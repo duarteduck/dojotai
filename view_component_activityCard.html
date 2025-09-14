@@ -1,0 +1,38 @@
+<div class="card activity" data-id="{{id}}" data-categoria-atividade="{{categoriaAtividadeId}}">
+  <div class="activity-inner">
+    <div class="activity-main">
+      <div class="meta-row">
+        <span class="chip {{statusClass}}">{{statusLabel}}</span>
+        {{#data}}
+          <div class="meta-date-wrapper">
+            {{#hasCategoriaAtividade}}
+              <span class="categoria-atividade-badge" style="color: {{categoriaAtividadeCor}}" title="{{categoriaAtividadeNome}}">
+                {{categoriaAtividadeIcone}}
+              </span>
+            {{/hasCategoriaAtividade}}
+            <small class="meta-date">{{data}}</small>
+          </div>
+        {{/data}}
+      </div>
+
+      <div class="title">{{titulo}}</div>
+
+      {{#hasDesc}}
+      <div class="desc">{{descricao}}</div>
+      {{/hasDesc}}
+
+      <div class="meta-author">Responsável: {{usuarioNome}}</div>
+
+      {{#hasUltimaAcao}}
+      <div class="meta-last">Última ação de {{atualizadoPorNome}} <br>em {{atualizadoEm}}</div>
+      {{/hasUltimaAcao}}
+    </div>
+
+    <div class="actions">
+      {{#isPendente}}
+        <button class="btn btn-concluir">Concluir</button>
+        <button class="btn btn-alt">Alterar</button>
+      {{/isPendente}}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,1002 @@
+<script>
+/* ===========================
+   UI helpers + Normalizer
+   =========================== */
+var Normalizer = {
+  activity: function(a){
+    if (!a) return a;
+    function get(o, keys, def){
+      for (var i=0;i<keys.length;i++){ var k=keys[i]; if(o && o[k]!=null) return o[k]; }
+      return def;
+    }
+    return {
+      id: get(a, ['id']),
+      titulo: get(a, ['titulo','Titulo','Título'], ''),
+      descricao: get(a, ['descricao','Descrição','desc']),
+      categoriaAtividadeId:   get(a, ['categoriaAtividadeId','categoria_atividade_id']),
+      categoriaAtividadeNome: get(a, ['categoriaAtividadeNome','categoria_atividade_nome']),
+      categoriaAtividadeIcone:get(a, ['categoriaAtividadeIcone','categoria_atividade_icone']),
+      categoriaAtividadeCor:  get(a, ['categoriaAtividadeCor','categoria_atividade_cor']),
+      status: String(get(a, ['status','Status'], 'pendente')).toLowerCase(),
+      uid: get(a, ['uid','UID','atribuido_uid','atribuidoUid']),
+      usuarioNome: get(a, ['usuarioNome','nomeUsuario','atribuido_nome','atribuidoNome']),
+      atualizadoPorNome: get(a, ['atualizadoPorNome','atualizado_nome']),
+      atualizadoEm: get(a, ['atualizadoEm','atualizado_em']),
+      data: get(a, ['data','Data'])
+    };
+  }
+};
+
+/* ===== SISTEMA DE SEMÁFORO - FUNÇÕES DE DATA ===== */
+var DateSemaforo = {
+  getDateAlert: function(dateStr) {
+    if (!dateStr) return 'normal';
+    try {
+      var activityDate = new Date(dateStr);
+      if (isNaN(activityDate)) return 'normal';
+      var today = new Date(); today.setHours(0,0,0,0);
+      var activityDateOnly = new Date(activityDate); activityDateOnly.setHours(0,0,0,0);
+      var diffDays = Math.ceil((activityDateOnly - today) / (1000*60*60*24));
+      if (diffDays <= 0) return 'overdue';     // hoje ou atrasada
+      if (diffDays <= 7) return 'upcoming';    // próximos 7 dias
+      return 'normal';
+    } catch(e){ return 'normal'; }
+  },
+  formatDateWithAlert: function(dateStr, alertType) {
+    if (!dateStr) return '';
+    var formattedDate = this.formatDate(dateStr);
+    if (alertType === 'overdue') {
+      return '<span class="meta-date-alert overdue"><span class="alert-icon">🚨</span>'+formattedDate+'</span>';
+    }
+    if (alertType === 'upcoming') {
+      return '<span class="meta-date-alert upcoming"><span class="alert-icon">⏰</span>'+formattedDate+'</span>';
+    }
+    return '<small class="meta-date">'+formattedDate+'</small>';
+  },
+  formatDate: function(dateStr) {
+    try {
+      var d = new Date(dateStr);
+      if (isNaN(d)) return dateStr;
+      return d.toLocaleDateString('pt-BR');
+    } catch(e){ return dateStr; }
+  }
+};
+
+/* ===========================
+   UI base
+   =========================== */
+var UI = {
+  escape: function(s){
+    s=(s==null?'':String(s));
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  },
+  tpl: function(id){
+    var el=document.getElementById(id);
+    var wrap=document.createElement('div');
+    wrap.innerHTML=el?el.innerHTML:'';
+    return wrap.firstElementChild||document.createElement('div');
+  },
+  toast: function(msg,kind){
+    var areaId='toast-area';
+    var area=document.getElementById(areaId);
+    if(!area){
+      area=document.createElement('div');
+      area.id=areaId;
+      area.style.position='fixed';
+      area.style.right='12px';
+      area.style.bottom='12px';
+      area.style.zIndex='9999';
+      document.body.appendChild(area);
+    }
+    var n=document.createElement('div');
+    n.className='toast '+(kind||'');
+    n.textContent=msg;
+    n.style.background='#111';
+    n.style.color='#fff';
+    n.style.padding='10px 14px';
+    n.style.borderRadius='10px';
+    n.style.marginTop='8px';
+    n.style.boxShadow='0 6px 20px rgba(0,0,0,.15)';
+    area.appendChild(n);
+    setTimeout(function(){ n.remove(); },2800);
+  },
+  renderSkeleton: function(el){
+    el.innerHTML='';
+    for(var i=0;i<4;i++){
+      var d=document.createElement('div');
+      d.className='card skel'; d.style.height='76px';
+      el.appendChild(d);
+    }
+  },
+
+  renderAtividades: function(data,filtro,el){
+    el.innerHTML='';
+    var items=(data||[]).filter(function(a){ return filtro==='todas'?true:(a.status===filtro); });
+
+    // Minhas
+    if(window.State&&State.ui&&State.ui.minhas){
+      items=items.filter(function(a){ return a.uid===State.uid; });
+    }
+    // Filtro por nome
+    if(window.State&&State.ui&&State.ui.nomeFiltro){
+      var q=String(State.ui.nomeFiltro||'').toLowerCase();
+      items=items.filter(function(a){ return String(a.usuarioNome||'').toLowerCase().indexOf(q)>=0; });
+    }
+    // Filtro por categoria
+    if(window.State&&State.ui&&State.ui.categoriaAtividadeFiltro&&State.ui.categoriaAtividadeFiltro!=='todas'){
+      items=items.filter(function(a){ return (a.categoriaAtividadeId||'')===State.ui.categoriaAtividadeFiltro; });
+    }
+    // Filtro por datas selecionadas no calendário
+    if(window.State&&State.ui&&State.ui.dateFilter&&State.ui.dateFilter.length>0){
+      items=items.filter(function(a){
+        if(!a.data) return false;
+        var activityDate=null;
+        if(/^\d{4}-\d{2}-\d{2}$/.test(a.data)){ activityDate=a.data; }
+        else if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(a.data)){
+          var parts=a.data.split('/');
+          var day=parts[0].padStart(2,'0');
+          var month=parts[1].padStart(2,'0');
+          var year=parts[2];
+          activityDate=year+'-'+month+'-'+day;
+        } else {
+          try{
+            var dateObj=new Date(a.data);
+            if(!isNaN(dateObj.getTime())){
+              var year=dateObj.getFullYear();
+              var month=(dateObj.getMonth()+1).toString().padStart(2,'0');
+              var day=dateObj.getDate().toString().padStart(2,'0');
+              activityDate=year+'-'+month+'-'+day;
+            }
+          }catch(e){}
+        }
+        return activityDate && State.ui.dateFilter.indexOf(activityDate)>=0;
+      });
+    }
+
+    if(items.length===0){ el.appendChild(this.tpl('tpl-empty')); return; }
+
+    function block(html,key,show){
+      var re=new RegExp('{{#'+key+'}}([\\s\\S]*?){{\\/'+key+'}}','g');
+      return html.replace(re, show ? '$1' : '');
+    }
+    function formatarDataBrasileira(dataStr){
+      if(!dataStr) return '';
+      try{
+        var d=new Date(dataStr);
+        if(isNaN(d)) return dataStr;
+        return d.toLocaleDateString('pt-BR')+' às '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      }catch(e){ return dataStr; }
+    }
+
+    for(var i=0;i<items.length;i++){
+      var a=items[i];
+      var tpl=document.getElementById('tpl-activity-card');
+      var html=tpl.innerHTML;
+
+      // data + alerta (somente pendente)
+      var dateAlert='normal', formattedDateWithAlert='';
+      if(a.status==='pendente'){
+        dateAlert=DateSemaforo.getDateAlert(a.data);
+        formattedDateWithAlert=DateSemaforo.formatDateWithAlert(a.data,dateAlert);
+      } else {
+        formattedDateWithAlert=a.data?'<small class="meta-date">'+DateSemaforo.formatDate(a.data)+'</small>':'';
+      }
+
+      var hasUltimaAcao=!!(a.atualizadoPorNome&&a.atualizadoEm);
+      var atualizadoEmFormatado=hasUltimaAcao?formatarDataBrasileira(a.atualizadoEm):'';
+      var hasCategoriaAtividade=!!(a.categoriaAtividadeIcone&&a.categoriaAtividadeNome);
+
+      html=html
+        .replace(/{{id}}/g,UI.escape(a.id))
+        .replace(/{{titulo}}/g,UI.escape(a.titulo||a.descricao||''))
+        .replace(/{{descricao}}/g,UI.escape(a.descricao||''))
+        .replace(/{{categoriaAtividadeId}}/g,UI.escape(a.categoriaAtividadeId||''))
+        .replace(/{{categoriaAtividadeNome}}/g,UI.escape(a.categoriaAtividadeNome||''))
+        .replace(/{{categoriaAtividadeIcone}}/g,a.categoriaAtividadeIcone||'')
+        .replace(/{{categoriaAtividadeCor}}/g,UI.escape(a.categoriaAtividadeCor||'#6B7280'))
+        .replace(/{{data}}/g,formattedDateWithAlert)
+        .replace(/{{usuarioNome}}/g,UI.escape(a.usuarioNome||a.uid||'—'))
+        .replace(/{{atualizadoPorNome}}/g,UI.escape(a.atualizadoPorNome||''))
+        .replace(/{{atualizadoEm}}/g,atualizadoEmFormatado)
+        .replace(/{{statusLabel}}/g,(a.status==='pendente'?'Pendente':(a.status==='concluida'?'Concluída':a.status)))
+        .replace(/{{statusClass}}/g,a.status);
+
+      html=block(html,'hasDesc',!!a.descricao);
+      html=block(html,'hasCategoriaAtividade',hasCategoriaAtividade);
+      html=block(html,'hasUltimaAcao',hasUltimaAcao);
+      html=block(html,'isPendente',a.status==='pendente');
+      html=block(html,'data',!!a.data);
+
+      var wrap=document.createElement('div'); wrap.innerHTML=html;
+      var card=wrap.firstElementChild;
+
+      // classes de alerta (pendente)
+      if(a.status==='pendente'){
+        if(dateAlert==='overdue') card.classList.add('alert-overdue');
+        else if(dateAlert==='upcoming') card.classList.add('alert-upcoming');
+      }
+
+      // concluir
+      var btnConcluir=card.querySelector('.btn-concluir');
+      if(btnConcluir){
+        (function(atividade,botao){
+          botao.addEventListener('click',function(){
+            botao.disabled=true; botao.classList.add('is-loading');
+            API.concluir(atividade.id).then(function(res){
+              var item=null; if(!State.cache) State.cache={atividades:[]};
+              for(var k=0;k<State.cache.atividades.length;k++){
+                if(State.cache.atividades[k].id===atividade.id){ item=State.cache.atividades[k]; break; }
+              }
+              if(item){
+                item.status=(res&&res.status)?res.status:'concluida';
+                if(res&&res.atualizadoPorNome) item.atualizadoPorNome=res.atualizadoPorNome;
+                if(res&&res.atualizadoEm) item.atualizadoEm=res.atualizadoEm;
+              }
+              UI.toast('Atividade concluída!');
+              var cur=(document.querySelector('#chips .chip.is-active[data-status]')||{}).dataset;
+              var st=cur&&cur.status?cur.status:'todas';
+              UI.renderAtividades(State.cache.atividades,st,el);
+            }).catch(function(err){
+              console.error('[concluir] erro',err);
+              UI.toast('Falha ao concluir','err');
+              botao.disabled=false; botao.classList.remove('is-loading');
+            });
+          });
+        })(a,btnConcluir);
+      }
+
+      el.appendChild(card);
+    }
+  }
+};
+
+/* ===========================
+   Views
+   =========================== */
+var Views = {
+  initLogin: function(){
+    var btn=document.getElementById('btn-login');
+    var inpLogin=document.getElementById('inp-login');
+    var inpPin=document.getElementById('inp-pin');
+    var msg=document.getElementById('login-msg');
+
+    function setLoading(v){
+      if(!btn) return;
+      btn.disabled=!!v;
+      if(btn.classList) btn.classList.toggle('is-loading',!!v);
+      if(msg) msg.textContent=v?'Autenticando...':'';
+    }
+    function doLogin(){
+      var login=(inpLogin&&inpLogin.value?inpLogin.value:'').trim();
+      var pin=(inpPin&&inpPin.value?inpPin.value:'').trim();
+      if(!login||!pin){ if(msg) msg.textContent='Informe login e PIN.'; return; }
+      setLoading(true);
+      API.login(login,pin).then(function(res){
+        var uidFromRes=(res&&res.user&&res.user.uid)?res.user.uid:null;
+        var hasOk=!!(res&&res.ok);
+        var uid=uidFromRes||(window.State&&State.uid)||null;
+        if(hasOk&&uid){
+          try{ if(uidFromRes) State.uid=uidFromRes; }catch(e){}
+          Router.go('#/dash');
+        } else {
+          if(msg) msg.textContent=(res&&res.error)||'Falha ao autenticar.';
+        }
+        setLoading(false);
+      }).catch(function(err){
+        console.error('[login] hard error',err);
+        if(msg) msg.textContent='Erro ao autenticar.';
+        setLoading(false);
+      });
+    }
+    if(btn) btn.onclick=doLogin;
+    function onKey(ev){
+      ev=ev||window.event;
+      var key=ev.key||ev.keyCode;
+      if(key==='Enter'||key===13){
+        if(ev.preventDefault) ev.preventDefault();
+        doLogin();
+      }
+    }
+    if(inpLogin) inpLogin.addEventListener('keydown',onKey);
+    if(inpPin)   inpPin.addEventListener('keydown',onKey);
+  },
+
+  initDash: function(){
+    // Bootstrap do State
+    if(!window.State){
+      window.State={
+        uid:(function(){ try{return localStorage.getItem('uid');}catch(e){return null;} })(),
+        clear:function(){ try{localStorage.removeItem('uid');}catch(e){} },
+        cache:{ atividades:[], categoriasAtividades:[] },
+        ui:{ minhas:false, nomeFiltro:'', categoriaAtividadeFiltro:'todas' }
+      };
+    } else {
+      if(!State.cache) State.cache={ atividades:[], categoriasAtividades:[] };
+      if(!State.ui) State.ui={ minhas:false, nomeFiltro:'', categoriaAtividadeFiltro:'todas' };
+    }
+    if(!State.ui.dateFilter) State.ui.dateFilter=[];
+    if(!State.ui.categoriaAtividadeFiltro) State.ui.categoriaAtividadeFiltro='todas';
+
+    var $=function(s){ return document.querySelector(s); };
+    var listEl=$('#list');
+
+    // Delegação para botão Alterar
+    if(listEl && !listEl.__altDelegation){
+      listEl.addEventListener('click', function(ev){
+        var btn = ev.target && ev.target.closest && ev.target.closest('.btn-alt');
+        if (!btn) return;
+        var card = btn.closest('.activity');
+        var id = card && card.getAttribute('data-id');
+        if (!id) return;
+        if (window.Router && Router.go){
+          Router.go('#/edit?id=' + encodeURIComponent(id));
+        } else {
+          location.hash = '#/edit?id=' + encodeURIComponent(id);
+        }
+      });
+      listEl.__altDelegation = true;
+    }
+    if(!listEl) return;
+
+    // Reset de filtros da UI
+    State.ui.minhas=false;
+    State.ui.nomeFiltro='';
+    State.ui.categoriaAtividadeFiltro='todas';
+
+    // Botões principais
+    var btnLogout=document.getElementById('btn-logout');
+    var btnNew   =document.getElementById('btn-new');
+    if(btnLogout) btnLogout.addEventListener('click', function(){ State.clear(); Router.go('#/login'); });
+    if(btnNew)    btnNew.addEventListener('click', function(){ Router.go('#/new'); });
+
+    // Menu overlay
+    var btnMenu=document.getElementById('btn-menu');
+    if(btnMenu){
+      btnMenu.addEventListener('click', function(){
+        if(UI.MenuSystem && !UI.MenuSystem.overlay){ UI.MenuSystem.init(); }
+        if(UI.MenuSystem && UI.MenuSystem.open){ UI.MenuSystem.open(); }
+      });
+    }
+
+    // Chips de status / minhas
+    var chips=document.getElementById('chips');
+    var chipMinhas=document.getElementById('chip-minhas');
+    var inpFiltro =document.getElementById('filtro-usuario');
+
+    if(chips){
+      chips.addEventListener('click', function(ev){
+        var el = ev.target.closest('.chip');
+        if(!el) return;
+
+        if(el.hasAttribute('data-status')){
+          var statusChips = document.querySelectorAll('#chips .chip[data-status]');
+          for (var i=0;i<statusChips.length;i++){ statusChips[i].classList.remove('is-active'); }
+          el.classList.add('is-active');
+          var status = el.getAttribute('data-status');
+          UI.renderAtividades(State.cache.atividades, status, listEl);
+          return;
+        }
+
+        if(el.id==='chip-minhas'){
+          State.ui.minhas=!State.ui.minhas;
+          if(State.ui.minhas){
+            State.ui.nomeFiltro='';
+            if(inpFiltro) inpFiltro.value='';
+          }
+          el.classList.toggle('is-active', State.ui.minhas);
+          var act=document.querySelector('#chips .chip.is-active[data-status]');
+          var cur=(act && act.getAttribute('data-status')) || 'todas';
+          UI.renderAtividades(State.cache.atividades, cur, listEl);
+          return;
+        }
+      });
+    }
+
+    // Toggle calendário
+    var chipCalendar=document.getElementById('chip-calendar');
+    if(chipCalendar){
+      chipCalendar.addEventListener('click', function(){
+        var wrap=document.getElementById('calendar-wrapper');
+        if(!wrap) return;
+        var isVisible = wrap.style.display !== 'none';
+        wrap.style.display = isVisible ? 'none' : 'block';
+        chipCalendar.classList.toggle('is-active', !isVisible);
+      });
+    }
+
+    // filtro por nome
+    if(inpFiltro){
+      inpFiltro.addEventListener('input', function(){
+        State.ui.nomeFiltro=(inpFiltro.value||'').trim();
+        if(State.ui.nomeFiltro && State.ui.minhas){
+          State.ui.minhas=false;
+          if(chipMinhas) chipMinhas.classList.remove('is-active');
+        }
+        var act=document.querySelector('#chips .chip.is-active[data-status]');
+        var cur=(act && act.getAttribute('data-status')) || 'todas';
+        UI.renderAtividades(State.cache.atividades, cur, listEl);
+      });
+    }
+
+    // filtro dinâmico por categoria (UI)
+    function renderCategoriaAtividadeFilters(categorias){
+      var container=document.getElementById('categoria-atividade-filter-container');
+      if(!container || !categorias || categorias.length===0) return;
+
+      var catFilter=document.createElement('div');
+      catFilter.className='categoria-atividade-filter';
+
+      var allBtn=document.createElement('div');
+      allBtn.className='categoria-atividade-filter-item is-active';
+      allBtn.setAttribute('data-categoria-atividade','todas');
+      allBtn.innerHTML='<span style="margin-right:6px;">🗂️</span>Todas';
+      catFilter.appendChild(allBtn);
+
+      categorias.forEach(function(cat){
+        var btn=document.createElement('div');
+        btn.className='categoria-atividade-filter-item';
+        btn.setAttribute('data-categoria-atividade', cat.id);
+        btn.innerHTML='<span style="color:'+ (cat.cor||'#6B7280') +';margin-right:6px;">'+ (cat.icone||'•') +'</span>'+ UI.escape(cat.nome||'');
+        catFilter.appendChild(btn);
+      });
+
+      container.innerHTML='';
+      container.appendChild(catFilter);
+
+      catFilter.addEventListener('click', function(ev){
+        var item=ev.target.closest('.categoria-atividade-filter-item');
+        if(!item) return;
+
+        catFilter.querySelectorAll('.categoria-atividade-filter-item').forEach(function(el){ el.classList.remove('is-active'); });
+        item.classList.add('is-active');
+
+        State.ui.categoriaAtividadeFiltro=item.getAttribute('data-categoria-atividade') || 'todas';
+
+        var act=document.querySelector('#chips .chip.is-active[data-status]');
+        var cur=(act && act.getAttribute('data-status')) || 'todas';
+        UI.renderAtividades(State.cache.atividades, cur, listEl);
+      });
+    }
+
+    // Carga inicial
+    UI.renderSkeleton(listEl);
+    Promise.all([
+      API.listMinhasAtividades(),
+      API.listarCategoriasAtividades()
+    ]).then(function(results){
+      var atividades=results[0]||[];
+      var categorias=results[1]||[];
+
+      State.cache.atividades = atividades.map(Normalizer.activity);
+      State.cache.categoriasAtividades = categorias||[];
+
+      // status default = pendente
+      var chipsStatus=document.querySelectorAll('#chips .chip[data-status]');
+      for (var i=0;i<chipsStatus.length;i++){ chipsStatus[i].classList.remove('is-active'); }
+      var chip=document.querySelector('#chips .chip[data-status="pendente"]');
+      if(chip) chip.classList.add('is-active');
+
+      renderCategoriaAtividadeFilters(State.cache.categoriasAtividades);
+
+      UI.renderAtividades(State.cache.atividades, 'pendente', listEl);
+
+      // (Re)cria/atualiza calendário se existir container
+      var calContainer = document.querySelector('#calendar');
+      if(calContainer){
+        window.State.calendar = new ActivityCalendar('#calendar', {
+          activities: State.cache.atividades,
+          onSelectionChange: function(dates){
+            State.ui.dateFilter = dates;
+            var act=document.querySelector('#chips .chip.is-active[data-status]');
+            var cur=(act && act.getAttribute('data-status')) || 'todas';
+            UI.renderAtividades(State.cache.atividades, cur, listEl);
+          }
+        });
+      }
+    }).catch(function(e){
+      console.error('[dash] erro ao carregar dados',e);
+      UI.toast('Falha ao carregar dados','err');
+      listEl.innerHTML='';
+    });
+  },
+
+  initNew: function(){
+    var sel        = document.getElementById('na-atr');
+    var selCatAtiv = document.getElementById('na-categoria-atividade');
+    var btnSave    = document.getElementById('na-save');
+    var btnCancel  = document.getElementById('na-cancel');
+    var msg        = document.getElementById('na-msg');
+
+    function __parseHashParams(){
+      try{
+        var q=(location.hash.split('?')[1]||'');
+        var out={};
+        q.split('&').forEach(function(kv){
+          var p=kv.split('=');
+          if(p[0]) out[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||'');
+        });
+        return out;
+      }catch(e){ return {}; }
+    }
+    var __params=__parseHashParams();
+    var __isEdit = location.hash.indexOf('#/edit')===0;
+    var __editId = __isEdit ? (__params.id||'') : '';
+
+    var __item=null;
+
+    function __hydrate(it){
+      if(!it) return;
+      var t = document.getElementById('na-titulo');
+      var d = document.getElementById('na-desc');
+      var dt= document.getElementById('na-data');
+
+      if(t) t.value = it.titulo || '';
+      if(d) d.value = it.descricao || '';
+
+      if (selCatAtiv && it.categoriaAtividadeId){
+        setTimeout(function(){ selCatAtiv.value = it.categoriaAtividadeId || ''; }, 100);
+      }
+
+      // converter data p/ yyyy-mm-dd
+      if (dt && it.data){
+        var dataValue = it.data;
+        if (typeof dataValue==='string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(dataValue)){
+          var parts=dataValue.split('/');
+          var day=parts[0].padStart(2,'0');
+          var month=parts[1].padStart(2,'0');
+          var year=parts[2];
+          if(year.length===2) year='20'+year;
+          dataValue = year+'-'+month+'-'+day;
+        } else if (dataValue instanceof Date || (typeof dataValue==='string' && dataValue.includes('T'))){
+          var dateObj = dataValue instanceof Date ? dataValue : new Date(dataValue);
+          if(!isNaN(dateObj.getTime())){
+            var y=dateObj.getFullYear();
+            var m=(dateObj.getMonth()+1).toString().padStart(2,'0');
+            var da=dateObj.getDate().toString().padStart(2,'0');
+            dataValue = y+'-'+m+'-'+da;
+          }
+        } else if (typeof dataValue==='string' && /^\d{4}-\d{2}-\d{2}$/.test(dataValue)){
+          // ok
+        } else if (typeof dataValue==='string' && dataValue.trim()){
+          try{
+            var dateObj=new Date(dataValue);
+            if(!isNaN(dateObj.getTime())){
+              var y=dateObj.getFullYear();
+              var m=(dateObj.getMonth()+1).toString().padStart(2,'0');
+              var da=dateObj.getDate().toString().padStart(2,'0');
+              dataValue = y+'-'+m+'-'+da;
+            }
+          }catch(e){ dataValue=''; }
+        }
+        dt.value = dataValue || '';
+      }
+    }
+
+    // modo edição: ajusta títulos e carrega item
+    if(__isEdit){
+      var h2 = document.querySelector('[data-view="new"] h2');
+      var btnSaveEl = btnSave;
+      if(h2) h2.textContent='Alterar atividade';
+      if(btnSaveEl) btnSaveEl.textContent='Alterar';
+
+      // tenta pegar do cache
+      try{
+        if(window.State && State.cache && Array.isArray(State.cache.atividades)){
+          for(var i=0;i<State.cache.atividades.length;i++){
+            var it = State.cache.atividades[i];
+            if(String(it.id)===String(__editId)){ __item=it; break; }
+          }
+        }
+      }catch(e){}
+
+      if(__item) __hydrate(__item);
+      else {
+        try{
+          API.getAtividadePorId(__editId).then(function(it){
+            __item = Normalizer.activity(it);
+            __hydrate(__item);
+            try{
+              var _sel = document.getElementById('na-atr');
+              if(_sel && __item){
+                setTimeout(function(){
+                  _sel.value = (__item.atribuido_uid || __item.uid || _sel.value || '');
+                }, 100);
+              }
+            }catch(e){}
+          }).catch(function(e){
+            console.warn('[edit] não foi possível obter item:', e);
+            UI.toast('Erro ao carregar dados da atividade','err');
+          });
+        }catch(e){}
+      }
+    } else {
+      var h2n = document.querySelector('[data-view="new"] h2');
+      if(h2n) h2n.textContent='Nova atividade';
+      if(btnSave) btnSave.textContent='Salvar';
+    }
+
+    // categorias
+    if(selCatAtiv){
+      selCatAtiv.innerHTML = '<option value="">Carregando...</option>';
+      API.listarCategoriasAtividades().then(function(categorias){
+        selCatAtiv.innerHTML = '<option value="">(Sem categoria)</option>';
+        (categorias||[]).forEach(function(cat){
+          var opt=document.createElement('option');
+          opt.value = cat.id;
+          opt.textContent = (cat.icone ? cat.icone+' ' : '') + cat.nome;
+          selCatAtiv.appendChild(opt);
+        });
+        if (__isEdit && __item && __item.categoriaAtividadeId){
+          selCatAtiv.value = __item.categoriaAtividadeId;
+        }
+      }).catch(function(e){
+        console.error('[new] categories error', e);
+        selCatAtiv.innerHTML = '<option value="">(Erro ao carregar)</option>';
+      });
+    }
+
+    // usuários
+    if(sel){
+      sel.innerHTML='<option value="">(carregando...)</option>';
+      API.listarUsuariosAtivos().then(function(users){
+        sel.innerHTML='';
+        for (var i=0;i<users.length;i++){
+          var u=users[i];
+          var opt=document.createElement('option');
+          opt.value=u.uid; opt.textContent=u.nome||u.login||u.uid;
+          if(u.uid===State.uid) opt.selected=true;
+          sel.appendChild(opt);
+        }
+        // pré-seleciona em edição
+        try{
+          if(__isEdit){
+            var __it=null;
+            if(window.State && State.cache && Array.isArray(State.cache.atividades)){
+              for(var k=0;k<State.cache.atividades.length;k++){
+                if(String(State.cache.atividades[k].id)===String(__editId)){ __it=State.cache.atividades[k]; break; }
+              }
+            }
+            if(__it) sel.value = (__it.atribuido_uid || __it.uid || sel.value || '');
+          }
+        }catch(e){}
+      }).catch(function(e){
+        console.error('[new] users error',e);
+        sel.innerHTML='<option>(falha)</option>';
+      });
+    }
+
+    if(btnCancel) btnCancel.onclick=function(){ Router.go('#/dash'); };
+
+    if(btnSave) btnSave.onclick=function(){
+      var payload={
+        titulo:(document.getElementById('na-titulo') && document.getElementById('na-titulo').value || '').trim(),
+        descricao:(document.getElementById('na-desc') && document.getElementById('na-desc').value || '').trim(),
+        data:(document.getElementById('na-data') && document.getElementById('na-data').value) || '',
+        atribuido_uid:(sel && sel.value) || (window.State && State.uid),
+        // Categoria nos dois formatos (ajuste conforme sua API)
+        categoriaAtividadeId:(selCatAtiv && selCatAtiv.value) || '',
+        categoria_atividade_id:(selCatAtiv && selCatAtiv.value) || ''
+      };
+      if(!payload.titulo){ if(msg) msg.textContent='Informe um título.'; return; }
+
+      btnSave.disabled=true; btnSave.classList.add('is-loading'); if(msg) msg.textContent='';
+
+      var promise = (__isEdit ? API.atualizar(__editId, payload) : API.criar(payload));
+      promise.then(function(res){
+        if(res && res.ok){
+          UI.toast(__isEdit ? 'Atividade alterada!' : 'Atividade criada!');
+          if (window.Router && Router.go) Router.go('#/dash'); else location.hash = '#/dash';
+        } else {
+          if (msg) msg.textContent = (res && res.error) || (__isEdit ? 'Falha ao alterar.' : 'Falha ao criar.');
+          btnSave.disabled=false; btnSave.classList.remove('is-loading');
+        }
+      }).catch(function(e){
+        console.error(__isEdit ? '[edit] update error' : '[new] create error', e);
+        if (msg) msg.textContent = __isEdit ? 'Erro ao alterar atividade.' : 'Erro ao criar atividade.';
+        btnSave.disabled=false; btnSave.classList.remove('is-loading');
+      });
+    };
+  }
+};
+
+/* ===========================
+   Sistema de Menu (overlay)
+   =========================== */
+var MenuSystem = {
+  overlay: null,
+  content: null,
+  isOpen: false,
+  items: [],
+
+  init: function(){
+    if (this.overlay) return;
+    this.createMenuHTML();
+    this.setupEventListeners();
+  },
+  createMenuHTML: function(){
+    if (document.getElementById('menu-overlay')) return;
+    var menuHTML = [
+      '<div class="menu-overlay" id="menu-overlay">',
+        '<div class="menu-panel">',
+          '<div class="menu-header">',
+            '<h3 class="menu-title">Menu</h3>',
+            '<button class="menu-close" id="menu-close">&times;</button>',
+          '</div>',
+          '<div class="menu-content" id="menu-content">',
+            '<div class="menu-loading">Carregando...</div>',
+          '</div>',
+        '</div>',
+      '</div>'
+    ].join('');
+    document.body.insertAdjacentHTML('beforeend', menuHTML);
+    this.overlay = document.getElementById('menu-overlay');
+    this.content = document.getElementById('menu-content');
+  },
+  setupEventListeners: function(){
+    var self=this;
+    var closeBtn=document.getElementById('menu-close');
+    if(closeBtn){ closeBtn.addEventListener('click', function(){ self.close(); }); }
+    if(this.overlay){
+      this.overlay.addEventListener('click', function(e){
+        if(e.target===self.overlay) self.close();
+      });
+    }
+    document.addEventListener('keydown', function(e){
+      if(e.key==='Escape' && self.isOpen) self.close();
+    });
+  },
+  open: function(){
+    if(this.isOpen) return;
+    this.isOpen=true;
+    if(this.overlay) this.overlay.classList.add('is-open');
+    document.body.style.overflow='hidden';
+    if(this.items.length===0){ this.loadMenuItems(); }
+  },
+  close: function(){
+    if(!this.isOpen) return;
+    this.isOpen=false;
+    if(this.overlay) this.overlay.classList.remove('is-open');
+    document.body.style.overflow='';
+  },
+  loadMenuItems: function(){
+    var self=this;
+    if(!this.content) return;
+    if(typeof API==='undefined' || !API.listMenu){
+      this.content.innerHTML='<div class="menu-error">Sistema não carregado completamente</div>';
+      return;
+    }
+    this.content.innerHTML='<div class="menu-loading">Carregando...</div>';
+    API.listMenu().then(function(items){ self.renderItems(items); }).catch(function(err){
+      console.error('[Menu] erro:',err);
+      self.content.innerHTML='<div class="menu-error">Erro ao carregar menu</div>';
+    });
+  },
+  renderItems: function(items){
+    var self=this;
+    if(!this.content) return;
+    if(!items||items.length===0){ this.content.innerHTML='<div class="menu-error">Nenhum item disponível</div>'; return; }
+    var html=[];
+    for(var i=0;i<items.length;i++){
+      var item=items[i];
+      html.push(
+        '<button class="menu-item" data-action="'+UI.escape(item.acao)+'" data-destino="'+UI.escape(item.destino)+'">'+
+          '<span class="menu-item-icon">'+UI.escape(item.icone||'▫️')+'</span>'+
+          '<span class="menu-item-text">'+UI.escape(item.titulo||'')+'</span>'+
+        '</button>'
+      );
+    }
+    this.content.innerHTML=html.join('');
+    var menuItems=this.content.querySelectorAll('.menu-item');
+    for(var j=0;j<menuItems.length;j++){
+      (function(button){
+        button.addEventListener('click', function(e){
+          var action=e.currentTarget.getAttribute('data-action');
+          var destino=e.currentTarget.getAttribute('data-destino');
+          self.handleItemClick(action,destino);
+        });
+      })(menuItems[j]);
+    }
+    this.items=items;
+  },
+  handleItemClick: function(action,destino){
+    switch(action){
+      case 'route':
+        if(window.Router && Router.go){ Router.go(destino); } else { location.hash=destino; }
+        break;
+      case 'function':
+        if(typeof window[destino]==='function'){ window[destino](); }
+        else { console.error('Função não encontrada:', destino); UI.toast('Função não disponível: '+destino,'err'); }
+        break;
+      case 'external':
+        window.open(destino,'_blank');
+        break;
+      default:
+        console.warn('Ação desconhecida:',action);
+    }
+    this.close();
+  }
+};
+UI.MenuSystem = MenuSystem;
+
+/* ===========================
+   Calendário de atividades
+   =========================== */
+class ActivityCalendar {
+  constructor(containerSelector, options = {}) {
+    this.container = document.querySelector(containerSelector);
+    this.currentDate = new Date();
+    this.selectedDates = new Set();
+    this.activities = options.activities || [];
+    this.onSelectionChange = options.onSelectionChange || (() => {});
+    this.monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    if(this.container){ this.init(); }
+  }
+  init() {
+    this.renderCalendarStructure();
+    this.setupEventListeners();
+    this.render();
+    this.selectDefaultDates();
+  }
+  renderCalendarStructure() {
+    this.container.innerHTML = `
+      <div class="calendar-header">
+        <div class="calendar-nav">
+          <button id="prev-month" aria-label="Mês anterior">&lt;</button>
+          <span class="calendar-month-year" id="month-year"></span>
+          <button id="next-month" aria-label="Próximo mês">&gt;</button>
+        </div>
+        <div class="calendar-actions">
+          <button class="btn btn-small" id="clear-selection">Limpar</button>
+          <button class="btn btn-small" id="select-default">Padrão</button>
+        </div>
+      </div>
+      <div class="calendar-grid" id="calendar-grid">
+        <div class="calendar-weekday">Dom</div>
+        <div class="calendar-weekday">Seg</div>
+        <div class="calendar-weekday">Ter</div>
+        <div class="calendar-weekday">Qua</div>
+        <div class="calendar-weekday">Qui</div>
+        <div class="calendar-weekday">Sex</div>
+        <div class="calendar-weekday">Sáb</div>
+      </div>
+      <div class="calendar-summary">
+        <div class="calendar-legend">
+          <div class="legend-item"><div class="legend-dot overdue"></div><span>Atrasadas</span></div>
+          <div class="legend-item"><div class="legend-dot upcoming"></div><span>Próximas</span></div>
+          <div class="legend-item"><div class="legend-dot future"></div><span>Futuras</span></div>
+        </div>
+        <div id="selection-count">0 datas selecionadas</div>
+      </div>
+    `;
+  }
+  setupEventListeners() {
+    var self=this;
+    document.getElementById('prev-month').addEventListener('click', function(){ self.currentDate.setMonth(self.currentDate.getMonth()-1); self.render(); });
+    document.getElementById('next-month').addEventListener('click', function(){ self.currentDate.setMonth(self.currentDate.getMonth()+1); self.render(); });
+    document.getElementById('clear-selection').addEventListener('click', function(){ self.clearSelection(); });
+    document.getElementById('select-default').addEventListener('click', function(){ self.selectDefaultDates(); });
+  }
+  getDateString(date){ const y=date.getFullYear(); const m=String(date.getMonth()+1).padStart(2,'0'); const d=String(date.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
+  parseDate(dateStr){
+    if(!dateStr) return null;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dateStr)){ const [y,m,d]=dateStr.split('-').map(Number); return new Date(y,m-1,d); }
+    if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)){ const [d,m,y]=dateStr.split('/').map(Number); return new Date(y,m-1,d); }
+    const dt=new Date(dateStr); return isNaN(dt)?null:dt;
+  }
+  getActivitiesForDate(date){
+    var dateStr=this.getDateString(date), self=this;
+    return (this.activities||[]).filter(function(a){
+      var ad=self.parseDate(a.data);
+      var st=String(a.status||'').toLowerCase();
+      var isPending=(st?st==='pendente':true);
+      return isPending && ad && self.getDateString(ad)===dateStr;
+    });
+  }
+  getDateStatus(date){ return DateSemaforo.getDateAlert(this.getDateString(date)); }
+  render(){
+    var year=this.currentDate.getFullYear();
+    var month=this.currentDate.getMonth();
+    document.getElementById('month-year').textContent=this.monthNames[month]+' '+year;
+    var grid=document.getElementById('calendar-grid');
+    var existingDays=grid.querySelectorAll('.calendar-day');
+    for(var i=0;i<existingDays.length;i++){ existingDays[i].remove(); }
+    var firstDay=new Date(year,month,1);
+    var lastDay=new Date(year,month+1,0);
+    var daysInMonth=lastDay.getDate();
+    var startDay=firstDay.getDay();
+    var prevMonth=new Date(year,month-1,0);
+
+    // mês anterior
+    for(var i2=startDay-1;i2>=0;i2--){
+      var day=prevMonth.getDate()-i2;
+      var date=new Date(year,month-1,day);
+      this.createDayElement(date,true);
+    }
+    // mês atual
+    for(var day2=1;day2<=daysInMonth;day2++){
+      var date2=new Date(year,month,day2);
+      this.createDayElement(date2,false);
+    }
+    // próximo mês
+    var totalCells=grid.children.length-7;
+    var remaining=42-totalCells;
+    for(var d3=1; d3<=remaining; d3++){
+      var date3=new Date(year,month+1,d3);
+      this.createDayElement(date3,true);
+    }
+    this.updateSelectionCount();
+  }
+  createDayElement(date,otherMonth){
+    var dayEl=document.createElement('div');
+    dayEl.className='calendar-day';
+    dayEl.textContent=date.getDate();
+    var dateStr=this.getDateString(date);
+    dayEl.dataset.date=dateStr;
+    if(otherMonth) dayEl.classList.add('other-month');
+
+    const today=new Date(); today.setHours(0,0,0,0);
+    const cellDate=new Date(date.getFullYear(),date.getMonth(),date.getDate());
+    if(cellDate.getTime()===today.getTime()){ dayEl.classList.add('today'); }
+
+    // pontinhos apenas se houver pendentes
+    var dayActs=this.getActivitiesForDate(date);
+    if(dayActs.length>0){
+      dayEl.classList.add('has-activity');
+      var status=this.getDateStatus(date);
+      dayEl.classList.add(status);
+      dayEl.title = dayActs.length + ' atividade(s) pendente(s)';
+    }
+
+    if(this.selectedDates.has(dateStr)) dayEl.classList.add('selected');
+
+    var self=this;
+    dayEl.addEventListener('click', function(){
+      self.toggleDate(dateStr);
+      dayEl.classList.toggle('selected');
+      self.updateSelectionCount();
+      self.onSelectionChange(Array.from(self.selectedDates));
+    });
+
+    document.getElementById('calendar-grid').appendChild(dayEl);
+  }
+  toggleDate(dateStr){ if(this.selectedDates.has(dateStr)) this.selectedDates.delete(dateStr); else this.selectedDates.add(dateStr); }
+  clearSelection(){ this.selectedDates.clear(); this.render(); this.onSelectionChange([]); }
+  selectDefaultDates(){
+    this.selectedDates.clear();
+    const today=new Date(); today.setHours(0,0,0,0);
+    for(let i=0;i<=10;i++){ const d=new Date(today); d.setDate(today.getDate()+i); this.selectedDates.add(this.getDateString(d)); }
+    (this.activities||[]).forEach(a=>{
+      const ad=this.parseDate(a.data); const st=String(a.status||'').toLowerCase();
+      if(!ad||st!=='pendente') return;
+      const cmp=new Date(ad.getFullYear(),ad.getMonth(),ad.getDate());
+      if(cmp<today) this.selectedDates.add(this.getDateString(ad));
+    });
+    this.render();
+    this.onSelectionChange(this.getSelectedDates());
+  }
+  updateSelectionCount(){
+    var count=this.selectedDates.size;
+    var text = count===1 ? '1 data selecionada' : count+' datas selecionadas';
+    document.getElementById('selection-count').textContent=text;
+  }
+  setActivities(activities){ this.activities=activities||[]; this.render(); }
+  getSelectedDates(){ return Array.from(this.selectedDates); }
+  selectDates(dateStrArray){ this.selectedDates.clear(); (dateStrArray||[]).forEach(d=>this.selectedDates.add(d)); this.render(); this.onSelectionChange(this.getSelectedDates()); }
+}
+
+/* ===========================
+   State exports
+   =========================== */
+window.UI = UI;
+window.Views = Views;
+
+// Adiciona filtro por data no State (garantia)
+if(!window.State) window.State={};
+if(!window.State.ui) window.State.ui={};
+window.State.ui.dateFilter=[];
+window.State.calendar=null;
+
+// Funções exemplo usadas em Menu
+window.showHelp = function(){ UI.toast('Sistema de Ajuda - Documentação em desenvolvimento'); };
+window.showAbout = function(){ UI.toast('Sistema de Atividades v2.0'); };
+</script>

@@ -1,0 +1,196 @@
+<script>
+/* Normalizador de status do back -> UI */
+const StatusMap = {
+  toUi: function(val){
+    var s = String(val || '').trim().toLowerCase();
+    if (s === 'pendente') return 'pendente';
+    if (s === 'concluida' || s === 'concluída') return 'concluida';
+    return s || 'pendente';
+  }
+};
+
+var API = {
+  /* loginUser(login, pin) -> { ok, user:{uid,...} } */
+  login: function(login, pin){
+    return new Promise(function(resolve){
+      google.script.run
+        .withSuccessHandler(function(res){
+          console.log('[API.login] success', res);
+          if(res && res.ok && res.user && res.user.uid){
+            State.uid = res.user.uid;
+            resolve(res);
+          } else {
+            if (res && res.error) console.warn('[API.login] server error:', res.error);
+            resolve({ ok:false });
+          }
+        })
+        .withFailureHandler(function(err){
+          console.error('[API.login] failure', err);
+          resolve({ ok:false });
+        })
+        .loginUser(login, pin);
+    });
+  },
+
+  /* listActivitiesApi() -> { ok, items:[...] } */
+  listMinhasAtividades: function(){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok){
+            var data = (res.items || []).map(function(a){
+              return {
+                id: a.id,
+                titulo: a.titulo || a.descricao || '',
+                descricao: a.descricao || '',
+                data: a.data || '',
+                categoria: a.categoria || '',
+                categoriaAtividadeId: a.categoria_atividade_id || '',
+                categoriaAtividadeNome: a.categoria_atividade_nome || '',
+                categoriaAtividadeIcone: a.categoria_atividade_icone || '',
+                categoriaAtividadeCor: a.categoria_atividade_cor || '',
+                status: StatusMap.toUi(a.status),
+                uid: a.atribuido_uid || '',
+                usuarioNome: a.atribuido_nome || '',
+                atualizadoPorNome: a.atualizado_nome || '',
+                atualizadoEm: a.atualizado_em || ''
+              };
+            });
+            resolve(data);
+          } else {
+            reject((res && res.error) || 'Falha na listagem');
+          }
+        })
+        .withFailureHandler(reject)
+        .listActivitiesApi();
+    });
+  },
+
+  /* completeActivity(id, uid) -> { ok:true } */
+  concluir: function(id){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok){
+            resolve({
+              ok: true,
+              status: 'concluida',
+              atualizadoPorNome: res.atualizadoPorNome || null
+            });
+          } else {
+            reject((res && res.error) || 'Falha ao concluir');
+          }
+        })
+        .withFailureHandler(reject)
+        .completeActivity(id, State.uid);
+    });
+  },
+
+  /* createActivity(payload, uidCriador) -> { ok, id } */
+  criar: function(payload){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok){ resolve(res); } else { reject((res && res.error) || 'Falha ao criar'); }
+        })
+        .withFailureHandler(reject)
+        .createActivity(payload, State.uid);
+    });
+  },
+
+  /* listActiveUsers() -> { ok, users:[{uid,nome,login}] } */
+  listarUsuariosAtivos: function(){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok){ resolve(res.users || []); }
+          else { reject((res && res.error) || 'Falha ao listar usuários'); }
+        })
+        .withFailureHandler(reject)
+        .listActiveUsers();
+    });
+  },
+
+  /* updateActivity(id, patch) -> { ok } */
+  atualizar: function(id, patch){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok){ resolve(res); }
+          else { reject((res && res.error) || 'Falha ao alterar'); }
+        })
+        .withFailureHandler(reject)
+        .updateActivity({ id:id, patch: patch }, (window.State && State.uid));
+    });
+  },
+
+  /* getActivityById(id) -> item normalizado */
+  getAtividadePorId: function(id){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok && res.item){
+            var a = res.item;
+            resolve({
+              id: a.id,
+              titulo: a.titulo || a.descricao || '',
+              descricao: a.descricao || '',
+              data: a.data || '',
+              categoria: a.categoria || '',
+              categoriaAtividadeId: a.categoria_atividade_id || '',
+              categoriaAtividadeNome: a.categoria_atividade_nome || '',
+              categoriaAtividadeIcone: a.categoria_atividade_icone || '',
+              categoriaAtividadeCor: a.categoria_atividade_cor || '',
+              status: StatusMap.toUi(a.status),
+              uid: a.atribuido_uid || '',
+              usuarioNome: a.atribuido_nome || '',
+              atualizadoPorNome: a.atualizado_nome || '',
+              atualizadoEm: a.atualizado_em || ''
+            });
+          } else {
+            reject((res && res.error) || 'Não encontrado');
+          }
+        })
+        .withFailureHandler(reject)
+        .getActivityById(id);
+    });
+  },
+
+  /* listarCategoriasAtividades() -> [categorias] */
+  listarCategoriasAtividades: function(){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok){ resolve(res.items || []); }
+          else { reject((res && res.error) || 'Falha ao listar categorias de atividades'); }
+        })
+        .withFailureHandler(reject)
+        .listCategoriasAtividadesApi();
+    });
+  },
+
+  listMenu: function(){
+    return new Promise(function(resolve, reject){
+      // Verifica se google.script.run está disponível
+      if (typeof google === 'undefined' || !google.script || !google.script.run) {
+        reject('Google Apps Script não disponível');
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok){
+            resolve(res.items || []);
+          } else {
+            reject((res && res.error) || 'Falha ao carregar menu');
+          }
+        })
+        .withFailureHandler(function(err) {
+          reject('Erro na API: ' + err);
+        })
+        .getMenuForUser('user'); // Por enquanto, role fixo
+    });
+  }
+
+};
+</script>
