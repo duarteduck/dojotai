@@ -2,7 +2,7 @@
 function doGet(e) {
   const tmpl = HtmlService.createTemplateFromFile('index');
   return tmpl.evaluate()
-    .setTitle('Dojotai - Login + Atividades')
+    .setTitle('Criciúmatai')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

@@ -6,26 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Dojotai</title>
   <style>
-    <?!= include('styles/styles_base'); ?>
-    <?!= include('styles/styles_components'); ?>
+    <?!= include('styles_base'); ?>
+    <?!= include('styles_components'); ?>
   </style>
 </head>
 <body>
   <div id="app"></div>
 
   <!-- Templates (views & components) -->
-  <template id="tpl-login"><?!= include('views/view_login'); ?></template>
-  <template id="tpl-dash"><?!= include('views/view_dash'); ?></template>
-  <template id="tpl-new"><?!= include('views/view_activity_new'); ?></template>
-  <template id="tpl-activity-card"><?!= include('views/component_activityCard'); ?></template>
-  <template id="tpl-empty"><?!= include('views/component_emptyState'); ?></template>
-  <template id="tpl-toast"><?!= include('views/component_toast'); ?></template>
+  <template id="tpl-login"><?!= include('view_login'); ?></template>
+  <template id="tpl-dash"><?!= include('view_dash'); ?></template>
+  <template id="tpl-new"><?!= include('view_activity_new'); ?></template>
+  <template id="tpl-activity-card"><?!= include('views_component_activityCard'); ?></template>
+  <template id="tpl-empty"><?!= include('views_component_emptyState'); ?></template>
+  <template id="tpl-toast"><?!= include('views_component_toast'); ?></template>
 
   <!-- Scripts (estado, api, ui, router) -->
-  <?!= include('scripts/app_state'); ?>
-  <?!= include('scripts/app_api'); ?>
-  <?!= include('scripts/app_ui'); ?>
-  <?!= include('scripts/app_router'); ?>
+  <?!= include('app_state'); ?>
+  <?!= include('app_api'); ?>
+  <?!= include('app_ui'); ?>
+  <?!= include('app_router'); ?>
   
 <script>
   // Bootstrap após DOM (evita race em alguns devices/iframes)

@@ -8,7 +8,7 @@ const APP = {
   TS_FORMAT: 'yyyy-MM-dd HH:mm:ss',
 
   // A própria tabela "Planilhas" (se estiver no mesmo arquivo, mantenha 'ACTIVE'):
-  PLANILHAS_SSID: 'ACTIVE',
+  PLANILHAS_SSID: '1hfl-CeO6nK4FLYl4uacK5NncBoJ3q-8PPzUWh7W6PmY',
 
   // Você criou este named range (singular):
   PLANILHAS_NAMED: 'PLANILHA_TBL',
