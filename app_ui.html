@@ -363,6 +363,20 @@ var Views = {
     var chipMinhas=document.getElementById('chip-minhas');
     var inpFiltro =document.getElementById('filtro-usuario');
 
+    if(inpFiltro){
+      inpFiltro.addEventListener('input', function(){
+        State.ui.nomeFiltro = this.value;
+        var act = document.querySelector('#chips .chip.is-active[data-status]');
+        var cur = (act && act.getAttribute('data-status')) || 'todas';
+        UI.renderAtividades(State.cache.atividades, cur, listEl);
+        
+        // Atualiza contadores das categorias
+        if (typeof window.atualizarContadoresCategorias === 'function') {
+          window.atualizarContadoresCategorias();
+        }
+      });
+    }
+
     if(chips){
       chips.addEventListener('click', function(ev){
         var el = ev.target.closest('.chip');
@@ -374,6 +388,12 @@ var Views = {
           el.classList.add('is-active');
           var status = el.getAttribute('data-status');
           UI.renderAtividades(State.cache.atividades, status, listEl);
+          
+          // LINHA ADICIONADA: Atualiza contadores das categorias
+          if (typeof window.atualizarContadoresCategorias === 'function') {
+            window.atualizarContadoresCategorias();
+          }
+          
           return;
         }
 
@@ -387,6 +407,12 @@ var Views = {
           var act=document.querySelector('#chips .chip.is-active[data-status]');
           var cur=(act && act.getAttribute('data-status')) || 'todas';
           UI.renderAtividades(State.cache.atividades, cur, listEl);
+          
+          // LINHA ADICIONADA: Atualiza contadores das categorias
+          if (typeof window.atualizarContadoresCategorias === 'function') {
+            window.atualizarContadoresCategorias();
+          }
+          
           return;
         }
       });
@@ -415,6 +441,11 @@ var Views = {
                 var act=document.querySelector('#chips .chip.is-active[data-status]');
                 var cur=(act && act.getAttribute('data-status')) || 'todas';
                 UI.renderAtividades(State.cache.atividades, cur, listEl);
+                
+                // LINHA ADICIONADA: Atualiza contadores das categorias
+                if (typeof window.atualizarContadoresCategorias === 'function') {
+                  window.atualizarContadoresCategorias();
+                }
               }
             });
           }
@@ -438,35 +469,121 @@ var Views = {
       var catFilter=document.createElement('div');
       catFilter.className='categoria-atividade-filter';
 
-      var allBtn=document.createElement('div');
-      allBtn.className='categoria-atividade-filter-item is-active';
-      allBtn.setAttribute('data-categoria-atividade','todas');
-      allBtn.innerHTML='<span style="margin-right:6px;">🗂️</span>Todas';
+      // Função para contar atividades por categoria
+      function contarAtividadesPorCategoria(categoriaId) {
+        if (!State.cache || !State.cache.atividades) return 0;
+        
+        // Aplica os mesmos filtros que estão ativos na UI
+        var items = State.cache.atividades.slice();
+        
+        // Filtro de status atual
+        var statusAtivo = 'todas';
+        var chipStatusAtivo = document.querySelector('#chips .chip.is-active[data-status]');
+        if (chipStatusAtivo) {
+          statusAtivo = chipStatusAtivo.getAttribute('data-status');
+        }
+        
+        if (statusAtivo !== 'todas') {
+          items = items.filter(function(a) { 
+            return a.status === statusAtivo; 
+          });
+        }
+        
+        // Filtro "Minhas tarefas"
+        if (State.ui && State.ui.minhas) {
+          items = items.filter(function(a) { 
+            return a.uid === State.uid; 
+          });
+        }
+        
+        // Filtro por nome de usuário
+        if (State.ui && State.ui.nomeFiltro) {
+          var q = String(State.ui.nomeFiltro || '').toLowerCase();
+          items = items.filter(function(a) { 
+            return String(a.usuarioNome || '').toLowerCase().indexOf(q) >= 0; 
+          });
+        }
+        
+        // Filtro por datas selecionadas no calendário
+        if (State.ui && State.ui.dateFilter && State.ui.dateFilter.length > 0) {
+          items = items.filter(function(a) {
+            if (!a.data) return false;
+            var activityDate = null;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(a.data)) { 
+              activityDate = a.data; 
+            } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(a.data)) {
+              var parts = a.data.split('/');
+              var day = parts[0].padStart(2, '0');
+              var month = parts[1].padStart(2, '0');
+              var year = parts[2];
+              activityDate = year + '-' + month + '-' + day;
+            } else {
+              try {
+                var dateObj = new Date(a.data);
+                if (!isNaN(dateObj.getTime())) {
+                  var year = dateObj.getFullYear();
+                  var month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                  var day = dateObj.getDate().toString().padStart(2, '0');
+                  activityDate = year + '-' + month + '-' + day;
+                }
+              } catch(e) {}
+            }
+            return activityDate && State.ui.dateFilter.indexOf(activityDate) >= 0;
+          });
+        }
+        
+        // Agora filtra por categoria
+        if (categoriaId === 'todas') {
+          return items.length;
+        } else {
+          return items.filter(function(a) {
+            return (a.categoriaAtividadeId || '') === categoriaId;
+          }).length;
+        }
+      }
+
+      // Botão "Todas" com contador
+      var todasCount = contarAtividadesPorCategoria('todas');
+      var allBtn = document.createElement('div');
+      allBtn.className = 'categoria-atividade-filter-item is-active';
+      allBtn.setAttribute('data-categoria-atividade', 'todas');
+      allBtn.innerHTML = '<span style="margin-right:6px;">🗂️</span>Todas <span class="filter-count">(' + todasCount + ')</span>';
       catFilter.appendChild(allBtn);
 
-      categorias.forEach(function(cat){
-        var btn=document.createElement('div');
-        btn.className='categoria-atividade-filter-item';
+      // Botões das categorias com contadores
+      categorias.forEach(function(cat) {
+        var count = contarAtividadesPorCategoria(cat.id);
+        var btn = document.createElement('div');
+        btn.className = 'categoria-atividade-filter-item';
         btn.setAttribute('data-categoria-atividade', cat.id);
-        btn.innerHTML='<span style="color:'+ (cat.cor||'#6B7280') +';margin-right:6px;">'+ (cat.icone||'•') +'</span>'+ UI.escape(cat.nome||'');
+        btn.innerHTML = '<span style="color:' + (cat.cor || '#6B7280') + ';margin-right:6px;">' + 
+                        (cat.icone || '•') + '</span>' + UI.escape(cat.nome || '') + 
+                        ' <span class="filter-count">(' + count + ')</span>';
         catFilter.appendChild(btn);
       });
 
-      container.innerHTML='';
+      container.innerHTML = '';
       container.appendChild(catFilter);
 
-      catFilter.addEventListener('click', function(ev){
-        var item=ev.target.closest('.categoria-atividade-filter-item');
-        if(!item) return;
+      catFilter.addEventListener('click', function(ev) {
+        var item = ev.target.closest('.categoria-atividade-filter-item');
+        if (!item) return;
 
-        catFilter.querySelectorAll('.categoria-atividade-filter-item').forEach(function(el){ el.classList.remove('is-active'); });
+        catFilter.querySelectorAll('.categoria-atividade-filter-item').forEach(function(el) { 
+          el.classList.remove('is-active'); 
+        });
         item.classList.add('is-active');
 
-        State.ui.categoriaAtividadeFiltro=item.getAttribute('data-categoria-atividade') || 'todas';
+        State.ui.categoriaAtividadeFiltro = item.getAttribute('data-categoria-atividade') || 'todas';
 
-        var act=document.querySelector('#chips .chip.is-active[data-status]');
-        var cur=(act && act.getAttribute('data-status')) || 'todas';
-        UI.renderAtividades(State.cache.atividades, cur, listEl);
+        var act = document.querySelector('#chips .chip.is-active[data-status]');
+        var cur = (act && act.getAttribute('data-status')) || 'todas';
+        UI.renderAtividades(State.cache.atividades, cur, document.getElementById('list'));
+        
+        // Atualiza os contadores após aplicar o filtro
+        if (typeof window.atualizarContadoresCategorias === 'function') {
+          window.atualizarContadoresCategorias();
+        }
       });
     }
 
@@ -995,7 +1112,91 @@ if(!window.State.ui) window.State.ui={};
 window.State.ui.dateFilter=[];
 window.State.calendar=null;
 
-// Funções exemplo usadas em Menu
-window.showHelp = function(){ UI.toast('Sistema de Ajuda - Documentação em desenvolvimento'); };
-window.showAbout = function(){ UI.toast('Sistema de Atividades v2.0'); };
+
+window.atualizarContadoresCategorias = function() {
+  var filterItems = document.querySelectorAll('.categoria-atividade-filter-item');
+  
+  filterItems.forEach(function(item) {
+    var categoriaId = item.getAttribute('data-categoria-atividade');
+    var count = contarAtividadesPorCategoria(categoriaId);
+    var countSpan = item.querySelector('.filter-count');
+    if (countSpan) {
+      countSpan.textContent = '(' + count + ')';
+    }
+  });
+  
+  // Função local para contar atividades
+  function contarAtividadesPorCategoria(categoriaId) {
+    if (!State.cache || !State.cache.atividades) return 0;
+    
+    var items = State.cache.atividades.slice();
+    
+    // Filtro de status atual
+    var statusAtivo = 'todas';
+    var chipStatusAtivo = document.querySelector('#chips .chip.is-active[data-status]');
+    if (chipStatusAtivo) {
+      statusAtivo = chipStatusAtivo.getAttribute('data-status');
+    }
+    
+    if (statusAtivo !== 'todas') {
+      items = items.filter(function(a) { 
+        return a.status === statusAtivo; 
+      });
+    }
+    
+    // Filtro "Minhas tarefas"
+    if (State.ui && State.ui.minhas) {
+      items = items.filter(function(a) { 
+        return a.uid === State.uid; 
+      });
+    }
+    
+    // Filtro por nome de usuário
+    if (State.ui && State.ui.nomeFiltro) {
+      var q = String(State.ui.nomeFiltro || '').toLowerCase();
+      items = items.filter(function(a) { 
+        return String(a.usuarioNome || '').toLowerCase().indexOf(q) >= 0; 
+      });
+    }
+    
+    // Filtro por datas selecionadas no calendário
+    if (State.ui && State.ui.dateFilter && State.ui.dateFilter.length > 0) {
+      items = items.filter(function(a) {
+        if (!a.data) return false;
+        var activityDate = null;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(a.data)) { 
+          activityDate = a.data; 
+        } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(a.data)) {
+          var parts = a.data.split('/');
+          var day = parts[0].padStart(2, '0');
+          var month = parts[1].padStart(2, '0');
+          var year = parts[2];
+          activityDate = year + '-' + month + '-' + day;
+        } else {
+          try {
+            var dateObj = new Date(a.data);
+            if (!isNaN(dateObj.getTime())) {
+              var year = dateObj.getFullYear();
+              var month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+              var day = dateObj.getDate().toString().padStart(2, '0');
+              activityDate = year + '-' + month + '-' + day;
+            }
+          } catch(e) {}
+        }
+        return activityDate && State.ui.dateFilter.indexOf(activityDate) >= 0;
+      });
+    }
+    
+    // Filtra por categoria
+    if (categoriaId === 'todas') {
+      return items.length;
+    } else {
+      return items.filter(function(a) {
+        return (a.categoriaAtividadeId || '') === categoriaId;
+      }).length;
+    }
+  }
+};
+
+
 </script>
