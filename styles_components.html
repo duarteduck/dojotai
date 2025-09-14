@@ -1209,4 +1209,37 @@
   }
 }
 
+/* CSS para o wrapper do calendário */
+#calendar-wrapper {
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+/* Calendário compacto */
+#calendar {
+  max-width: 320px;
+  margin: 0 auto 16px;
+}
+
+/* Botão do calendário ativo */
+#chip-calendar.is-active {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
+
+/* Responsivo - calendário em mobile */
+@media (max-width: 768px) {
+  #calendar {
+    max-width: 100%;
+    margin: 0 0 16px 0;
+  }
+  
+  .calendar-container {
+    width: 100% !important;
+    max-width: 350px;
+    margin: 0 auto;
+  }
+}
+
 </style>

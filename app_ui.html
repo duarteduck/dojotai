@@ -399,22 +399,34 @@ var Views = {
         var wrap=document.getElementById('calendar-wrapper');
         if(!wrap) return;
         var isVisible = wrap.style.display !== 'none';
-        wrap.style.display = isVisible ? 'none' : 'block';
-        chipCalendar.classList.toggle('is-active', !isVisible);
-      });
-    }
-
-    // filtro por nome
-    if(inpFiltro){
-      inpFiltro.addEventListener('input', function(){
-        State.ui.nomeFiltro=(inpFiltro.value||'').trim();
-        if(State.ui.nomeFiltro && State.ui.minhas){
-          State.ui.minhas=false;
-          if(chipMinhas) chipMinhas.classList.remove('is-active');
+        
+        if(!isVisible) {
+          // Mostrar calendário
+          wrap.style.display = 'block';
+          chipCalendar.classList.add('is-active');
+          
+          // Criar calendário se ainda não existe
+          var calContainer = document.querySelector('#calendar');
+          if(calContainer && !window.State.calendar) {
+            window.State.calendar = new ActivityCalendar('#calendar', {
+              activities: State.cache.atividades || [],
+              onSelectionChange: function(dates){
+                State.ui.dateFilter = dates;
+                var act=document.querySelector('#chips .chip.is-active[data-status]');
+                var cur=(act && act.getAttribute('data-status')) || 'todas';
+                UI.renderAtividades(State.cache.atividades, cur, listEl);
+              }
+            });
+          }
+          // Atualizar atividades se o calendário já existe
+          else if(window.State.calendar && window.State.calendar.setActivities) {
+            window.State.calendar.setActivities(State.cache.atividades || []);
+          }
+        } else {
+          // Ocultar calendário
+          wrap.style.display = 'none';
+          chipCalendar.classList.remove('is-active');
         }
-        var act=document.querySelector('#chips .chip.is-active[data-status]');
-        var cur=(act && act.getAttribute('data-status')) || 'todas';
-        UI.renderAtividades(State.cache.atividades, cur, listEl);
       });
     }
 
@@ -480,19 +492,6 @@ var Views = {
 
       UI.renderAtividades(State.cache.atividades, 'pendente', listEl);
 
-      // (Re)cria/atualiza calendário se existir container
-      var calContainer = document.querySelector('#calendar');
-      if(calContainer){
-        window.State.calendar = new ActivityCalendar('#calendar', {
-          activities: State.cache.atividades,
-          onSelectionChange: function(dates){
-            State.ui.dateFilter = dates;
-            var act=document.querySelector('#chips .chip.is-active[data-status]');
-            var cur=(act && act.getAttribute('data-status')) || 'todas';
-            UI.renderAtividades(State.cache.atividades, cur, listEl);
-          }
-        });
-      }
     }).catch(function(e){
       console.error('[dash] erro ao carregar dados',e);
       UI.toast('Falha ao carregar dados','err');
