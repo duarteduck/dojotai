@@ -1701,4 +1701,290 @@
   }
 }
 
+<!-- Adicione estas regras no FINAL do styles_components.html -->
+
+/* ===== CALENDÁRIO MOBILE - VERSÃO MELHORADA ===== */
+
+/* Base do calendário - agora mais flexível */
+.calendar-container {
+  width: 100%; /* Mudança: era 260px fixo */
+  max-width: 350px; /* Limita em telas grandes */
+  background: #fff;
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px; /* Reduzido de 6px */
+  padding: 0;
+  margin: 0 auto 16px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px; /* Aumentado de 12px */
+}
+
+/* Cabeçalho do calendário */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f5f5f5;
+  padding: 8px 12px; /* Aumentado de 4px 6px */
+  font-size: 13px; /* Aumentado de 12px */
+}
+
+.calendar-nav {
+  display: flex;
+  gap: 8px; /* Aumentado de 4px */
+}
+
+.calendar-nav button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px; /* Aumentado de 12px */
+  padding: 4px 8px; /* Aumentado de 2px 6px */
+  min-width: 32px; /* Novo: melhor área de toque */
+  min-height: 32px; /* Novo: melhor área de toque */
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.calendar-nav button:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+.calendar-month-year {
+  font-size: 14px; /* Aumentado de 12px */
+  font-weight: 700; /* Aumentado de 600 */
+}
+
+/* Grid de dias - melhorado para mobile */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px; /* Aumentado de 1px */
+  background: #ddd;
+  padding: 2px; /* Novo: padding interno */
+}
+
+.calendar-weekday {
+  text-align: center;
+  padding: 8px 4px; /* Aumentado de 3px 0 */
+  font-size: 12px; /* Aumentado de 11px */
+  font-weight: 700; /* Aumentado de 600 */
+  background: #f9f9f9;
+  min-height: 32px; /* Novo: altura mínima */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-day {
+  text-align: center;
+  padding: 12px 4px; /* Aumentado de 6px 0 */
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px; /* Aumentado de 12px */
+  min-height: 40px; /* Aumentado de ~24px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.calendar-day:hover { 
+  background: #f0f7ff; 
+  transform: scale(1.05); /* Novo: feedback visual */
+}
+
+.calendar-day:active {
+  transform: scale(0.95); /* Novo: feedback de toque */
+}
+
+/* Estados dos dias */
+.calendar-day.today { 
+  background: #eaf4ff; 
+  font-weight: bold; 
+  border: 2px solid #007AFF; /* Novo: borda destacada */
+}
+
+.calendar-day.selected { 
+  background: #007AFF; /* Mudança: cor mais forte */
+  color: white;
+  font-weight: bold;
+}
+
+.calendar-day.other-month { 
+  color: #aaa; 
+  background: #fafafa; 
+}
+
+.calendar-day.has-activity::after {
+  content: '';
+  display: block;
+  width: 6px; /* Aumentado de 4px */
+  height: 6px; /* Aumentado de 4px */
+  position: absolute;
+  bottom: 4px;
+  right: 50%;
+  transform: translateX(50%);
+  background: #ff4444;
+  border-radius: 50%;
+}
+
+/* ===== MOBILE SPECIFIC ===== */
+
+/* Dispositivos móveis reais */
+@media (max-width: 768px) {
+  .calendar-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 0 16px 0;
+    border-radius: 12px; /* Mais arredondado no mobile */
+  }
+  
+  .calendar-header {
+    padding: 12px 16px; /* Mais generoso */
+    font-size: 14px;
+  }
+  
+  .calendar-nav button {
+    min-width: 40px; /* Área de toque maior */
+    min-height: 40px;
+    font-size: 16px;
+  }
+  
+  .calendar-month-year {
+    font-size: 15px;
+  }
+  
+  .calendar-grid {
+    gap: 3px; /* Mais espaço entre cells */
+    padding: 3px;
+  }
+  
+  .calendar-weekday {
+    padding: 10px 4px;
+    font-size: 13px;
+    min-height: 36px;
+  }
+  
+  .calendar-day {
+    padding: 16px 4px; /* Mais área de toque */
+    font-size: 14px;
+    min-height: 48px; /* Altura confortável para toque */
+    font-weight: 500;
+  }
+  
+  .calendar-day.has-activity::after {
+    width: 7px;
+    height: 7px;
+    bottom: 6px;
+  }
+}
+
+/* Dispositivos muito pequenos */
+@media (max-width: 360px) {
+  .calendar-day {
+    min-height: 44px;
+    font-size: 13px;
+  }
+  
+  .calendar-weekday {
+    min-height: 32px;
+    font-size: 12px;
+  }
+}
+
+/* ===== FORÇA MOBILE NO IFRAME 980px ===== */
+
+/* Quando detecta iframe + touch + device pequeno */
+.force-mobile .calendar-container {
+  width: 100% !important;
+  max-width: none !important;
+  font-size: 14px !important;
+}
+
+.force-mobile .calendar-day {
+  min-height: 50px !important; /* Extra confortável */
+  font-size: 15px !important;
+  padding: 18px 4px !important;
+}
+
+.force-mobile .calendar-weekday {
+  min-height: 38px !important;
+  font-size: 14px !important;
+  padding: 12px 4px !important;
+}
+
+.force-mobile .calendar-nav button {
+  min-width: 44px !important;
+  min-height: 44px !important;
+  font-size: 18px !important;
+}
+
+.force-mobile .calendar-header {
+  padding: 14px 18px !important;
+}
+
+.force-mobile .calendar-month-year {
+  font-size: 16px !important;
+}
+
+/* Dispositivos touch em geral (cinto de segurança) */
+@media (pointer: coarse) {
+  .calendar-day {
+    min-height: 46px;
+    font-size: 14px;
+    padding: 15px 4px;
+  }
+  
+  .calendar-nav button {
+    min-width: 42px;
+    min-height: 42px;
+  }
+  
+  .calendar-container {
+    border-radius: 10px;
+  }
+}
+
+/* ===== DARK MODE ===== */
+@media (prefers-color-scheme: dark) {
+  .calendar-container {
+    background: var(--card, #1f2937);
+    border-color: var(--border, #374151);
+  }
+  
+  .calendar-header {
+    background: var(--bg-subtle, #374151);
+  }
+  
+  .calendar-weekday {
+    background: var(--bg-subtle, #374151);
+    color: var(--fg, #f9fafb);
+  }
+  
+  .calendar-day {
+    background: var(--card, #1f2937);
+    color: var(--fg, #f3f4f6);
+  }
+  
+  .calendar-day:hover {
+    background: var(--btn-hover-bg, #374151);
+  }
+  
+  .calendar-day.today {
+    background: #1e3a8a;
+    color: #e0e7ff;
+    border-color: #3b82f6;
+  }
+  
+  .calendar-day.selected {
+    background: #3b82f6;
+    color: white;
+  }
+  
+  .calendar-day.other-month {
+    color: #6b7280;
+    background: var(--bg-subtle, #374151);
+  }
+}
 </style>
