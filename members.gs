@@ -321,3 +321,29 @@ function getFullTableValuesMembros_(ctx) {
   const rng = sh.getRange(startRow, startCol, lastRow - startRow + 1, width);
   return rng.getValues();
 }
+
+function testeMembros() {
+  console.log('=== TESTE API MEMBROS ===');
+  
+  // Teste 1: Listar membros
+  console.log('1. Testando listMembersApi()...');
+  const result = listMembersApi();
+  console.log('Resultado:', result);
+  
+  if (result.ok) {
+    console.log(`✅ Sucesso! Encontrados ${result.items.length} membros`);
+    console.log('Primeiro membro:', result.items[0]);
+  } else {
+    console.log('❌ Erro:', result.error);
+  }
+  
+  // Teste 2: Buscar membro específico (se houver)
+  if (result.ok && result.items.length > 0) {
+    console.log('\n2. Testando getMemberById()...');
+    const firstId = result.items[0].id;
+    const member = getMemberById(firstId);
+    console.log('Membro encontrado:', member);
+  }
+  
+  console.log('\n=== FIM DOS TESTES ===');
+}
