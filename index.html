@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Dojotai</title>
   <style>
     <?!= include('styles_base'); ?>
@@ -19,6 +19,8 @@
   <template id="tpl-activity-card"><?!= include('view_component_activityCard'); ?></template>
   <template id="tpl-empty"><?!= include('view_component_emptyState'); ?></template>
   <template id="tpl-toast"><?!= include('view_component_toast'); ?></template>
+  <template id="tpl-members"><?!= include('view_members_list'); ?></template>
+  <template id="tpl-member-card"><?!= include('view_component_memberCard'); ?></template>
 
   <!-- Scripts (estado, api, ui, router) -->
   <?!= include('app_state'); ?>
@@ -26,10 +28,10 @@
   <?!= include('app_ui'); ?>
   <?!= include('app_router'); ?>
   
-  <script>
-    // Bootstrap após DOM (evita race em alguns devices/iframes)
-    document.addEventListener('DOMContentLoaded', () => Router.start(), { once:true });
-  </script>
+<script>
+  // Bootstrap após DOM (evita race em alguns devices/iframes)
+  document.addEventListener('DOMContentLoaded', () => Router.start(), { once:true });
+</script>
 
   <script>
     // Ajuste de 100vh no mobile
@@ -117,199 +119,6 @@
     applyAutoRem();
   })();
   </script>
-
-  <!-- ===== NOVO: SCRIPT AVANÇADO DE DETECÇÃO DO IFRAME 980px ===== -->
-  <script>
-  (() => {
-    // ===== SISTEMA AVANÇADO DE DETECÇÃO DO IFRAME 980px =====
-    
-    function detectAndFixMobile() {
-      const root = document.documentElement;
-      
-      // Detecções básicas
-      const inIframe = (window.top !== window.self);
-      const isTouch = matchMedia('(pointer: coarse)').matches;
-      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      
-      // Dimensões reais vs CSS
-      const screenRealW = Math.min(screen.width, screen.height); // Menor dimensão real
-      const viewportW = window.innerWidth;
-      const documentW = document.documentElement.clientWidth;
-      
-      // Detecção específica do iframe 980px do Apps Script
-      const looks980 = viewportW === 980 || documentW === 980;
-      const bigViewportSmallScreen = viewportW >= 700 && screenRealW <= 480;
-      
-      // User agent mobile
-      const mobileUA = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      // Combinações que indicam iframe 980px problemático
-      const isProblematic = inIframe && (isTouch || hasTouch || mobileUA) && 
-                            (looks980 || bigViewportSmallScreen);
-      
-      // Aplica classes
-      root.classList.toggle('force-mobile', isProblematic);
-      root.classList.toggle('in-iframe', inIframe);
-      root.classList.toggle('has-touch', isTouch || hasTouch);
-      root.classList.toggle('mobile-ua', mobileUA);
-      
-      // Debug info (remova em produção)
-      if (isProblematic) {
-        console.log('🔧 Mobile Fix Aplicado:', {
-          iframe: inIframe,
-          touch: isTouch || hasTouch,
-          screenReal: screenRealW,
-          viewport: viewportW,
-          userAgent: mobileUA
-        });
-      }
-      
-      // Força redimensionamento do calendário
-      if (isProblematic) {
-        requestAnimationFrame(() => {
-          const calendar = document.querySelector('.calendar-container');
-          if (calendar) {
-            calendar.style.width = '100%';
-            calendar.style.maxWidth = 'none';
-          }
-        });
-      }
-    }
-    
-    // ===== AUTO-AJUSTE DE FONT-SIZE PARA COMPENSAR 980px =====
-    
-    function autoAdjustFontSize() {
-      const root = document.documentElement;
-      const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-      const screenCSS = Math.min(screen.width, screen.height) || 480;
-      const layoutW = window.innerWidth || 980;
-      const inIframe = (window.top !== window.self);
-      
-      // Fator de compressão (quanto o layout está "espremido")
-      const squeezeFactor = Math.max(1, layoutW / screenCSS);
-      const needsCompensation = isTouch && inIframe && squeezeFactor > 1.2;
-      
-      if (needsCompensation) {
-        // Calcula font-size compensado
-        const baseFontSize = 16;
-        const compensatedSize = Math.min(baseFontSize * squeezeFactor * 0.8, 28);
-        
-        root.style.setProperty('font-size', compensatedSize + 'px', 'important');
-        
-        // Ajustes específicos para componentes críticos
-        setTimeout(() => {
-          const style = document.createElement('style');
-          style.textContent = `
-            .force-mobile .calendar-day {
-              font-size: ${Math.min(compensatedSize * 0.9, 18)}px !important;
-              min-height: ${Math.min(compensatedSize * 3, 60)}px !important;
-            }
-            .force-mobile .btn {
-              font-size: ${Math.min(compensatedSize * 0.95, 20)}px !important;
-              min-height: ${Math.min(compensatedSize * 3.2, 56)}px !important;
-            }
-          `;
-          document.head.appendChild(style);
-        }, 100);
-      }
-    }
-    
-    // ===== OBSERVADOR DE MUDANÇAS DE VIEWPORT =====
-    
-    let resizeTimeout;
-    function handleResize() {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        detectAndFixMobile();
-        autoAdjustFontSize();
-      }, 100);
-    }
-    
-    // ===== INICIALIZAÇÃO E EVENTOS =====
-    
-    // Executa imediatamente
-    detectAndFixMobile();
-    autoAdjustFontSize();
-    
-    // Monitora mudanças
-    window.addEventListener('resize', handleResize, { passive: true });
-    window.addEventListener('orientationchange', () => {
-      setTimeout(() => {
-        detectAndFixMobile();
-        autoAdjustFontSize();
-      }, 200);
-    });
-    
-    // Monitora mudanças no DOM (útil quando o calendário é criado dinamicamente)
-    const observer = new MutationObserver((mutations) => {
-      let shouldRecheck = false;
-      mutations.forEach(mutation => {
-        if (mutation.type === 'childList') {
-          const addedNodes = Array.from(mutation.addedNodes);
-          if (addedNodes.some(node => 
-            node.nodeType === 1 && 
-            (node.classList?.contains('calendar-container') || 
-             node.querySelector?.('.calendar-container'))
-          )) {
-            shouldRecheck = true;
-          }
-        }
-      });
-      
-      if (shouldRecheck) {
-        setTimeout(detectAndFixMobile, 50);
-      }
-    });
-    
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-    
-  })();
-  </script>
-
-  <!-- ===== NOVO: CSS ADICIONAL PARA CALENDÁRIO RESPONSIVO ===== -->
-  <style>
-  /* Força calendário responsivo em qualquer situação */
-  .calendar-responsive-override {
-    width: 100% !important;
-    max-width: none !important;
-  }
-
-  /* Container wrapper para o calendário */
-  #calendar-wrapper {
-    width: 100%;
-    overflow: hidden;
-  }
-
-  #calendar-wrapper .calendar-container {
-    margin: 0 auto;
-  }
-
-  /* Força mobile quando necessário */
-  @media screen and (max-device-width: 768px) {
-    .calendar-container {
-      width: 100% !important;
-      max-width: none !important;
-    }
-  }
-
-  /* Fallback absoluto para iframe problemático */
-  .force-mobile #calendar-wrapper,
-  .force-mobile .calendar-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Melhora a responsividade geral */
-  .force-mobile .container {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-    max-width: 100% !important;
-  }
-  </style>
 
 </body>
 </html>
