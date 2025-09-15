@@ -815,6 +815,413 @@ var Views = {
       });
     };
   }
+  
+};
+
+/* ===========================
+   SISTEMA DE MEMBROS - UI
+   =========================== */
+
+// Adicionar ao objeto Views em app_ui.html
+
+Views.initMembers = function() {
+  if (!window.State) {
+    window.State = { 
+      uid: localStorage.getItem('uid'),
+      cache: { atividades: [], membros: [] }, 
+      ui: { membros: { filtros: {}, busca: '' } } 
+    };
+  }
+  
+  if (!State.cache) State.cache = { atividades: [], membros: [] };
+  if (!State.ui.membros) State.ui.membros = { filtros: {}, busca: '' };
+
+  var listEl = document.getElementById('members-list');
+  var searchEl = document.getElementById('members-search');
+  var filtersEl = document.getElementById('members-filters');
+  var summaryEl = document.getElementById('members-summary');
+  var btnBack = document.getElementById('btn-members-back');
+  var btnStats = document.getElementById('btn-members-stats');
+  var btnLink = document.getElementById('btn-members-link');
+
+  if (!listEl) return;
+
+  // Botão voltar
+  if (btnBack) {
+    btnBack.addEventListener('click', function() {
+      Router.go('#/dash');
+    });
+  }
+
+  // Busca em tempo real
+  if (searchEl) {
+    searchEl.addEventListener('input', function() {
+      State.ui.membros.busca = this.value.toLowerCase();
+      renderMembersList();
+    });
+  }
+
+  // Filtros
+  if (filtersEl) {
+    filtersEl.addEventListener('click', function(ev) {
+      var chip = ev.target.closest('.chip');
+      if (!chip) return;
+
+      // Status filters
+      if (chip.hasAttribute('data-status')) {
+        filtersEl.querySelectorAll('.chip[data-status]').forEach(function(c) {
+          c.classList.remove('is-active');
+        });
+        chip.classList.add('is-active');
+        State.ui.membros.filtros.status = chip.getAttribute('data-status');
+        renderMembersList();
+        return;
+      }
+
+      // Dojo filters
+      if (chip.hasAttribute('data-dojo')) {
+        filtersEl.querySelectorAll('.chip[data-dojo]').forEach(function(c) {
+          c.classList.remove('is-active');
+        });
+        chip.classList.add('is-active');
+        State.ui.membros.filtros.dojo = chip.getAttribute('data-dojo');
+        renderMembersList();
+        return;
+      }
+
+      // Grupo filters
+      if (chip.hasAttribute('data-grupo')) {
+        filtersEl.querySelectorAll('.chip[data-grupo]').forEach(function(c) {
+          c.classList.remove('is-active');
+        });
+        chip.classList.add('is-active');
+        State.ui.membros.filtros.grupo = chip.getAttribute('data-grupo');
+        renderMembersList();
+        return;
+      }
+    });
+  }
+
+  // Delegação de eventos para ações dos cards
+  if (listEl) {
+    listEl.addEventListener('click', function(ev) {
+      var btn = ev.target.closest('button');
+      if (!btn) return;
+
+      var memberId = btn.getAttribute('data-member-id');
+      if (!memberId) return;
+
+      if (btn.classList.contains('btn-view')) {
+        Router.go('#/member?id=' + encodeURIComponent(memberId));
+        return;
+      }
+
+      if (btn.classList.contains('btn-link')) {
+        // TODO: Abrir modal de vinculação
+        UI.toast('Funcionalidade de vinculação em desenvolvimento');
+        return;
+      }
+
+      if (btn.classList.contains('btn-unlink')) {
+        var userUid = btn.getAttribute('data-user-uid');
+        if (confirm('Tem certeza que deseja desvincular este membro?')) {
+          // TODO: Implementar desvinculação
+          UI.toast('Desvinculação em desenvolvimento');
+        }
+        return;
+      }
+    });
+  }
+
+  // Carregamento inicial
+  loadMembers();
+
+  function loadMembers() {
+    if (listEl) UI.renderMembersSkeleton(listEl);
+    if (summaryEl) updateSummary({ total: '-', ativos: '-', vinculados: '-', naoVinculados: '-' });
+
+    API.listMembers().then(function(members) {
+      State.cache.membros = members || [];
+      createDynamicFilters();
+      renderMembersList();
+      updateSummary();
+    }).catch(function(err) {
+      console.error('[Members] Erro ao carregar:', err);
+      UI.toast('Falha ao carregar membros', 'err');
+      if (listEl) listEl.innerHTML = '<div class="members-empty"><div class="members-empty-icon">😔</div><div class="members-empty-text">Erro ao carregar membros</div></div>';
+    });
+  }
+
+  function createDynamicFilters() {
+    var members = State.cache.membros || [];
+    
+    // Extrair dojos únicos
+    var dojos = ['todos'];
+    var grupos = ['todos'];
+    
+    members.forEach(function(m) {
+      if (m.dojo && dojos.indexOf(m.dojo) === -1) dojos.push(m.dojo);
+      if (m.categoria_grupo && grupos.indexOf(m.categoria_grupo) === -1) grupos.push(m.categoria_grupo);
+    });
+
+    // Criar chips de dojo
+    dojos.forEach(function(dojo) {
+      var existingChip = document.querySelector('[data-dojo="' + dojo + '"]');
+      if (!existingChip && dojo !== 'todos') {
+        var chip = document.createElement('div');
+        chip.className = 'chip visible';
+        chip.setAttribute('data-dojo', dojo);
+        chip.textContent = dojo;
+        filtersEl.appendChild(chip);
+      }
+    });
+
+    // Criar chips de grupo
+    grupos.forEach(function(grupo) {
+      var existingChip = document.querySelector('[data-grupo="' + grupo + '"]');
+      if (!existingChip && grupo !== 'todos') {
+        var chip = document.createElement('div');
+        chip.className = 'chip visible';
+        chip.setAttribute('data-grupo', grupo);
+        chip.textContent = grupo;
+        filtersEl.appendChild(chip);
+      }
+    });
+  }
+
+  function renderMembersList() {
+    var members = State.cache.membros || [];
+    var filtros = State.ui.membros.filtros;
+    var busca = State.ui.membros.busca;
+
+    // Aplicar filtros
+    var filtered = members.filter(function(m) {
+      // Filtro de status
+      if (filtros.status && filtros.status !== 'todos') {
+        var status = m.status.toLowerCase();
+        if (filtros.status !== status) return false;
+      }
+
+      // Filtro de dojo
+      if (filtros.dojo && filtros.dojo !== 'todos') {
+        if (m.dojo !== filtros.dojo) return false;
+      }
+
+      // Filtro de grupo
+      if (filtros.grupo && filtros.grupo !== 'todos') {
+        if (m.categoria_grupo !== filtros.grupo) return false;
+      }
+
+      // Busca por nome
+      if (busca) {
+        if (m.nome.toLowerCase().indexOf(busca) === -1) return false;
+      }
+
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="members-empty"><div class="members-empty-icon">🔍</div><div class="members-empty-text">Nenhum membro encontrado com esses filtros</div></div>';
+      return;
+    }
+
+    // Renderizar cards
+    listEl.innerHTML = '';
+    filtered.forEach(function(member) {
+      var card = createMemberCard(member);
+      listEl.appendChild(card);
+    });
+  }
+
+  function createMemberCard(member) {
+    var template = document.getElementById('tpl-member-card');
+    if (!template) {
+      console.error('Template tpl-member-card não encontrado');
+      return document.createElement('div');
+    }
+
+    var html = template.innerHTML;
+    
+    // Dados básicos
+    var avatarText = member.nome.split(' ').map(function(n) { return n[0]; }).join('').substr(0, 2).toUpperCase();
+    var statusClass = member.status.toLowerCase();
+    var statusLabel = member.status;
+
+    // Dados condicionais
+    var hasGrau = !!(member.grau_omitama && member.grau_omitama.trim());
+    var hasCargo = !!(member.cargo && member.cargo.trim());
+    var hasGrupo = !!(member.categoria_grupo && member.categoria_grupo.trim());
+    var hasSexo = !!(member.sexo && member.sexo.trim());
+    var hasIdade = !!(member.idade && member.idade > 0);
+    var hasBuntai = !!(member.buntai && member.buntai.trim());
+    var hasPersonalInfo = hasSexo || hasIdade || hasBuntai;
+
+    // Status de vinculação
+    var isLinked = !!(member.usuario_uid && member.usuario_uid.trim());
+    var isUnlinked = !isLinked;
+    var usuario_nome = isLinked ? (getUserNameByUid(member.usuario_uid) || member.usuario_uid) : '';
+
+    // Sexo formatado
+    var sexoLabel = '';
+    if (hasSexo) {
+      sexoLabel = member.sexo.toUpperCase() === 'M' ? 'Masculino' : 
+                  member.sexo.toUpperCase() === 'F' ? 'Feminino' : member.sexo;
+    }
+
+    // Substituições
+    var replacements = {
+      'id': UI.escape(member.id || ''),
+      'nome': UI.escape(member.nome || ''),
+      'avatarText': avatarText,
+      'grau_omitama': UI.escape(member.grau_omitama || ''),
+      'cargo': UI.escape(member.cargo || ''),
+      'dojo': UI.escape(member.dojo || ''),
+      'categoria_grupo': UI.escape(member.categoria_grupo || ''),
+      'status': UI.escape(member.status || ''),
+      'statusClass': statusClass,
+      'statusLabel': statusLabel,
+      'sexoLabel': sexoLabel,
+      'idade': member.idade || 0,
+      'buntai': UI.escape(member.buntai || ''),
+      'usuario_uid': UI.escape(member.usuario_uid || ''),
+      'usuario_nome': UI.escape(usuario_nome)
+    };
+
+    // Replace all placeholders
+    Object.keys(replacements).forEach(function(key) {
+      var regex = new RegExp('{{' + key + '}}', 'g');
+      html = html.replace(regex, replacements[key]);
+    });
+
+    // Conditional blocks
+    html = toggleBlock(html, 'hasGrau', hasGrau);
+    html = toggleBlock(html, 'hasCargo', hasCargo);
+    html = toggleBlock(html, 'hasGrupo', hasGrupo);
+    html = toggleBlock(html, 'hasSexo', hasSexo);
+    html = toggleBlock(html, 'hasIdade', hasIdade);
+    html = toggleBlock(html, 'hasBuntai', hasBuntai);
+    html = toggleBlock(html, 'hasPersonalInfo', hasPersonalInfo);
+    html = toggleBlock(html, 'isLinked', isLinked);
+    html = toggleBlock(html, 'isUnlinked', isUnlinked);
+    html = toggleBlock(html, 'canEdit', true); // Por enquanto todos podem editar
+
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    return wrapper.firstElementChild;
+  }
+
+  function toggleBlock(html, blockName, show) {
+    var regex = new RegExp('{{#' + blockName + '}}([\\s\\S]*?){{\\/' + blockName + '}}', 'g');
+    return html.replace(regex, show ? '$1' : '');
+  }
+
+  function getUserNameByUid(uid) {
+    // TODO: Implementar cache de usuários
+    // Por enquanto retorna o próprio UID
+    return uid;
+  }
+
+  function updateSummary(custom) {
+    if (!summaryEl) return;
+
+    var stats = custom || calculateStats();
+    
+    var totalEl = document.getElementById('total-members');
+    var activeEl = document.getElementById('active-members');
+    var linkedEl = document.getElementById('linked-members');
+    var unlinkedEl = document.getElementById('unlinked-members');
+
+    if (totalEl) totalEl.textContent = stats.total;
+    if (activeEl) activeEl.textContent = stats.ativos;
+    if (linkedEl) linkedEl.textContent = stats.vinculados;
+    if (unlinkedEl) unlinkedEl.textContent = stats.naoVinculados;
+  }
+
+  function calculateStats() {
+    var members = State.cache.membros || [];
+    
+    var total = members.length;
+    var ativos = members.filter(function(m) { return m.status.toLowerCase() === 'ativo'; }).length;
+    var vinculados = members.filter(function(m) { return m.usuario_uid && m.usuario_uid.trim(); }).length;
+    var naoVinculados = total - vinculados;
+
+    return { total: total, ativos: ativos, vinculados: vinculados, naoVinculados: naoVinculados };
+  }
+};
+
+UI.renderMembersSkeleton = function(el) {
+  el.innerHTML = '';
+  el.className = 'members-loading';
+  
+  for (var i = 0; i < 6; i++) {
+    var skeleton = document.createElement('div');
+    skeleton.className = 'member-skeleton';
+    el.appendChild(skeleton);
+  }
+  
+  setTimeout(function() {
+    if (el) el.className = 'row';
+  }, 100);
+};
+
+API.listMembers = function() {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.ok) {
+          resolve(res.items || []);
+        } else {
+          reject((res && res.error) || 'Falha ao listar membros');
+        }
+      })
+      .withFailureHandler(reject)
+      .listMembersApi();
+  });
+};
+
+API.getMember = function(id) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.ok) {
+          resolve(res.item || null);
+        } else {
+          reject((res && res.error) || 'Membro não encontrado');
+        }
+      })
+      .withFailureHandler(reject)
+      .getMemberById(id);
+  });
+};
+
+API.searchMembers = function(filters) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.ok) {
+          resolve(res.items || []);
+        } else {
+          reject((res && res.error) || 'Falha na busca');
+        }
+      })
+      .withFailureHandler(reject)
+      .searchMembers(filters);
+  });
+};
+
+API.linkMemberToUser = function(memberId, usuarioUid) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.ok) {
+          resolve(res);
+        } else {
+          reject((res && res.error) || 'Falha na vinculação');
+        }
+      })
+      .withFailureHandler(reject)
+      .linkMemberToUser(memberId, usuarioUid, State.uid);
+  });
 };
 
 /* ===========================

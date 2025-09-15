@@ -1,0 +1,71 @@
+<div class="card member" data-id="{{id}}" data-status="{{status}}">
+  <div class="member-header">
+    <div class="member-avatar">
+      <span class="member-avatar-text">{{avatarText}}</span>
+    </div>
+    <div class="member-info">
+      <div class="member-name">{{id}} - {{nome}}</div>
+      <div class="member-details">
+        {{#hasGrau}}
+        <span class="member-grau">🥋 {{grau_omitama}}</span>
+        {{/hasGrau}}
+        {{#hasCargo}}
+        <span class="member-cargo">• {{cargo}}</span>
+        {{/hasCargo}}
+      </div>
+      <div class="member-org">
+        <span class="member-dojo">🏢 {{dojo}}</span>
+        {{#hasGrupo}}
+        <span class="member-grupo">• {{categoria_grupo}}</span>
+        {{/hasGrupo}}
+      </div>
+    </div>
+    <div class="member-status">
+      <span class="chip {{statusClass}}">{{statusLabel}}</span>
+    </div>
+  </div>
+
+  <div class="member-body">
+    {{#hasPersonalInfo}}
+    <div class="member-personal">
+      {{#hasSexo}}
+      <span class="member-detail">{{sexoLabel}}</span>
+      {{/hasSexo}}
+      {{#hasIdade}}
+      <span class="member-detail">• {{idade}} anos</span>
+      {{/hasIdade}}
+      {{#hasBuntai}}
+      <span class="member-detail">• {{buntai}}</span>
+      {{/hasBuntai}}
+    </div>
+    {{/hasPersonalInfo}}
+
+    <div class="member-link-status">
+      {{#isLinked}}
+      <div class="member-linked">
+        <span class="link-icon">👤</span>
+        <span class="link-text">Usuário: {{usuario_nome}}</span>
+        <button class="btn-small btn-unlink" data-member-id="{{id}}" data-user-uid="{{usuario_uid}}">
+          🔗 Desvincular
+        </button>
+      </div>
+      {{/isLinked}}
+      {{#isUnlinked}}
+      <div class="member-unlinked">
+        <span class="link-icon">❌</span>
+        <span class="link-text">Sem usuário vinculado</span>
+        <button class="btn-small btn-link" data-member-id="{{id}}">
+          🔗 Vincular
+        </button>
+      </div>
+      {{/isUnlinked}}
+    </div>
+  </div>
+
+  <div class="member-actions">
+    <button class="btn-small btn-view" data-member-id="{{id}}">👁️ Ver</button>
+    {{#canEdit}}
+    <button class="btn-small btn-edit" data-member-id="{{id}}">✏️ Editar</button>
+    {{/canEdit}}
+  </div>
+</div>

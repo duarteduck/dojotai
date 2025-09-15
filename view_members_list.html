@@ -1,0 +1,47 @@
+<div class="container" data-view="members">
+  <div class="dash-header">
+    <h2>👥 Membros</h2>
+    <div class="dash-actions">
+      <button class="btn" id="btn-members-stats">📊 Stats</button>
+      <button class="btn" id="btn-members-link">🔗 Vincular</button>
+      <button class="btn" id="btn-members-back">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- Filtros e busca -->
+  <div class="chips" id="members-filters">
+    <div class="chip is-active" data-status="todos">Todos</div>
+    <div class="chip" data-status="ativo">Ativos</div>
+    <div class="chip" data-status="inativo">Inativos</div>
+    <span class="chip-sep"></span>
+    <div class="chip" data-dojo="todos">Todos Dojos</div>
+    <div class="chip" data-grupo="todos">Todos Grupos</div>
+  </div>
+
+  <div class="filter-row">
+    <input id="members-search" class="input" placeholder="🔍 Buscar membros por nome..." />
+  </div>
+
+  <!-- Resumo -->
+  <div class="members-summary" id="members-summary">
+    <div class="summary-item">
+      <span class="summary-number" id="total-members">-</span>
+      <span class="summary-label">Total</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-number" id="active-members">-</span>
+      <span class="summary-label">Ativos</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-number" id="linked-members">-</span>
+      <span class="summary-label">Vinculados</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-number" id="unlinked-members">-</span>
+      <span class="summary-label">Sem Usuário</span>
+    </div>
+  </div>
+
+  <!-- Lista de membros -->
+  <div id="members-list" class="row"></div>
+</div>
