@@ -1,20 +1,30 @@
-param(
-    [Parameter(Mandatory=$true)]
-    [string]$Message
-)
+Write-Host "Deploy Dojotai (sem duplicacao)..." -ForegroundColor Green
 
-Write-Host "🚀 Iniciando deploy do Dojotai..." -ForegroundColor Blue
+# Verifica se ha mudancas nao commitadas
+$status = git status --porcelain
+if ($status) {
+    Write-Host "ERRO: Ha mudancas nao commitadas!" -ForegroundColor Red
+    Write-Host "   > Faca o commit primeiro no VS Code" -ForegroundColor Yellow
+    Write-Host "   > Depois rode este script novamente" -ForegroundColor Yellow
+    exit 1
+}
 
-Write-Host "📝 Fazendo commit..." -ForegroundColor Blue
-git add .
-git commit -m $Message
+Write-Host "Tudo commitado. Prosseguindo com deploy..." -ForegroundColor Green
 
-Write-Host "📤 Enviando para Google Apps Script..." -ForegroundColor Blue
+Write-Host "Enviando para Google Apps Script..." -ForegroundColor Blue
 clasp push
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Erro no clasp push" -ForegroundColor Red
+    exit 1
+}
 
-Write-Host "💾 Fazendo backup no GitHub..." -ForegroundColor Blue
+Write-Host "Sincronizando com GitHub..." -ForegroundColor Blue
 git push github main
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Erro no push GitHub" -ForegroundColor Red
+    exit 1
+}
 
-Write-Host "✅ Deploy completo!" -ForegroundColor Green
-Write-Host "   - Google Apps Script atualizado" -ForegroundColor Green
-Write-Host "   - GitHub sincronizado" -ForegroundColor Green
+Write-Host "Deploy completo!" -ForegroundColor Green
+Write-Host "   - Google Apps Script atualizado" -ForegroundColor Gray
+Write-Host "   - GitHub sincronizado" -ForegroundColor Gray

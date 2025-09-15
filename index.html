@@ -266,24 +266,6 @@
       subtree: true
     });
     
-    // ===== HELPER PARA DEBUG =====
-    
-    // Adiciona informações de debug no console (remova em produção)
-    window.debugMobileDetection = () => {
-      console.table({
-        'Em iFrame': window.top !== window.self,
-        'Touch Device': matchMedia('(pointer: coarse)').matches,
-        'Ontouchstart': 'ontouchstart' in window,
-        'MaxTouchPoints': navigator.maxTouchPoints,
-        'Screen Width': screen.width,
-        'Screen Height': screen.height,
-        'Viewport Width': window.innerWidth,
-        'Document Width': document.documentElement.clientWidth,
-        'User Agent Mobile': /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-        'Force Mobile Ativo': document.documentElement.classList.contains('force-mobile')
-      });
-    };
-    
   })();
   </script>
 
