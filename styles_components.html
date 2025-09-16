@@ -795,6 +795,29 @@
   flex: 1 0 auto; /* Permite expansão */
 }
 
+/* Chips dentro dos containers dinâmicos */
+#status-container .chip,
+#grupos-container .chip,
+#dojos-container .chip {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background: yellow !important; /* Para debug - fundo amarelo */
+  border: 2px solid blue !important; /* Para debug - borda azul */
+  border-radius: var(--radius) !important;
+  padding: 8px 16px !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  color: black !important; /* Para debug - texto preto */
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  min-height: 36px !important;
+  white-space: nowrap !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 999 !important;
+}
+
 /* Garante que os containers se comportem como parte do sistema de chips */
 #members-filters {
   align-items: center;

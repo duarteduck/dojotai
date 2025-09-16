@@ -1103,6 +1103,17 @@ var Views = {
         console.log('Dojo chips:', dojosContainer.children.length);
         console.log('Container grupos innerHTML:', gruposContainer.innerHTML);
         console.log('Container dojos innerHTML:', dojosContainer.innerHTML);
+
+        // Teste forçado: adicionar chip visível para debug
+        var testChip = document.createElement('div');
+        testChip.className = 'chip';
+        testChip.style.background = 'lime';
+        testChip.style.color = 'black';
+        testChip.style.padding = '10px';
+        testChip.style.border = '3px solid magenta';
+        testChip.textContent = 'TESTE';
+        gruposContainer.appendChild(testChip);
+        console.log('🧪 Chip de teste adicionado ao container de grupos');
       }, 100);
     }
 
