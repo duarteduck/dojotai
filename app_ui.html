@@ -346,10 +346,8 @@ var Views = {
     // Botões principais
     var btnLogout=document.getElementById('btn-logout');
     var btnNew   =document.getElementById('btn-new');
-    var btnMembers=document.getElementById('btn-members');
     if(btnLogout) btnLogout.addEventListener('click', function(){ State.clear(); Router.go('#/login'); });
     if(btnNew)    btnNew.addEventListener('click', function(){ Router.go('#/new'); });
-    if(btnMembers) btnMembers.addEventListener('click', function(){ Router.go('#/members'); });
 
     // Menu overlay
     var btnMenu=document.getElementById('btn-menu');
