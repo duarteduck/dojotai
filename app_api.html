@@ -190,9 +190,9 @@ var API = {
         })
         .getMenuForUser('user'); // Por enquanto, role fixo
     });
-  }
+  },
 
-  listMembers = function() {
+  listMembers: function() {
     return new Promise(function(resolve, reject) {
       google.script.run
         .withSuccessHandler(function(res) {
@@ -205,9 +205,9 @@ var API = {
         .withFailureHandler(reject)
         .listMembersApi();
     });
-  };
+  },
 
-  getMember = function(id) {
+  getMember: function(id) {
     return new Promise(function(resolve, reject) {
       google.script.run
         .withSuccessHandler(function(res) {
@@ -220,7 +220,7 @@ var API = {
         .withFailureHandler(reject)
         .getMemberById(id);
     });
-  };
+  }
 
 };
 </script>
