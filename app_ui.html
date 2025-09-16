@@ -993,11 +993,11 @@ var Views = {
 
     function createDynamicFilters() {
       var members = State.cache.membros || [];
-      
+
       // Extrair dojos únicos
       var dojos = ['todos'];
       var grupos = ['todos'];
-      
+
       members.forEach(function(m) {
         if (m.dojo && dojos.indexOf(m.dojo) === -1) dojos.push(m.dojo);
         if (m.categoria_grupo && grupos.indexOf(m.categoria_grupo) === -1) grupos.push(m.categoria_grupo);
