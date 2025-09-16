@@ -778,15 +778,18 @@
 #status-container,
 #grupos-container,
 #dojos-container {
-  display: inline-flex;
+  display: inline-flex !important;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  min-height: 40px; /* Para debug - garante altura mínima */
+  border: 1px solid red; /* Para debug - contorno visível */
 }
 
 /* Garante que os containers se comportem como parte do sistema de chips */
 #members-filters {
   align-items: center;
+  flex-wrap: wrap;
 }
 
 #members-filters > * {

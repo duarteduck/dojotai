@@ -1094,6 +1094,16 @@ var Views = {
         dojosContainer: !!dojosContainer
       });
       console.log('📋 Membros processados:', members.length);
+
+      // Debug: verificar se elementos estão realmente no DOM
+      setTimeout(function() {
+        console.log('🔎 Elementos no DOM após criação:');
+        console.log('Status chips:', statusContainer.children.length);
+        console.log('Grupo chips:', gruposContainer.children.length);
+        console.log('Dojo chips:', dojosContainer.children.length);
+        console.log('Container grupos innerHTML:', gruposContainer.innerHTML);
+        console.log('Container dojos innerHTML:', dojosContainer.innerHTML);
+      }, 100);
     }
 
     function renderMembersList() {
