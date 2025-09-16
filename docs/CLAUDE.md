@@ -145,3 +145,37 @@ Este é um projeto Google Apps Script, então não há testes unitários tradici
 - **Permissões**: Acesso ao Google Sheets requer permissões de compartilhamento adequadas
 - **Cache**: Browser pode cachear versões antigas; use hard refresh durante desenvolvimento
 - **Viewport mobile**: Usa cálculo customizado de altura do viewport para mobile Safari
+
+## Histórico de Mudanças Recentes
+
+### 16/09/2025 - Sistema de Membros Completo
+
+**Implementação do Sistema de Filtros Avançados para Membros**
+- Redesign completo dos filtros seguindo padrão da tela de atividades
+- Filtros principais sempre visíveis (Status e Dojos)
+- Modal com filtros avançados (Categoria/Grupo, Categoria de Membro, Buntai, Cargo, Sexo, Grau/Omitama, Usuário)
+- Sistema de tags removíveis para filtros ativos
+- Busca por nome em tempo real
+
+**Correções de Layout e Funcionalidade**
+- Correção da largura dos cards de membros para ocupar tela completa
+- Implementação da tela de detalhes individual do membro
+- Correção do botão "Ver" que redirecionava incorretamente para login
+- Separação do campo de busca e botão de filtros em linhas distintas
+- Correção do erro JavaScript `filtersEl is not defined`
+
+**Arquivos Modificados:**
+- `view_members_list.html`: Interface completa com modal de filtros
+- `view_member_detail.html`: Nova tela de detalhes do membro
+- `view_component_memberCard.html`: Card com botão "Ver" funcional
+- `styles_components.html`: CSS para modal, filtros e responsividade
+- `app_ui.html`: Lógica completa de filtros e navegação (Views.initMembers/initMember)
+- `app_router.html`: Rotas para `/members` e `/member?id={ID}`
+- `index.html`: Registro dos novos templates
+
+**Funcionalidades Entregues:**
+1. **Sistema de Filtros Multi-Nível**: Filtros simples + modal avançado
+2. **Visualização Individual**: Tela completa de detalhes do membro
+3. **Interface Responsiva**: Design consistente mobile/desktop
+4. **Navegação Funcional**: Integração completa com roteamento SPA
+5. **Estados Visuais**: Loading, erro, vazio para melhor UX
