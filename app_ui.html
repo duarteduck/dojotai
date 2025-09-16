@@ -1034,7 +1034,15 @@ var Views = {
       var dojos = [];
       var grupos = [];
 
-      members.forEach(function(m) {
+      members.forEach(function(m, index) {
+        if (index < 3) { // Log apenas os primeiros 3 membros para debug
+          console.log('🔍 Membro ' + index + ':', {
+            status: m.status,
+            dojo: m.dojo,
+            categoria_grupo: m.categoria_grupo,
+            keys: Object.keys(m)
+          });
+        }
         if (m.status && status.indexOf(m.status) === -1) status.push(m.status);
         if (m.dojo && dojos.indexOf(m.dojo) === -1) dojos.push(m.dojo);
         if (m.categoria_grupo && grupos.indexOf(m.categoria_grupo) === -1) grupos.push(m.categoria_grupo);
@@ -1066,6 +1074,7 @@ var Views = {
         chip.setAttribute('data-grupo', grupo);
         chip.textContent = grupo;
         gruposContainer.appendChild(chip);
+        console.log('✅ Chip de grupo criado:', grupo);
       });
 
       // Criar chips de dojo dinamicamente
@@ -1075,9 +1084,16 @@ var Views = {
         chip.setAttribute('data-dojo', dojo);
         chip.textContent = dojo;
         dojosContainer.appendChild(chip);
+        console.log('✅ Chip de dojo criado:', dojo);
       });
 
       console.log('🎨 Filtros criados:', { status: status, grupos: grupos, dojos: dojos });
+      console.log('📊 Containers encontrados:', {
+        statusContainer: !!statusContainer,
+        gruposContainer: !!gruposContainer,
+        dojosContainer: !!dojosContainer
+      });
+      console.log('📋 Membros processados:', members.length);
     }
 
     function renderMembersList() {
