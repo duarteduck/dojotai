@@ -346,8 +346,10 @@ var Views = {
     // Botões principais
     var btnLogout=document.getElementById('btn-logout');
     var btnNew   =document.getElementById('btn-new');
+    var btnMembers=document.getElementById('btn-members');
     if(btnLogout) btnLogout.addEventListener('click', function(){ State.clear(); Router.go('#/login'); });
     if(btnNew)    btnNew.addEventListener('click', function(){ Router.go('#/new'); });
+    if(btnMembers) btnMembers.addEventListener('click', function(){ Router.go('#/members'); });
 
     // Menu overlay
     var btnMenu=document.getElementById('btn-menu');
@@ -1255,14 +1257,30 @@ var MenuSystem = {
     var self=this;
     if(!this.content) return;
     if(typeof API==='undefined' || !API.listMenu){
-      this.content.innerHTML='<div class="menu-error">Sistema não carregado completamente</div>';
+      console.warn('[Menu] API não disponível, usando itens padrão');
+      self.renderItems(self.getDefaultMenuItems());
       return;
     }
     this.content.innerHTML='<div class="menu-loading">Carregando...</div>';
-    API.listMenu().then(function(items){ self.renderItems(items); }).catch(function(err){
+    API.listMenu().then(function(items){
+      // Se não há itens da planilha, usa itens padrão
+      if(!items || items.length === 0) {
+        console.warn('[Menu] Nenhum item na planilha, usando itens padrão');
+        items = self.getDefaultMenuItems();
+      }
+      self.renderItems(items);
+    }).catch(function(err){
       console.error('[Menu] erro:',err);
-      self.content.innerHTML='<div class="menu-error">Erro ao carregar menu</div>';
+      console.warn('[Menu] Erro ao carregar, usando itens padrão');
+      self.renderItems(self.getDefaultMenuItems());
     });
+  },
+  getDefaultMenuItems: function(){
+    return [
+      { titulo: '📋 Atividades', icone: '📋', acao: 'route', destino: '#/dash', ordem: 1 },
+      { titulo: '👥 Membros', icone: '👥', acao: 'route', destino: '#/members', ordem: 2 },
+      { titulo: '➕ Nova Atividade', icone: '➕', acao: 'route', destino: '#/new', ordem: 3 }
+    ];
   },
   renderItems: function(items){
     var self=this;
