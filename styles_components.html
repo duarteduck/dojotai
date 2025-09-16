@@ -743,8 +743,15 @@
 /* Responsividade dos filtros de membros */
 @media (max-width: 768px) {
   #members-filters {
-    justify-content: center;
+    justify-content: flex-start;
     gap: 6px 8px;
+    flex-direction: row; /* Força linha horizontal */
+  }
+
+  #status-container,
+  #grupos-container,
+  #dojos-container {
+    min-width: 100px !important; /* Mais espaço em mobile */
   }
 
   #members-filters .chip-sep {
@@ -783,18 +790,27 @@
   gap: 0.5rem;
   align-items: center;
   min-height: 40px; /* Para debug - garante altura mínima */
+  min-width: 50px; /* Força largura mínima */
   border: 1px solid red; /* Para debug - contorno visível */
+  flex: 1 0 auto; /* Permite expansão */
 }
 
 /* Garante que os containers se comportem como parte do sistema de chips */
 #members-filters {
   align-items: center;
   flex-wrap: wrap;
+  width: 100%; /* Garante largura total */
+  display: flex !important; /* Força flex */
 }
 
 #members-filters > * {
   display: inline-flex;
   align-items: center;
+}
+
+/* Separadores não devem interferir no layout */
+#members-filters .chip-sep {
+  flex-shrink: 0; /* Não encolhe */
 }
 
 /* Minhas chip active style reusing .chip.is-active */
