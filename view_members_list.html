@@ -14,7 +14,7 @@
 
   <!-- Filtros e busca -->
   <div class="chips" id="members-filters">
-    <!-- Seção 1: Status (estática) -->
+    <!-- Seção 1: Status -->
     <div class="chip" data-status="todos">Todos</div>
     <div class="chip is-active" data-status="ativo">Ativos</div>
     <div class="chip" data-status="inativo">Inativos</div>
@@ -22,12 +22,12 @@
     <span class="chip-sep"></span>
 
     <!-- Seção 2: Grupos/Categorias (dinâmica) -->
-    <div class="chip is-active" data-grupo="todos">Todos Grupos</div>
+    <div id="grupos-container"></div>
 
     <span class="chip-sep"></span>
 
     <!-- Seção 3: Dojos/Localização (dinâmica) -->
-    <div class="chip is-active" data-dojo="todos">Todos Dojos</div>
+    <div id="dojos-container"></div>
   </div>
 
   <div class="filter-row">

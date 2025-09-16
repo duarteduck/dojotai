@@ -774,6 +774,25 @@
   }
 }
 
+/* Containers dinâmicos de filtros */
+#grupos-container,
+#dojos-container {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Garante que os containers se comportem como parte do sistema de chips */
+#members-filters {
+  align-items: center;
+}
+
+#members-filters > * {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Minhas chip active style reusing .chip.is-active */
 #chip-minhas.is-active{}
 

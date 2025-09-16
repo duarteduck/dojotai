@@ -834,9 +834,9 @@ var Views = {
     if (!State.cache) State.cache = { atividades: [], membros: [] };
     if (!State.ui.membros) State.ui.membros = {
       filtros: {
-        status: 'ativo',
-        grupo: 'todos',
-        dojo: 'todos'
+        status: ['ativo'],
+        grupos: [],
+        dojos: []
       },
       busca: ''
     };
@@ -894,35 +894,65 @@ var Views = {
         var chip = ev.target.closest('.chip');
         if (!chip) return;
 
-        // Status filters
+        // Status filters (seleção múltipla/toggle - igual aos demais)
         if (chip.hasAttribute('data-status')) {
-          filtersEl.querySelectorAll('.chip[data-status]').forEach(function(c) {
-            c.classList.remove('is-active');
-          });
-          chip.classList.add('is-active');
-          State.ui.membros.filtros.status = chip.getAttribute('data-status');
+          var status = chip.getAttribute('data-status');
+          var isActive = chip.classList.contains('is-active');
+
+          if (isActive) {
+            // Remover da seleção
+            chip.classList.remove('is-active');
+            var index = State.ui.membros.filtros.status.indexOf(status);
+            if (index > -1) State.ui.membros.filtros.status.splice(index, 1);
+          } else {
+            // Adicionar à seleção
+            chip.classList.add('is-active');
+            if (State.ui.membros.filtros.status.indexOf(status) === -1) {
+              State.ui.membros.filtros.status.push(status);
+            }
+          }
           renderMembersList();
           return;
         }
 
-        // Dojo filters
+        // Dojo filters (seleção múltipla/toggle)
         if (chip.hasAttribute('data-dojo')) {
-          filtersEl.querySelectorAll('.chip[data-dojo]').forEach(function(c) {
-            c.classList.remove('is-active');
-          });
-          chip.classList.add('is-active');
-          State.ui.membros.filtros.dojo = chip.getAttribute('data-dojo');
+          var dojo = chip.getAttribute('data-dojo');
+          var isActive = chip.classList.contains('is-active');
+
+          if (isActive) {
+            // Remover da seleção
+            chip.classList.remove('is-active');
+            var index = State.ui.membros.filtros.dojos.indexOf(dojo);
+            if (index > -1) State.ui.membros.filtros.dojos.splice(index, 1);
+          } else {
+            // Adicionar à seleção
+            chip.classList.add('is-active');
+            if (State.ui.membros.filtros.dojos.indexOf(dojo) === -1) {
+              State.ui.membros.filtros.dojos.push(dojo);
+            }
+          }
           renderMembersList();
           return;
         }
 
-        // Grupo filters
+        // Grupo filters (seleção múltipla/toggle)
         if (chip.hasAttribute('data-grupo')) {
-          filtersEl.querySelectorAll('.chip[data-grupo]').forEach(function(c) {
-            c.classList.remove('is-active');
-          });
-          chip.classList.add('is-active');
-          State.ui.membros.filtros.grupo = chip.getAttribute('data-grupo');
+          var grupo = chip.getAttribute('data-grupo');
+          var isActive = chip.classList.contains('is-active');
+
+          if (isActive) {
+            // Remover da seleção
+            chip.classList.remove('is-active');
+            var index = State.ui.membros.filtros.grupos.indexOf(grupo);
+            if (index > -1) State.ui.membros.filtros.grupos.splice(index, 1);
+          } else {
+            // Adicionar à seleção
+            chip.classList.add('is-active');
+            if (State.ui.membros.filtros.grupos.indexOf(grupo) === -1) {
+              State.ui.membros.filtros.grupos.push(grupo);
+            }
+          }
           renderMembersList();
           return;
         }
@@ -993,40 +1023,44 @@ var Views = {
 
     function createDynamicFilters() {
       var members = State.cache.membros || [];
+      var gruposContainer = document.getElementById('grupos-container');
+      var dojosContainer = document.getElementById('dojos-container');
 
-      // Extrair dojos únicos
-      var dojos = ['todos'];
-      var grupos = ['todos'];
+      if (!gruposContainer || !dojosContainer) return;
+
+      // Extrair dojos e grupos únicos
+      var dojos = [];
+      var grupos = [];
 
       members.forEach(function(m) {
         if (m.dojo && dojos.indexOf(m.dojo) === -1) dojos.push(m.dojo);
         if (m.categoria_grupo && grupos.indexOf(m.categoria_grupo) === -1) grupos.push(m.categoria_grupo);
       });
 
-      // Criar chips de dojo dinamicamente
-      dojos.forEach(function(dojo) {
-        if (dojo === 'todos') return;
-        var existingChip = filtersEl ? filtersEl.querySelector('[data-dojo="' + dojo + '"]') : null;
-        if (!existingChip && filtersEl) {
-          var chip = document.createElement('div');
-          chip.className = 'chip visible';
-          chip.setAttribute('data-dojo', dojo);
-          chip.textContent = dojo;
-          filtersEl.appendChild(chip);
-        }
-      });
+      // Ordenar alfabeticamente
+      dojos.sort();
+      grupos.sort();
+
+      // Limpar containers existentes
+      gruposContainer.innerHTML = '';
+      dojosContainer.innerHTML = '';
 
       // Criar chips de grupo dinamicamente
       grupos.forEach(function(grupo) {
-        if (grupo === 'todos') return;
-        var existingChip = filtersEl ? filtersEl.querySelector('[data-grupo="' + grupo + '"]') : null;
-        if (!existingChip && filtersEl) {
-          var chip = document.createElement('div');
-          chip.className = 'chip visible';
-          chip.setAttribute('data-grupo', grupo);
-          chip.textContent = grupo;
-          filtersEl.appendChild(chip);
-        }
+        var chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.setAttribute('data-grupo', grupo);
+        chip.textContent = grupo;
+        gruposContainer.appendChild(chip);
+      });
+
+      // Criar chips de dojo dinamicamente
+      dojos.forEach(function(dojo) {
+        var chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.setAttribute('data-dojo', dojo);
+        chip.textContent = dojo;
+        dojosContainer.appendChild(chip);
       });
     }
 
@@ -1040,19 +1074,26 @@ var Views = {
       // Aplicar filtros
       var filtered = members.filter(function(m) {
         // Filtro de status
-        if (filtros.status && filtros.status !== 'todos') {
+        if (filtros.status && filtros.status.length > 0) {
           var status = m.status.toLowerCase();
-          if (filtros.status !== status) return false;
+          var hasValidStatus = false;
+          for (var i = 0; i < filtros.status.length; i++) {
+            if (filtros.status[i] === 'todos' || filtros.status[i] === status) {
+              hasValidStatus = true;
+              break;
+            }
+          }
+          if (!hasValidStatus) return false;
         }
 
-        // Filtro de dojo
-        if (filtros.dojo && filtros.dojo !== 'todos') {
-          if (m.dojo !== filtros.dojo) return false;
+        // Filtro de dojo (se nenhum selecionado, mostra todos)
+        if (filtros.dojos && filtros.dojos.length > 0) {
+          if (filtros.dojos.indexOf(m.dojo) === -1) return false;
         }
 
-        // Filtro de grupo
-        if (filtros.grupo && filtros.grupo !== 'todos') {
-          if (m.categoria_grupo !== filtros.grupo) return false;
+        // Filtro de grupo (se nenhum selecionado, mostra todos)
+        if (filtros.grupos && filtros.grupos.length > 0) {
+          if (filtros.grupos.indexOf(m.categoria_grupo) === -1) return false;
         }
 
         // Busca por nome
