@@ -1990,19 +1990,50 @@
 
 /* ===== SISTEMA DE MEMBROS - ESTILOS ===== */
 
-/* Grid específico para membros - força largura completa */
+/* Grid específico para membros - igual aos cards de atividade */
 [data-view="members"] .row {
   display: grid;
-  grid-template-columns: 1fr !important;
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+  gap: 20px;
   width: 100%;
 }
 
-/* Cards de membros ocupam largura completa */
-[data-view="members"] .card.member {
-  width: 100% !important;
-  max-width: 100% !important;
-  grid-column: 1 !important;
+/* Mobile: força 1 coluna */
+@media (max-width: 768px) {
+  [data-view="members"] .row {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+/* Desktop 3-col: alinhar com atividades */
+@media (min-width: 900px) {
+  [data-view="members"] .row {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 20px !important;
+    justify-content: stretch !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Cards com mesma altura + ações no rodapé */
+  [data-view="members"] .card.member {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+  }
+
+  [data-view="members"] .member-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  [data-view="members"] .member-actions {
+    margin-top: auto !important;
+  }
 }
 
 /* Resumo/estatísticas dos membros */
