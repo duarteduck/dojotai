@@ -18,13 +18,11 @@ var Router = {
     var root = document.getElementById('app');
     if (!root) return;
 
-    var tplId = 'tpl-login';
-    if (view === 'dash') tplId = 'tpl-dash';
-    if (view === 'new')  tplId = 'tpl-new';
-    if (view === 'members') tplId = 'tpl-members';        // NOVO
-    if (view === 'member')  tplId = 'tpl-member-profile'; // NOVO (futuro)
+    console.log('🔄 Router.mount chamado para view:', view);
 
-    var tpl = document.getElementById('tpl-'+view) || document.getElementById(tplId);
+    var tplId = 'tpl-' + view;
+    var tpl = document.getElementById(tplId);
+    
     if (tpl){
       root.innerHTML = tpl.innerHTML;
       
@@ -32,10 +30,17 @@ var Router = {
       if (view === 'login')  init = Views.initLogin;
       if (view === 'dash')   init = Views.initDash;
       if (view === 'new')    init = Views.initNew;
-      if (view === 'members') init = Views.initMembers;    // NOVO
-      if (view === 'member')  init = Views.initMemberProfile; // NOVO (futuro)
+      if (view === 'members') init = Views.initMembers;  // ← ESTA LINHA É CRUCIAL
       
-      if (typeof init === 'function') init();
+      console.log('🎯 Inicializador encontrado para', view, ':', typeof init);
+      
+      if (typeof init === 'function') {
+        init();
+      } else {
+        console.error('❌ Inicializador não encontrado para view:', view);
+      }
+    } else {
+      console.error('❌ Template não encontrado:', tplId);
     }
   },
 
@@ -43,27 +48,31 @@ var Router = {
     var route = (location.hash || '#/login');
     var authed = !!(window.localStorage && localStorage.getItem('uid'));
 
+    console.log('🗺️ Router.resolve - Rota:', route, 'Autenticado:', authed);
+
     // Proteção de rotas autenticadas
     if (route.indexOf('#/dash') === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/new')  === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/edit') === 0 && !authed) { return this.go('#/login'); }
-    if (route.indexOf('#/members') === 0 && !authed) { return this.go('#/login'); } // NOVO
-    if (route.indexOf('#/member')  === 0 && !authed) { return this.go('#/login'); } // NOVO
+    if (route.indexOf('#/members') === 0 && !authed) { return this.go('#/login'); } // ← PROTEÇÃO MEMBERS
     
     // Redirecionamento se já logado
-    if (route.indexOf('#/login')=== 0 && authed)  { return this.go('#/dash'); }
+    if (route.indexOf('#/login') === 0 && authed) { return this.go('#/dash'); }
 
     // Determinação da view
     var view = 'login';
     if (route.indexOf('#/dash') === 0) view = 'dash';
     if (route.indexOf('#/new')  === 0) view = 'new';
-    if (route.indexOf('#/edit') === 0) view = 'new';        // edit usa o mesmo template de new
-    if (route.indexOf('#/members') === 0) view = 'members'; // NOVO
-    if (route.indexOf('#/member')  === 0) view = 'member';  // NOVO
+    if (route.indexOf('#/edit') === 0) view = 'new';
+    if (route.indexOf('#/members') === 0) view = 'members'; // ← ESTA LINHA É CRUCIAL
 
+    console.log('✅ View determinada:', view);
     this.mount(view);
   },
 
-  go: function(hash){ location.hash = hash; }
+  go: function(hash){ 
+    console.log('🚀 Router.go chamado para:', hash);
+    location.hash = hash; 
+  }
 };
 </script>
