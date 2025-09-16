@@ -834,7 +834,7 @@ var Views = {
     if (!State.cache) State.cache = { atividades: [], membros: [] };
     if (!State.ui.membros) State.ui.membros = {
       filtros: {
-        status: ['ativo'],
+        status: [],
         grupos: [],
         dojos: []
       },
@@ -1023,27 +1023,41 @@ var Views = {
 
     function createDynamicFilters() {
       var members = State.cache.membros || [];
+      var statusContainer = document.getElementById('status-container');
       var gruposContainer = document.getElementById('grupos-container');
       var dojosContainer = document.getElementById('dojos-container');
 
-      if (!gruposContainer || !dojosContainer) return;
+      if (!statusContainer || !gruposContainer || !dojosContainer) return;
 
-      // Extrair dojos e grupos únicos
+      // Extrair status, dojos e grupos únicos
+      var status = [];
       var dojos = [];
       var grupos = [];
 
       members.forEach(function(m) {
+        if (m.status && status.indexOf(m.status) === -1) status.push(m.status);
         if (m.dojo && dojos.indexOf(m.dojo) === -1) dojos.push(m.dojo);
         if (m.categoria_grupo && grupos.indexOf(m.categoria_grupo) === -1) grupos.push(m.categoria_grupo);
       });
 
       // Ordenar alfabeticamente
+      status.sort();
       dojos.sort();
       grupos.sort();
 
       // Limpar containers existentes
+      statusContainer.innerHTML = '';
       gruposContainer.innerHTML = '';
       dojosContainer.innerHTML = '';
+
+      // Criar chips de status dinamicamente
+      status.forEach(function(st) {
+        var chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.setAttribute('data-status', st);
+        chip.textContent = st.charAt(0).toUpperCase() + st.slice(1); // Primeira letra maiúscula
+        statusContainer.appendChild(chip);
+      });
 
       // Criar chips de grupo dinamicamente
       grupos.forEach(function(grupo) {
@@ -1062,6 +1076,8 @@ var Views = {
         chip.textContent = dojo;
         dojosContainer.appendChild(chip);
       });
+
+      console.log('🎨 Filtros criados:', { status: status, grupos: grupos, dojos: dojos });
     }
 
     function renderMembersList() {
@@ -1073,17 +1089,9 @@ var Views = {
 
       // Aplicar filtros
       var filtered = members.filter(function(m) {
-        // Filtro de status
+        // Filtro de status (se nenhum selecionado, mostra todos)
         if (filtros.status && filtros.status.length > 0) {
-          var status = m.status.toLowerCase();
-          var hasValidStatus = false;
-          for (var i = 0; i < filtros.status.length; i++) {
-            if (filtros.status[i] === 'todos' || filtros.status[i] === status) {
-              hasValidStatus = true;
-              break;
-            }
-          }
-          if (!hasValidStatus) return false;
+          if (filtros.status.indexOf(m.status) === -1) return false;
         }
 
         // Filtro de dojo (se nenhum selecionado, mostra todos)
