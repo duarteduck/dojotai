@@ -720,8 +720,58 @@
 #chips{ flex-wrap: wrap; gap:.5rem .5rem; }
 #chips .chip-sep{
   width:1px; height:28px; align-self:center;
-  background: rgba(0,0,0,.08);
-  margin: 0 .25rem 0 .25rem;
+  background: rgba(0,0,0,.15);
+  margin: 0 .5rem 0 .5rem;
+}
+
+/* Melhor separador para membros */
+#members-filters .chip-sep {
+  width: 2px;
+  height: 32px;
+  background: var(--border);
+  border-radius: 1px;
+  margin: 0 .75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  #members-filters .chip-sep {
+    background: var(--border);
+    opacity: 0.6;
+  }
+}
+
+/* Responsividade dos filtros de membros */
+@media (max-width: 768px) {
+  #members-filters {
+    justify-content: center;
+    gap: 6px 8px;
+  }
+
+  #members-filters .chip-sep {
+    margin: 0 4px;
+    height: 24px;
+  }
+
+  #members-filters .chip {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  #members-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  #members-filters .chip-sep {
+    width: 100%;
+    height: 1px;
+    margin: 0;
+    align-self: stretch;
+  }
 }
 
 /* Minhas chip active style reusing .chip.is-active */

@@ -832,7 +832,14 @@ var Views = {
     }
     
     if (!State.cache) State.cache = { atividades: [], membros: [] };
-    if (!State.ui.membros) State.ui.membros = { filtros: { status: 'todos' }, busca: '' };
+    if (!State.ui.membros) State.ui.membros = {
+      filtros: {
+        status: 'ativo',
+        grupo: 'todos',
+        dojo: 'todos'
+      },
+      busca: ''
+    };
 
     var listEl = document.getElementById('members-list');
     var searchEl = document.getElementById('members-search');
