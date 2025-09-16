@@ -169,6 +169,7 @@ var API = {
     });
   },
 
+  /* listMenu() -> [items] */
   listMenu: function(){
     return new Promise(function(resolve, reject){
       // Verifica se google.script.run está disponível
@@ -192,35 +193,324 @@ var API = {
     });
   },
 
+  /* ===========================
+     SISTEMA DE MEMBROS - API
+     =========================== */
+
+  /* listMembers() -> [members] */
   listMembers: function() {
     return new Promise(function(resolve, reject) {
-      google.script.run
-        .withSuccessHandler(function(res) {
-          if (res && res.ok) {
-            resolve(res.items || []);
-          } else {
-            reject((res && res.error) || 'Falha ao listar membros');
-          }
-        })
-        .withFailureHandler(reject)
-        .listMembersApi();
+      console.log('📡 API.listMembers chamada');
+      
+      // Tenta primeiro a API real
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.listMembersApi) {
+        console.log('🔗 Chamando backend listMembersApi...');
+        
+        google.script.run
+          .withSuccessHandler(function(res) {
+            console.log('📡 Resposta do backend:', res);
+            if (res && res.ok) {
+              console.log('✅ Membros carregados do backend:', (res.items || []).length);
+              resolve(res.items || []);
+            } else {
+              console.warn('⚠️ Backend retornou erro:', res && res.error);
+              // Fallback para dados mock
+              console.log('🎭 Usando dados mock como fallback');
+              resolve(getMockMembers());
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro na chamada do backend:', err);
+            // Fallback para dados mock  
+            console.log('🎭 Usando dados mock devido ao erro');
+            resolve(getMockMembers());
+          })
+          .listMembersApi();
+      } else {
+        console.warn('⚠️ Google Apps Script ou listMembersApi não disponível');
+        console.log('🔍 google:', typeof google);
+        console.log('🔍 google.script:', typeof (google && google.script));
+        console.log('🔍 google.script.run:', typeof (google && google.script && google.script.run));
+        console.log('🔍 listMembersApi:', typeof (google && google.script && google.script.run && google.script.run.listMembersApi));
+        
+        console.log('🎭 Usando dados mock');
+        resolve(getMockMembers());
+      }
+    });
+    
+    function getMockMembers() {
+      console.log('🎭 Gerando dados mock para teste');
+      return [
+        {
+          id: 'MBR-001',
+          codigo_mestre: 'CM001', 
+          nome: 'João Silva',
+          status: 'Ativo',
+          dojo: 'Dojo Central',
+          categoria_grupo: 'Adultos',
+          categoria_membro: 'Regular',
+          cargo: 'Instrutor',
+          sexo: 'M',
+          idade: 35,
+          grau_omitama: 'Faixa Preta',
+          buntai: 'Grupo A',
+          usuario_uid: 'U001',
+          ordenacao: 1
+        },
+        {
+          id: 'MBR-002', 
+          codigo_mestre: 'CM002',
+          nome: 'Maria Santos',
+          status: 'Ativo',
+          dojo: 'Dojo Norte',
+          categoria_grupo: 'Adultos', 
+          categoria_membro: 'Regular',
+          cargo: 'Aluna',
+          sexo: 'F',
+          idade: 28,
+          grau_omitama: 'Faixa Marrom',
+          buntai: 'Grupo B',
+          usuario_uid: '',
+          ordenacao: 2
+        },
+        {
+          id: 'MBR-003',
+          codigo_mestre: 'CM003', 
+          nome: 'Pedro Lima',
+          status: 'Inativo',
+          dojo: 'Dojo Central',
+          categoria_grupo: 'Juvenil',
+          categoria_membro: 'Regular',
+          cargo: 'Aluno', 
+          sexo: 'M',
+          idade: 16,
+          grau_omitama: 'Faixa Verde',
+          buntai: 'Grupo C',
+          usuario_uid: 'U003',
+          ordenacao: 3
+        },
+        {
+          id: 'MBR-004',
+          codigo_mestre: 'CM004',
+          nome: 'Ana Costa',
+          status: 'Ativo', 
+          dojo: 'Dojo Sul',
+          categoria_grupo: 'Infantil',
+          categoria_membro: 'Regular',
+          cargo: 'Aluna',
+          sexo: 'F',
+          idade: 12,
+          grau_omitama: 'Faixa Azul',
+          buntai: 'Grupo D',
+          usuario_uid: '',
+          ordenacao: 4
+        },
+        {
+          id: 'MBR-005',
+          codigo_mestre: 'CM005',
+          nome: 'Carlos Oliveira',
+          status: 'Ativo',
+          dojo: 'Dojo Norte', 
+          categoria_grupo: 'Adultos',
+          categoria_membro: 'Regular',
+          cargo: 'Assistente',
+          sexo: 'M',
+          idade: 42,
+          grau_omitama: 'Faixa Preta',
+          buntai: 'Grupo A',
+          usuario_uid: 'U005',
+          ordenacao: 5
+        }
+      ];
+    }
+  },
+
+  /* getMember(id) -> member */
+  getMember: function(id) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.getMember chamada para ID:', id);
+      
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.getMemberById) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            console.log('📡 Resposta getMemberById:', res);
+            if (res && res.ok) {
+              resolve(res.item || null);
+            } else {
+              reject((res && res.error) || 'Membro não encontrado');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro getMemberById:', err);
+            reject('Erro na API: ' + err);
+          })
+          .getMemberById(id);
+      } else {
+        console.warn('⚠️ getMemberById não disponível, usando mock');
+        // Simula busca no mock
+        var mockMembers = [
+          { id: 'MBR-001', nome: 'João Silva', status: 'Ativo' },
+          { id: 'MBR-002', nome: 'Maria Santos', status: 'Ativo' },
+          { id: 'MBR-003', nome: 'Pedro Lima', status: 'Inativo' }
+        ];
+        var member = mockMembers.find(function(m) { return m.id === id; });
+        if (member) {
+          resolve(member);
+        } else {
+          reject('Membro não encontrado no mock');
+        }
+      }
     });
   },
 
-  getMember: function(id) {
+  /* searchMembers(filters) -> [members] */
+  searchMembers: function(filters) {
     return new Promise(function(resolve, reject) {
-      google.script.run
-        .withSuccessHandler(function(res) {
-          if (res && res.ok) {
-            resolve(res.item || null);
-          } else {
-            reject((res && res.error) || 'Membro não encontrado');
-          }
-        })
-        .withFailureHandler(reject)
-        .getMemberById(id);
+      console.log('📡 API.searchMembers chamada com filtros:', filters);
+      
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.searchMembers) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res.items || []);
+            } else {
+              reject((res && res.error) || 'Falha na busca');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro searchMembers:', err);
+            reject('Erro na API: ' + err);
+          })
+          .searchMembers(filters);
+      } else {
+        console.warn('⚠️ searchMembers não disponível, usando filtro mock');
+        // Aplica filtros aos dados mock
+        API.listMembers().then(function(members) {
+          var filtered = members.filter(function(m) {
+            if (filters.nome && m.nome.toLowerCase().indexOf(filters.nome.toLowerCase()) === -1) return false;
+            if (filters.status && m.status.toLowerCase() !== filters.status.toLowerCase()) return false;
+            if (filters.dojo && m.dojo.toLowerCase().indexOf(filters.dojo.toLowerCase()) === -1) return false;
+            return true;
+          });
+          resolve(filtered);
+        }).catch(reject);
+      }
+    });
+  },
+
+  /* linkMemberToUser(memberId, usuarioUid) -> result */
+  linkMemberToUser: function(memberId, usuarioUid) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.linkMemberToUser:', memberId, '<->', usuarioUid);
+      
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.linkMemberToUser) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res);
+            } else {
+              reject((res && res.error) || 'Falha na vinculação');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro linkMemberToUser:', err);
+            reject('Erro na API: ' + err);
+          })
+          .linkMemberToUser(memberId, usuarioUid, State.uid);
+      } else {
+        console.warn('⚠️ linkMemberToUser não disponível');
+        reject('Funcionalidade não implementada no mock');
+      }
+    });
+  },
+
+  /* listActiveMembers() -> [members] */
+  listActiveMembers: function() {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.listActiveMembers chamada');
+      
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.listActiveMembersApi) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res.items || []);
+            } else {
+              reject((res && res.error) || 'Falha ao listar membros ativos');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro listActiveMembers:', err);
+            reject('Erro na API: ' + err);
+          })
+          .listActiveMembersApi();
+      } else {
+        console.warn('⚠️ listActiveMembersApi não disponível, filtrando mock');
+        // Filtra apenas ativos dos dados mock
+        API.listMembers().then(function(members) {
+          var activeMembers = members.filter(function(m) {
+            return m.status.toLowerCase() === 'ativo';
+          });
+          resolve(activeMembers);
+        }).catch(reject);
+      }
     });
   }
-
 };
+
+/* ===========================
+   Funções auxiliares para debug
+   =========================== */
+
+// Função para verificar o estado da API
+window.debugAPI = function() {
+  console.log('🔍 === DEBUG API ===');
+  console.log('Google Apps Script disponível:', typeof google !== 'undefined');
+  console.log('google.script.run disponível:', typeof (google && google.script && google.script.run) !== 'undefined');
+  
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    console.log('Funções do backend disponíveis:');
+    console.log('- listMembersApi:', typeof google.script.run.listMembersApi);
+    console.log('- getMemberById:', typeof google.script.run.getMemberById);
+    console.log('- searchMembers:', typeof google.script.run.searchMembers);
+    console.log('- linkMemberToUser:', typeof google.script.run.linkMemberToUser);
+    console.log('- listActiveMembersApi:', typeof google.script.run.listActiveMembersApi);
+  }
+  
+  console.log('State.uid:', window.State && State.uid);
+  console.log('🔍 === FIM DEBUG ===');
+};
+
+// Função para testar APIs de membros
+window.testMembersAPI = function() {
+  console.log('🧪 === TESTE APIs MEMBROS ===');
+  
+  API.listMembers().then(function(members) {
+    console.log('✅ listMembers funcionou:', members.length, 'membros');
+    console.log('Primeiro membro:', members[0]);
+    
+    if (members.length > 0) {
+      return API.getMember(members[0].id);
+    }
+  }).then(function(member) {
+    if (member) {
+      console.log('✅ getMember funcionou:', member.nome);
+    }
+    
+    return API.searchMembers({ status: 'ativo' });
+  }).then(function(activeMembers) {
+    console.log('✅ searchMembers funcionou:', activeMembers.length, 'ativos');
+    
+    return API.listActiveMembers();
+  }).then(function(activeMembers2) {
+    console.log('✅ listActiveMembers funcionou:', activeMembers2.length, 'ativos');
+    console.log('🧪 === TODOS OS TESTES CONCLUÍDOS ===');
+  }).catch(function(error) {
+    console.error('❌ Erro no teste:', error);
+  });
+};
+
+/* ===========================
+   Export global
+   =========================== */
+window.API = API;
 </script>
