@@ -12,26 +12,28 @@
     </div>
   </div>
 
-  <!-- Filtros e busca -->
-  <div id="members-filters">
-    <!-- Linha 1: Status -->
-    <div class="members-filter-row">
-      <div id="status-container"></div>
-    </div>
-
-    <!-- Linha 2: Grupos/Categorias -->
-    <div class="members-filter-row">
-      <div id="grupos-container"></div>
-    </div>
-
-    <!-- Linha 3: Dojos/Localização -->
-    <div class="members-filter-row">
-      <div id="dojos-container"></div>
-    </div>
+  <!-- Filtros principais (sempre visíveis) -->
+  <div class="chips" id="members-main-filters">
+    <!-- Status -->
+    <div id="members-status-container"></div>
+    <span class="chip-sep"></span>
+    <!-- Dojos -->
+    <div id="members-dojos-container"></div>
   </div>
 
+  <!-- Busca e filtros avançados -->
   <div class="filter-row">
     <input id="members-search" class="input" placeholder="🔍 Buscar membros por nome..." />
+    <button class="btn" id="btn-members-filters">🔍 Filtros</button>
+  </div>
+
+  <!-- Tags de filtros ativos -->
+  <div id="members-active-filters" class="active-filters" style="display: none;">
+    <div class="active-filters-header">
+      <span class="active-filters-label">Filtros ativos:</span>
+      <button class="btn-clear-filters" id="btn-clear-members-filters">Limpar todos</button>
+    </div>
+    <div id="members-filter-tags" class="filter-tags"></div>
   </div>
 
   <!-- Resumo -->
@@ -56,4 +58,73 @@
 
   <!-- Lista de membros -->
   <div id="members-list" class="row"></div>
+</div>
+
+<!-- Modal de Filtros Avançados -->
+<div id="members-filters-modal" class="modal" style="display: none;">
+  <div class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Filtros Avançados - Membros</h3>
+        <button class="modal-close" id="members-filters-modal-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="filter-grid">
+          <!-- Categoria/Grupo -->
+          <div class="filter-section">
+            <label class="filter-label">Categoria/Grupo</label>
+            <div id="modal-grupos-container" class="modal-chips"></div>
+          </div>
+
+          <!-- Categoria de Membro -->
+          <div class="filter-section">
+            <label class="filter-label">Categoria de Membro</label>
+            <div id="modal-categoria-membro-container" class="modal-chips"></div>
+          </div>
+
+          <!-- Buntai -->
+          <div class="filter-section">
+            <label class="filter-label">Buntai</label>
+            <div id="modal-buntai-container" class="modal-chips"></div>
+          </div>
+
+          <!-- Cargo -->
+          <div class="filter-section">
+            <label class="filter-label">Cargo</label>
+            <div id="modal-cargo-container" class="modal-chips"></div>
+          </div>
+
+          <!-- Sexo -->
+          <div class="filter-section">
+            <label class="filter-label">Sexo</label>
+            <div id="modal-sexo-container" class="modal-chips">
+              <div class="chip" data-filter="sexo" data-value="masculino">Masculino</div>
+              <div class="chip" data-filter="sexo" data-value="feminino">Feminino</div>
+            </div>
+          </div>
+
+          <!-- Grau/Omitama -->
+          <div class="filter-section">
+            <label class="filter-label">Grau/Omitama</label>
+            <div id="modal-grau-container" class="modal-chips"></div>
+          </div>
+
+          <!-- Vinculação de usuário -->
+          <div class="filter-section">
+            <label class="filter-label">Usuário do Sistema</label>
+            <div id="modal-usuario-container" class="modal-chips">
+              <div class="chip" data-filter="usuario" data-value="vinculado">Com usuário</div>
+              <div class="chip" data-filter="usuario" data-value="nao-vinculado">Sem usuário</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-clear-modal-filters">Limpar Filtros</button>
+        <button class="btn btn-primary" id="btn-apply-modal-filters">Aplicar Filtros</button>
+      </div>
+    </div>
+  </div>
 </div>

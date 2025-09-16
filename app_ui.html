@@ -835,20 +835,29 @@ var Views = {
     if (!State.ui.membros) State.ui.membros = {
       filtros: {
         status: [],
+        dojos: [],
         grupos: [],
-        dojos: []
+        categoria_membro: [],
+        buntai: [],
+        cargo: [],
+        sexo: [],
+        grau: [],
+        usuario: []
       },
       busca: ''
     };
 
     var listEl = document.getElementById('members-list');
     var searchEl = document.getElementById('members-search');
-    var filtersEl = document.getElementById('members-filters');
     var summaryEl = document.getElementById('members-summary');
     var btnMenu = document.getElementById('btn-members-menu');
     var btnStats = document.getElementById('btn-members-stats');
     var btnLink = document.getElementById('btn-members-link');
     var btnNew = document.getElementById('btn-members-new');
+    var btnFilters = document.getElementById('btn-members-filters');
+    var modal = document.getElementById('members-filters-modal');
+    var activeFiltersEl = document.getElementById('members-active-filters');
+    var filterTagsEl = document.getElementById('members-filter-tags');
 
     console.log('🔍 Elementos encontrados:', {
       listEl: !!listEl,
@@ -888,76 +897,8 @@ var Views = {
       });
     }
 
-    // Filtros por chips
-    if (filtersEl) {
-      filtersEl.addEventListener('click', function(ev) {
-        var chip = ev.target.closest('.chip');
-        if (!chip) return;
-
-        // Status filters (seleção múltipla/toggle - igual aos demais)
-        if (chip.hasAttribute('data-status')) {
-          var status = chip.getAttribute('data-status');
-          var isActive = chip.classList.contains('is-active');
-
-          if (isActive) {
-            // Remover da seleção
-            chip.classList.remove('is-active');
-            var index = State.ui.membros.filtros.status.indexOf(status);
-            if (index > -1) State.ui.membros.filtros.status.splice(index, 1);
-          } else {
-            // Adicionar à seleção
-            chip.classList.add('is-active');
-            if (State.ui.membros.filtros.status.indexOf(status) === -1) {
-              State.ui.membros.filtros.status.push(status);
-            }
-          }
-          renderMembersList();
-          return;
-        }
-
-        // Dojo filters (seleção múltipla/toggle)
-        if (chip.hasAttribute('data-dojo')) {
-          var dojo = chip.getAttribute('data-dojo');
-          var isActive = chip.classList.contains('is-active');
-
-          if (isActive) {
-            // Remover da seleção
-            chip.classList.remove('is-active');
-            var index = State.ui.membros.filtros.dojos.indexOf(dojo);
-            if (index > -1) State.ui.membros.filtros.dojos.splice(index, 1);
-          } else {
-            // Adicionar à seleção
-            chip.classList.add('is-active');
-            if (State.ui.membros.filtros.dojos.indexOf(dojo) === -1) {
-              State.ui.membros.filtros.dojos.push(dojo);
-            }
-          }
-          renderMembersList();
-          return;
-        }
-
-        // Grupo filters (seleção múltipla/toggle)
-        if (chip.hasAttribute('data-grupo')) {
-          var grupo = chip.getAttribute('data-grupo');
-          var isActive = chip.classList.contains('is-active');
-
-          if (isActive) {
-            // Remover da seleção
-            chip.classList.remove('is-active');
-            var index = State.ui.membros.filtros.grupos.indexOf(grupo);
-            if (index > -1) State.ui.membros.filtros.grupos.splice(index, 1);
-          } else {
-            // Adicionar à seleção
-            chip.classList.add('is-active');
-            if (State.ui.membros.filtros.grupos.indexOf(grupo) === -1) {
-              State.ui.membros.filtros.grupos.push(grupo);
-            }
-          }
-          renderMembersList();
-          return;
-        }
-      });
-    }
+    // Nova lógica de filtros
+    setupMembersFilters();
 
     // Delegação de eventos para ações dos cards
     if (listEl) {
@@ -1021,54 +962,144 @@ var Views = {
       });
     }
 
+    function setupMembersFilters() {
+      // Event listeners para filtros principais
+      setupMainFilters();
+
+      // Event listeners para modal
+      setupModalFilters();
+
+      // Event listeners para busca
+      if (searchEl) {
+        searchEl.addEventListener('input', function() {
+          State.ui.membros.busca = searchEl.value.toLowerCase().trim();
+          renderMembersList();
+        });
+      }
+    }
+
+    function setupMainFilters() {
+      var mainFiltersEl = document.getElementById('members-main-filters');
+      if (!mainFiltersEl) return;
+
+      mainFiltersEl.addEventListener('click', function(ev) {
+        var chip = ev.target.closest('.chip');
+        if (!chip) return;
+
+        var filterType = null;
+        var filterValue = null;
+
+        if (chip.hasAttribute('data-status')) {
+          filterType = 'status';
+          filterValue = chip.getAttribute('data-status');
+        } else if (chip.hasAttribute('data-dojo')) {
+          filterType = 'dojos';
+          filterValue = chip.getAttribute('data-dojo');
+        }
+
+        if (filterType && filterValue) {
+          toggleMainFilter(filterType, filterValue, chip);
+        }
+      });
+    }
+
+    function setupModalFilters() {
+      // Abrir modal
+      if (btnFilters) {
+        btnFilters.addEventListener('click', function() {
+          openFiltersModal();
+        });
+      }
+
+      // Fechar modal
+      var closeBtn = document.getElementById('members-filters-modal-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', closeFiltersModal);
+      }
+
+      // Clicar fora do modal
+      if (modal) {
+        modal.addEventListener('click', function(ev) {
+          if (ev.target === modal) closeFiltersModal();
+        });
+      }
+
+      // Event listeners dos chips no modal
+      if (modal) {
+        modal.addEventListener('click', function(ev) {
+          var chip = ev.target.closest('.chip');
+          if (!chip) return;
+
+          var filterType = chip.getAttribute('data-filter');
+          var filterValue = chip.getAttribute('data-value');
+
+          if (filterType && filterValue) {
+            toggleModalFilter(filterType, filterValue, chip);
+          }
+        });
+      }
+
+      // Botões do modal
+      var btnClear = document.getElementById('btn-clear-modal-filters');
+      var btnApply = document.getElementById('btn-apply-modal-filters');
+
+      if (btnClear) {
+        btnClear.addEventListener('click', clearAllModalFilters);
+      }
+
+      if (btnApply) {
+        btnApply.addEventListener('click', function() {
+          closeFiltersModal();
+          renderMembersList();
+          updateActiveFilters();
+        });
+      }
+
+      // Limpar todos os filtros
+      var btnClearAll = document.getElementById('btn-clear-members-filters');
+      if (btnClearAll) {
+        btnClearAll.addEventListener('click', clearAllFilters);
+      }
+    }
+
     function createDynamicFilters() {
       var members = State.cache.membros || [];
-      var statusContainer = document.getElementById('status-container');
-      var gruposContainer = document.getElementById('grupos-container');
-      var dojosContainer = document.getElementById('dojos-container');
 
-      if (!statusContainer || !gruposContainer || !dojosContainer) return;
+      createMainFilters(members);
+      createModalFilters(members);
+    }
 
-      // Extrair status, dojos e grupos únicos
+    function createMainFilters(members) {
+      var statusContainer = document.getElementById('members-status-container');
+      var dojosContainer = document.getElementById('members-dojos-container');
+
+      if (!statusContainer || !dojosContainer) return;
+
+      // Extrair valores únicos
       var status = [];
       var dojos = [];
-      var grupos = [];
 
       members.forEach(function(m) {
         if (m.status && status.indexOf(m.status) === -1) status.push(m.status);
         if (m.dojo && dojos.indexOf(m.dojo) === -1) dojos.push(m.dojo);
-        if (m.categoria_grupo && grupos.indexOf(m.categoria_grupo) === -1) grupos.push(m.categoria_grupo);
       });
 
       // Ordenar alfabeticamente
       status.sort();
       dojos.sort();
-      grupos.sort();
 
-      // Limpar containers existentes
+      // Criar chips de status
       statusContainer.innerHTML = '';
-      gruposContainer.innerHTML = '';
-      dojosContainer.innerHTML = '';
-
-      // Criar chips de status dinamicamente
       status.forEach(function(st) {
         var chip = document.createElement('div');
         chip.className = 'chip';
         chip.setAttribute('data-status', st);
-        chip.textContent = st.charAt(0).toUpperCase() + st.slice(1); // Primeira letra maiúscula
+        chip.textContent = st.charAt(0).toUpperCase() + st.slice(1);
         statusContainer.appendChild(chip);
       });
 
-      // Criar chips de grupo dinamicamente
-      grupos.forEach(function(grupo) {
-        var chip = document.createElement('div');
-        chip.className = 'chip';
-        chip.setAttribute('data-grupo', grupo);
-        chip.textContent = grupo;
-        gruposContainer.appendChild(chip);
-      });
-
-      // Criar chips de dojo dinamicamente
+      // Criar chips de dojos
+      dojosContainer.innerHTML = '';
       dojos.forEach(function(dojo) {
         var chip = document.createElement('div');
         chip.className = 'chip';
@@ -1076,7 +1107,52 @@ var Views = {
         chip.textContent = dojo;
         dojosContainer.appendChild(chip);
       });
+    }
 
+    function createModalFilters(members) {
+      // Extrair todos os valores únicos
+      var grupos = [];
+      var categoria_membro = [];
+      var buntai = [];
+      var cargo = [];
+      var grau = [];
+
+      members.forEach(function(m) {
+        if (m.categoria_grupo && grupos.indexOf(m.categoria_grupo) === -1) grupos.push(m.categoria_grupo);
+        if (m.categoria_membro && categoria_membro.indexOf(m.categoria_membro) === -1) categoria_membro.push(m.categoria_membro);
+        if (m.buntai && buntai.indexOf(m.buntai) === -1) buntai.push(m.buntai);
+        if (m.cargo && cargo.indexOf(m.cargo) === -1) cargo.push(m.cargo);
+        if (m.grau_omitama && grau.indexOf(m.grau_omitama) === -1) grau.push(m.grau_omitama);
+      });
+
+      // Ordenar tudo
+      grupos.sort();
+      categoria_membro.sort();
+      buntai.sort();
+      cargo.sort();
+      grau.sort();
+
+      // Criar chips nos containers do modal
+      createModalChips('modal-grupos-container', grupos, 'grupos');
+      createModalChips('modal-categoria-membro-container', categoria_membro, 'categoria_membro');
+      createModalChips('modal-buntai-container', buntai, 'buntai');
+      createModalChips('modal-cargo-container', cargo, 'cargo');
+      createModalChips('modal-grau-container', grau, 'grau');
+    }
+
+    function createModalChips(containerId, values, filterType) {
+      var container = document.getElementById(containerId);
+      if (!container) return;
+
+      container.innerHTML = '';
+      values.forEach(function(value) {
+        var chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.setAttribute('data-filter', filterType);
+        chip.setAttribute('data-value', value);
+        chip.textContent = value;
+        container.appendChild(chip);
+      });
     }
 
     function renderMembersList() {
@@ -1088,19 +1164,58 @@ var Views = {
 
       // Aplicar filtros
       var filtered = members.filter(function(m) {
-        // Filtro de status (se nenhum selecionado, mostra todos)
+        // Aplicar todos os filtros
         if (filtros.status && filtros.status.length > 0) {
           if (filtros.status.indexOf(m.status) === -1) return false;
         }
 
-        // Filtro de dojo (se nenhum selecionado, mostra todos)
         if (filtros.dojos && filtros.dojos.length > 0) {
           if (filtros.dojos.indexOf(m.dojo) === -1) return false;
         }
 
-        // Filtro de grupo (se nenhum selecionado, mostra todos)
         if (filtros.grupos && filtros.grupos.length > 0) {
           if (filtros.grupos.indexOf(m.categoria_grupo) === -1) return false;
+        }
+
+        if (filtros.categoria_membro && filtros.categoria_membro.length > 0) {
+          if (filtros.categoria_membro.indexOf(m.categoria_membro) === -1) return false;
+        }
+
+        if (filtros.buntai && filtros.buntai.length > 0) {
+          if (filtros.buntai.indexOf(m.buntai) === -1) return false;
+        }
+
+        if (filtros.cargo && filtros.cargo.length > 0) {
+          if (filtros.cargo.indexOf(m.cargo) === -1) return false;
+        }
+
+        if (filtros.sexo && filtros.sexo.length > 0) {
+          var memberSexo = normalizeSexo(m.sexo);
+          var hasValidSexo = false;
+          for (var i = 0; i < filtros.sexo.length; i++) {
+            if (filtros.sexo[i] === memberSexo) {
+              hasValidSexo = true;
+              break;
+            }
+          }
+          if (!hasValidSexo) return false;
+        }
+
+        if (filtros.grau && filtros.grau.length > 0) {
+          if (filtros.grau.indexOf(m.grau_omitama) === -1) return false;
+        }
+
+        if (filtros.usuario && filtros.usuario.length > 0) {
+          var hasUser = !!m.usuario_uid;
+          var hasValidUser = false;
+          for (var i = 0; i < filtros.usuario.length; i++) {
+            if ((filtros.usuario[i] === 'vinculado' && hasUser) ||
+                (filtros.usuario[i] === 'nao-vinculado' && !hasUser)) {
+              hasValidUser = true;
+              break;
+            }
+          }
+          if (!hasValidUser) return false;
         }
 
         // Busca por nome
@@ -1254,6 +1369,236 @@ var Views = {
       setTimeout(function() {
         if (el) el.className = 'row';
       }, 100);
+    }
+
+    // Funções auxiliares para filtros
+    function toggleMainFilter(filterType, filterValue, chip) {
+      var isActive = chip.classList.contains('is-active');
+      var filters = State.ui.membros.filtros[filterType];
+
+      if (isActive) {
+        // Remover
+        chip.classList.remove('is-active');
+        var index = filters.indexOf(filterValue);
+        if (index > -1) filters.splice(index, 1);
+      } else {
+        // Adicionar
+        chip.classList.add('is-active');
+        if (filters.indexOf(filterValue) === -1) {
+          filters.push(filterValue);
+        }
+      }
+
+      renderMembersList();
+      updateActiveFilters();
+    }
+
+    function toggleModalFilter(filterType, filterValue, chip) {
+      var isActive = chip.classList.contains('is-active');
+      var filters = State.ui.membros.filtros[filterType];
+
+      if (isActive) {
+        chip.classList.remove('is-active');
+        var index = filters.indexOf(filterValue);
+        if (index > -1) filters.splice(index, 1);
+      } else {
+        chip.classList.add('is-active');
+        if (filters.indexOf(filterValue) === -1) {
+          filters.push(filterValue);
+        }
+      }
+    }
+
+    function openFiltersModal() {
+      if (!modal) return;
+
+      // Sincronizar estado dos chips com filtros ativos
+      syncModalFilters();
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeFiltersModal() {
+      if (!modal) return;
+
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    function syncModalFilters() {
+      if (!modal) return;
+
+      // Limpar todos os estados ativos
+      var chips = modal.querySelectorAll('.chip');
+      chips.forEach(function(chip) {
+        chip.classList.remove('is-active');
+      });
+
+      // Aplicar estados ativos baseados nos filtros
+      var filtros = State.ui.membros.filtros;
+      Object.keys(filtros).forEach(function(filterType) {
+        if (filtros[filterType] && filtros[filterType].length > 0) {
+          filtros[filterType].forEach(function(value) {
+            var chip = modal.querySelector('.chip[data-filter="' + filterType + '"][data-value="' + value + '"]');
+            if (chip) {
+              chip.classList.add('is-active');
+            }
+          });
+        }
+      });
+    }
+
+    function clearAllModalFilters() {
+      // Limpar chips do modal
+      var chips = modal.querySelectorAll('.chip.is-active');
+      chips.forEach(function(chip) {
+        chip.classList.remove('is-active');
+      });
+
+      // Limpar filtros avançados (manter principais)
+      State.ui.membros.filtros.grupos = [];
+      State.ui.membros.filtros.categoria_membro = [];
+      State.ui.membros.filtros.buntai = [];
+      State.ui.membros.filtros.cargo = [];
+      State.ui.membros.filtros.sexo = [];
+      State.ui.membros.filtros.grau = [];
+      State.ui.membros.filtros.usuario = [];
+    }
+
+    function clearAllFilters() {
+      // Limpar estado
+      Object.keys(State.ui.membros.filtros).forEach(function(key) {
+        State.ui.membros.filtros[key] = [];
+      });
+
+      // Limpar chips principais
+      var mainChips = document.querySelectorAll('#members-main-filters .chip.is-active');
+      mainChips.forEach(function(chip) {
+        chip.classList.remove('is-active');
+      });
+
+      // Limpar modal
+      if (modal) {
+        var modalChips = modal.querySelectorAll('.chip.is-active');
+        modalChips.forEach(function(chip) {
+          chip.classList.remove('is-active');
+        });
+      }
+
+      renderMembersList();
+      updateActiveFilters();
+    }
+
+    function updateActiveFilters() {
+      if (!activeFiltersEl || !filterTagsEl) return;
+
+      var filtros = State.ui.membros.filtros;
+      var tags = [];
+
+      // Coletar todas as tags ativas
+      Object.keys(filtros).forEach(function(filterType) {
+        if (filtros[filterType] && filtros[filterType].length > 0) {
+          filtros[filterType].forEach(function(value) {
+            tags.push({
+              type: filterType,
+              value: value,
+              label: getFilterLabel(filterType, value)
+            });
+          });
+        }
+      });
+
+      if (tags.length > 0) {
+        activeFiltersEl.style.display = 'block';
+        renderFilterTags(tags);
+      } else {
+        activeFiltersEl.style.display = 'none';
+      }
+    }
+
+    function getFilterLabel(filterType, value) {
+      var labels = {
+        'status': 'Status: ' + value,
+        'dojos': 'Dojo: ' + value,
+        'grupos': 'Grupo: ' + value,
+        'categoria_membro': 'Categoria: ' + value,
+        'buntai': 'Buntai: ' + value,
+        'cargo': 'Cargo: ' + value,
+        'sexo': 'Sexo: ' + (value === 'masculino' ? 'Masculino' : 'Feminino'),
+        'grau': 'Grau: ' + value,
+        'usuario': 'Usuário: ' + (value === 'vinculado' ? 'Com usuário' : 'Sem usuário')
+      };
+      return labels[filterType] || value;
+    }
+
+    function renderFilterTags(tags) {
+      if (!filterTagsEl) return;
+
+      var html = tags.map(function(tag) {
+        return '<div class="filter-tag">' +
+          '<span>' + tag.label + '</span>' +
+          '<button class="filter-tag-remove" data-filter-type="' + tag.type + '" data-filter-value="' + tag.value + '">&times;</button>' +
+        '</div>';
+      }).join('');
+
+      filterTagsEl.innerHTML = html;
+
+      // Event listeners para remover tags
+      filterTagsEl.addEventListener('click', function(ev) {
+        var removeBtn = ev.target.closest('.filter-tag-remove');
+        if (!removeBtn) return;
+
+        var filterType = removeBtn.getAttribute('data-filter-type');
+        var filterValue = removeBtn.getAttribute('data-filter-value');
+
+        removeFilter(filterType, filterValue);
+      });
+    }
+
+    function removeFilter(filterType, filterValue) {
+      var filters = State.ui.membros.filtros[filterType];
+      if (filters) {
+        var index = filters.indexOf(filterValue);
+        if (index > -1) {
+          filters.splice(index, 1);
+        }
+      }
+
+      // Atualizar chips visuais
+      updateFilterChips(filterType, filterValue, false);
+
+      renderMembersList();
+      updateActiveFilters();
+    }
+
+    function updateFilterChips(filterType, filterValue, isActive) {
+      // Atualizar chip principal
+      var mainChip = document.querySelector('#members-main-filters .chip[data-' + filterType.replace('s', '') + '="' + filterValue + '"]');
+      if (mainChip) {
+        if (isActive) {
+          mainChip.classList.add('is-active');
+        } else {
+          mainChip.classList.remove('is-active');
+        }
+      }
+
+      // Atualizar chip do modal
+      var modalChip = modal.querySelector('.chip[data-filter="' + filterType + '"][data-value="' + filterValue + '"]');
+      if (modalChip) {
+        if (isActive) {
+          modalChip.classList.add('is-active');
+        } else {
+          modalChip.classList.remove('is-active');
+        }
+      }
+    }
+
+    function normalizeSexo(sexo) {
+      if (!sexo) return '';
+      var sexoStr = String(sexo).toLowerCase();
+      if (sexoStr === 'm' || sexoStr === 'masc' || sexoStr === 'masculino') return 'masculino';
+      if (sexoStr === 'f' || sexoStr === 'fem' || sexoStr === 'feminino') return 'feminino';
+      return '';
     }
   },
 
