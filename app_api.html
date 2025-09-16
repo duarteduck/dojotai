@@ -192,5 +192,35 @@ var API = {
     });
   }
 
+  listMembers = function() {
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.ok) {
+            resolve(res.items || []);
+          } else {
+            reject((res && res.error) || 'Falha ao listar membros');
+          }
+        })
+        .withFailureHandler(reject)
+        .listMembersApi();
+    });
+  };
+
+  getMember = function(id) {
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.ok) {
+            resolve(res.item || null);
+          } else {
+            reject((res && res.error) || 'Membro não encontrado');
+          }
+        })
+        .withFailureHandler(reject)
+        .getMemberById(id);
+    });
+  };
+
 };
 </script>
