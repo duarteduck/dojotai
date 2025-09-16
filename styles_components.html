@@ -789,10 +789,8 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  min-height: 40px; /* Para debug - garante altura mínima */
-  min-width: 50px; /* Força largura mínima */
-  border: 1px solid red; /* Para debug - contorno visível */
-  flex: 1 0 auto; /* Permite expansão */
+  min-width: 50px;
+  flex: 1 0 auto;
 }
 
 /* Chips dentro dos containers dinâmicos */
@@ -802,20 +800,33 @@
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  background: yellow !important; /* Para debug - fundo amarelo */
-  border: 2px solid blue !important; /* Para debug - borda azul */
+  background: var(--bg) !important;
+  border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
   padding: 8px 16px !important;
   font-size: 0.9rem !important;
   font-weight: 500 !important;
-  color: black !important; /* Para debug - texto preto */
+  color: var(--fg) !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   min-height: 36px !important;
   white-space: nowrap !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  z-index: 999 !important;
+}
+
+/* Estados ativo e hover para chips dinâmicos */
+#status-container .chip:hover,
+#grupos-container .chip:hover,
+#dojos-container .chip:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--primary) !important;
+}
+
+#status-container .chip.is-active,
+#grupos-container .chip.is-active,
+#dojos-container .chip.is-active {
+  background: var(--primary) !important;
+  color: white !important;
+  border-color: var(--primary) !important;
 }
 
 /* Garante que os containers se comportem como parte do sistema de chips */
