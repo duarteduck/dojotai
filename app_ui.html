@@ -1200,6 +1200,244 @@ var Views = {
         if (el) el.className = 'row';
       }, 100);
     }
+  },
+
+  /* ===========================
+     SISTEMA DE MEMBRO INDIVIDUAL
+     =========================== */
+  initMember: function() {
+    console.log('🎯 Views.initMember executado!');
+
+    // Extrai o ID do membro da URL
+    var urlParams = this.getUrlParams();
+    var memberId = urlParams.id;
+
+    if (!memberId) {
+      console.error('❌ ID do membro não fornecido');
+      UI.toast('ID do membro não fornecido', 'err');
+      Router.go('#/members');
+      return;
+    }
+
+    console.log('🔍 Carregando membro ID:', memberId);
+
+    // Elementos da view
+    var loadingEl = document.getElementById('member-detail-loading');
+    var errorEl = document.getElementById('member-detail-error');
+    var btnBack = document.getElementById('btn-member-back');
+    var btnEdit = document.getElementById('btn-member-edit');
+    var btnRetry = document.getElementById('btn-member-retry');
+
+    // Event listeners
+    if (btnBack) {
+      btnBack.addEventListener('click', function() {
+        Router.go('#/members');
+      });
+    }
+
+    if (btnRetry) {
+      btnRetry.addEventListener('click', function() {
+        loadMemberData();
+      });
+    }
+
+    // Carrega dados do membro
+    loadMemberData();
+
+    function loadMemberData() {
+      console.log('📡 Carregando dados do membro...');
+
+      if (loadingEl) loadingEl.style.display = 'block';
+      if (errorEl) errorEl.style.display = 'none';
+
+      // Busca membro na API
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('✅ Dados do membro recebidos:', result);
+
+          if (loadingEl) loadingEl.style.display = 'none';
+
+          if (result && result.ok && result.item) {
+            renderMemberData(result.item);
+          } else {
+            showError('Membro não encontrado');
+          }
+        })
+        .withFailureHandler(function(err) {
+          console.error('❌ Erro ao carregar membro:', err);
+          if (loadingEl) loadingEl.style.display = 'none';
+          showError('Erro ao carregar dados do membro');
+        })
+        .getMemberById(memberId);
+    }
+
+    function renderMemberData(member) {
+      console.log('🎨 Renderizando dados do membro:', member);
+
+      // Nome e código
+      setElementText('member-detail-name', member.nome || 'Nome não informado');
+      setElementText('member-detail-code', '#' + (member.id || '-'));
+
+      // Status
+      var statusChip = document.getElementById('member-detail-status-chip');
+      if (statusChip) {
+        statusChip.textContent = getStatusLabel(member.status);
+        statusChip.className = 'chip ' + getStatusClass(member.status);
+      }
+
+      // Informações pessoais
+      setElementText('member-nome-completo', member.nome_completo || member.nome || '-');
+      setOptionalField('member-sexo', member.sexo, getSexoLabel);
+      setOptionalField('member-idade', member.idade);
+      setOptionalField('member-data-nascimento', member.data_nascimento, formatDate);
+
+      // Organização
+      setElementText('member-dojo', member.dojo || '-');
+      setOptionalField('member-categoria-grupo', member.categoria_grupo);
+      setOptionalField('member-categoria-membro', member.categoria_membro);
+      setOptionalField('member-buntai', member.buntai);
+      setOptionalField('member-cargo', member.cargo);
+
+      // Graduação
+      var hasGraduacao = member.grau_omitama || member.numero_seminario_basico;
+      if (hasGraduacao) {
+        showSection('member-graduacao-section');
+        setElementText('member-grau-omitama', member.grau_omitama || '-');
+        setOptionalField('member-seminario-basico', member.numero_seminario_basico);
+      }
+
+      // Contato
+      var hasContato = member.telefone || member.email || member.endereco;
+      if (hasContato) {
+        showSection('member-contato-section');
+        setOptionalField('member-telefone', member.telefone);
+        setOptionalField('member-email', member.email);
+        setOptionalField('member-endereco', member.endereco);
+      }
+
+      // Usuário vinculado
+      if (member.usuario_uid) {
+        showElement('member-linked-detail');
+        hideElement('member-unlinked-detail');
+        setElementText('member-usuario-nome', member.usuario_nome || 'Usuário vinculado');
+      } else {
+        hideElement('member-linked-detail');
+        showElement('member-unlinked-detail');
+      }
+
+      // Metadados
+      var hasMetadata = member.criado_em || member.atualizado_em;
+      if (hasMetadata) {
+        showSection('member-metadata-section');
+        setOptionalField('member-criado-em', member.criado_em, formatDateTime);
+        setOptionalField('member-atualizado-em', member.atualizado_em, formatDateTime);
+      }
+    }
+
+    function setElementText(id, text) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    function setOptionalField(id, value, formatter) {
+      var container = document.getElementById(id + '-container');
+      var element = document.getElementById(id);
+
+      if (value) {
+        if (container) container.style.display = 'block';
+        if (element) {
+          element.textContent = formatter ? formatter(value) : value;
+        }
+      } else {
+        if (container) container.style.display = 'none';
+      }
+    }
+
+    function showSection(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'block';
+    }
+
+    function showElement(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'block';
+    }
+
+    function hideElement(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    }
+
+    function showError(message) {
+      if (errorEl) {
+        errorEl.style.display = 'block';
+        var errorTextEl = errorEl.querySelector('.error-text');
+        if (errorTextEl) errorTextEl.textContent = message;
+      }
+    }
+
+    function getStatusLabel(status) {
+      var statusStr = String(status || '').toLowerCase();
+      if (statusStr === 'ativo') return 'Ativo';
+      if (statusStr === 'inativo') return 'Inativo';
+      return 'Indefinido';
+    }
+
+    function getStatusClass(status) {
+      var statusStr = String(status || '').toLowerCase();
+      if (statusStr === 'ativo') return 'ativo';
+      if (statusStr === 'inativo') return 'inativo';
+      return '';
+    }
+
+    function getSexoLabel(sexo) {
+      if (!sexo) return '';
+      var sexoStr = String(sexo).toLowerCase();
+      if (sexoStr === 'm' || sexoStr === 'masc' || sexoStr === 'masculino') return 'Masculino';
+      if (sexoStr === 'f' || sexoStr === 'fem' || sexoStr === 'feminino') return 'Feminino';
+      return sexo;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      try {
+        var date = new Date(dateStr);
+        return date.toLocaleDateString('pt-BR');
+      } catch (e) {
+        return dateStr;
+      }
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return '';
+      try {
+        var date = new Date(dateStr);
+        return date.toLocaleString('pt-BR');
+      } catch (e) {
+        return dateStr;
+      }
+    }
+  },
+
+  // Função auxiliar para extrair parâmetros da URL
+  getUrlParams: function() {
+    var params = {};
+    var hash = location.hash || '';
+    var queryIndex = hash.indexOf('?');
+
+    if (queryIndex === -1) return params;
+
+    var query = hash.substring(queryIndex + 1);
+    var pairs = query.split('&');
+
+    for (var i = 0; i < pairs.length; i++) {
+      var pair = pairs[i].split('=');
+      if (pair.length === 2) {
+        params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+      }
+    }
+
+    return params;
   }
 };
 

@@ -1990,6 +1990,21 @@
 
 /* ===== SISTEMA DE MEMBROS - ESTILOS ===== */
 
+/* Grid específico para membros - força largura completa */
+[data-view="members"] .row {
+  display: grid;
+  grid-template-columns: 1fr !important;
+  gap: 16px;
+  width: 100%;
+}
+
+/* Cards de membros ocupam largura completa */
+[data-view="members"] .card.member {
+  width: 100% !important;
+  max-width: 100% !important;
+  grid-column: 1 !important;
+}
+
 /* Resumo/estatísticas dos membros */
 .members-summary {
   display: flex;
@@ -2000,6 +2015,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
+  width: 100%;
 }
 
 .summary-item {
@@ -2322,6 +2338,226 @@
 #members-filters .chip[data-dojo].visible,
 #members-filters .chip[data-grupo].visible {
   display: inline-flex;
+}
+
+/* ===== DETALHES DO MEMBRO - ESTILOS ===== */
+
+/* Header da página de detalhes */
+.member-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.member-detail-title h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.member-detail-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.member-detail-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Grid de seções */
+.member-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+/* Seções individuais */
+.member-detail-section {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Lista de detalhes */
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  color: var(--fg);
+  font-weight: 500;
+  overflow-wrap: break-word;
+}
+
+/* Status de vinculação detalhado */
+.member-link-status-detail {
+  width: 100%;
+}
+
+.member-link-status-detail .member-linked,
+.member-link-status-detail .member-unlinked {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.member-link-status-detail .member-linked {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.member-link-status-detail .member-unlinked {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.link-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link-user-name {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* Estados de carregamento e erro */
+.loading-state {
+  padding: 40px;
+  text-align: center;
+}
+
+.error-state {
+  padding: 40px;
+  text-align: center;
+}
+
+.error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.error-icon {
+  font-size: 2rem;
+}
+
+.error-text {
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+
+/* Responsividade mobile */
+@media (max-width: 768px) {
+  .member-detail-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .member-detail-actions {
+    justify-content: stretch;
+  }
+
+  .member-detail-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .member-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .member-detail-section {
+    padding: 16px;
+  }
+
+  .member-detail-title h2 {
+    font-size: 1.5rem;
+  }
+
+  .detail-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .detail-label {
+    flex-shrink: 0;
+    min-width: 40%;
+  }
+
+  .detail-value {
+    text-align: right;
+    flex: 1;
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .member-detail-section {
+    background: var(--card);
+  }
+
+  .member-link-status-detail .member-linked {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.25);
+  }
+
+  .member-link-status-detail .member-unlinked {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.25);
+  }
 }
 
 </style>

@@ -31,6 +31,7 @@ var Router = {
       if (view === 'dash')   init = Views.initDash;
       if (view === 'new')    init = Views.initNew;
       if (view === 'members') init = Views.initMembers;  // ← ESTA LINHA É CRUCIAL
+      if (view === 'member') init = Views.initMember;   // ← NOVA LINHA PARA MEMBRO INDIVIDUAL
       
       console.log('🎯 Inicializador encontrado para', view, ':', typeof init);
       
@@ -55,6 +56,7 @@ var Router = {
     if (route.indexOf('#/new')  === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/edit') === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/members') === 0 && !authed) { return this.go('#/login'); } // ← PROTEÇÃO MEMBERS
+    if (route.indexOf('#/member') === 0 && !authed) { return this.go('#/login'); } // ← PROTEÇÃO MEMBER
     
     // Redirecionamento se já logado
     if (route.indexOf('#/login') === 0 && authed) { return this.go('#/dash'); }
@@ -64,7 +66,8 @@ var Router = {
     if (route.indexOf('#/dash') === 0) view = 'dash';
     if (route.indexOf('#/new')  === 0) view = 'new';
     if (route.indexOf('#/edit') === 0) view = 'new';
-    if (route.indexOf('#/members') === 0) view = 'members'; // ← ESTA LINHA É CRUCIAL
+    if (route.indexOf('#/member?') === 0) view = 'member'; // ← MEMBRO INDIVIDUAL (deve vir antes de members!)
+    if (route.indexOf('#/members') === 0) view = 'members'; // ← LISTA DE MEMBROS
 
     console.log('✅ View determinada:', view);
     this.mount(view);
