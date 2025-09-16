@@ -838,15 +838,17 @@ var Views = {
     var searchEl = document.getElementById('members-search');
     var filtersEl = document.getElementById('members-filters');
     var summaryEl = document.getElementById('members-summary');
-    var btnBack = document.getElementById('btn-members-back');
+    var btnMenu = document.getElementById('btn-members-menu');
     var btnStats = document.getElementById('btn-members-stats');
     var btnLink = document.getElementById('btn-members-link');
+    var btnNew = document.getElementById('btn-members-new');
 
     console.log('🔍 Elementos encontrados:', {
       listEl: !!listEl,
       searchEl: !!searchEl,
       filtersEl: !!filtersEl,
-      btnBack: !!btnBack
+      btnMenu: !!btnMenu,
+      btnNew: !!btnNew
     });
 
     if (!listEl) {
@@ -854,11 +856,20 @@ var Views = {
       return;
     }
 
-    // Botão voltar
-    if (btnBack) {
-      btnBack.addEventListener('click', function() {
-        console.log('🔙 Voltando para dashboard');
-        Router.go('#/dash');
+    // Botão menu
+    if (btnMenu) {
+      btnMenu.addEventListener('click', function() {
+        console.log('🔄 Abrindo menu na tela de membros');
+        if(UI.MenuSystem && !UI.MenuSystem.overlay){ UI.MenuSystem.init(); }
+        if(UI.MenuSystem && UI.MenuSystem.open){ UI.MenuSystem.open(); }
+      });
+    }
+
+    // Botão novo membro (funcionalidade futura)
+    if (btnNew) {
+      btnNew.addEventListener('click', function() {
+        console.log('➕ Botão Novo Membro clicado');
+        UI.toast('Funcionalidade de novo membro em desenvolvimento');
       });
     }
 
