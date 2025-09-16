@@ -743,108 +743,45 @@
 /* Responsividade dos filtros de membros */
 @media (max-width: 768px) {
   #members-filters {
-    justify-content: flex-start;
-    gap: 6px 8px;
-    flex-direction: row; /* Força linha horizontal */
+    gap: 8px;
   }
 
-  #status-container,
-  #grupos-container,
-  #dojos-container {
-    min-width: 100px !important; /* Mais espaço em mobile */
-  }
-
-  #members-filters .chip-sep {
-    margin: 0 4px;
-    height: 24px;
-  }
-
-  #members-filters .chip {
-    font-size: 0.85rem;
-    padding: 8px 12px;
-    min-height: 36px;
+  .members-filter-row {
+    gap: 4px;
   }
 }
 
-@media (max-width: 480px) {
-  #members-filters {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  #members-filters .chip-sep {
-    width: 100%;
-    height: 1px;
-    margin: 0;
-    align-self: stretch;
-  }
+/* Filtros de membros - cada seção em linha separada */
+#members-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
-/* Containers dinâmicos de filtros */
-#status-container,
-#grupos-container,
-#dojos-container {
-  display: inline-flex !important;
+/* Linhas de filtros */
+.members-filter-row {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  min-width: 50px;
-  flex: 1 0 auto;
 }
 
-/* Chips dentro dos containers dinâmicos */
+/* Containers dinâmicos herdam estilo dos chips padrão */
+#status-container,
+#grupos-container,
+#dojos-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Chips dos membros usam o mesmo CSS das atividades */
 #status-container .chip,
 #grupos-container .chip,
 #dojos-container .chip {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius) !important;
-  padding: 8px 16px !important;
-  font-size: 0.9rem !important;
-  font-weight: 500 !important;
-  color: var(--fg) !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-  min-height: 36px !important;
-  white-space: nowrap !important;
-}
-
-/* Estados ativo e hover para chips dinâmicos */
-#status-container .chip:hover,
-#grupos-container .chip:hover,
-#dojos-container .chip:hover {
-  background: var(--bg-hover) !important;
-  border-color: var(--primary) !important;
-}
-
-#status-container .chip.is-active,
-#grupos-container .chip.is-active,
-#dojos-container .chip.is-active {
-  background: var(--primary) !important;
-  color: white !important;
-  border-color: var(--primary) !important;
-}
-
-/* Garante que os containers se comportem como parte do sistema de chips */
-#members-filters {
-  align-items: center;
-  flex-wrap: wrap;
-  width: 100%; /* Garante largura total */
-  display: flex !important; /* Força flex */
-}
-
-#members-filters > * {
-  display: inline-flex;
-  align-items: center;
-}
-
-/* Separadores não devem interferir no layout */
-#members-filters .chip-sep {
-  flex-shrink: 0; /* Não encolhe */
+  /* Herda todos os estilos de .chip padrão */
 }
 
 /* Minhas chip active style reusing .chip.is-active */
