@@ -349,7 +349,7 @@ var Views = {
     if(!listEl) return;
 
     // Reset de filtros da UI
-    State.ui.minhas=false;
+    State.ui.minhas=true;  // Minhas tarefas como padrão
     State.ui.nomeFiltro='';
     State.ui.categoriaAtividadeFiltro='todas';
 
@@ -616,6 +616,10 @@ var Views = {
       for (var i=0;i<chipsStatus.length;i++){ chipsStatus[i].classList.remove('is-active'); }
       var chip=document.querySelector('#chips .chip[data-status="pendente"]');
       if(chip) chip.classList.add('is-active');
+
+      // minhas tarefas default = ativo
+      var chipMinhas=document.getElementById('chip-minhas');
+      if(chipMinhas) chipMinhas.classList.add('is-active');
 
       renderCategoriaAtividadeFilters(State.cache.categoriasAtividades);
 
@@ -2435,10 +2439,14 @@ window.ParticipacaoSystem = {
 
     this.currentActivityId = activityId;
 
+    // Busca o título da atividade no cache
+    var atividade = this.findActivityById(activityId);
+    var activityTitle = atividade ? atividade.titulo : activityId;
+
     // Define título
     var title = this.modal.querySelector('#participacoes-modal-title');
     if (title) {
-      title.textContent = 'Participações - ' + activityId;
+      title.textContent = 'Participações - ' + activityTitle;
     }
 
     // Abre na primeira aba
@@ -2538,16 +2546,316 @@ window.ParticipacaoSystem = {
   loadAlvosTab: function() {
     console.log('🎯 Carregando aba de alvos...');
 
-    // Mostra mensagem de desenvolvimento
+    // Inicializa filtros e controles
+    this.setupAlvosFilters();
+    this.setupAlvosEventListeners();
+
+    // Esconde resultados inicialmente
     var alvosContainer = this.modal.querySelector('#alvos-resultados');
     if (alvosContainer) {
-      alvosContainer.style.display = 'block';
-      alvosContainer.innerHTML = '<div class="development-notice" style="padding: 20px; text-align: center; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid var(--primary);">' +
-        '<h4 style="color: var(--primary); margin-bottom: 10px;">🚧 Em Desenvolvimento</h4>' +
-        '<p>A funcionalidade de definir alvos está sendo implementada.</p>' +
-        '<p>Em breve você poderá selecionar membros por filtros.</p>' +
-        '</div>';
+      alvosContainer.style.display = 'none';
     }
+  },
+
+  setupAlvosFilters: function() {
+    console.log('🔧 Configurando filtros de alvos...');
+
+    // Carrega membros para extrair valores únicos dos filtros
+    if (!State.cache || !State.cache.membros) {
+      console.warn('⚠️ Cache de membros não disponível');
+      return;
+    }
+
+    var membros = State.cache.membros;
+    this.createAlvosFilterChips(membros);
+  },
+
+  createAlvosFilterChips: function(membros) {
+    // Extrai valores únicos
+    var dojos = [];
+    var status = [];
+    var cargos = [];
+    var categorias = [];
+    var buntais = [];
+
+    membros.forEach(function(m) {
+      if (m.dojo && dojos.indexOf(m.dojo) === -1) dojos.push(m.dojo);
+      if (m.status && status.indexOf(m.status) === -1) status.push(m.status);
+      if (m.cargo && cargos.indexOf(m.cargo) === -1) cargos.push(m.cargo);
+      if (m.categoria_grupo && categorias.indexOf(m.categoria_grupo) === -1) categorias.push(m.categoria_grupo);
+      if (m.buntai && buntais.indexOf(m.buntai) === -1) buntais.push(m.buntai);
+    });
+
+    // Ordena alfabeticamente
+    dojos.sort();
+    status.sort();
+    cargos.sort();
+    categorias.sort();
+    buntais.sort();
+
+    // Cria chips nos containers
+    this.createFilterChips('alvos-dojos-container', dojos, 'dojo');
+    this.createFilterChips('alvos-status-container', status, 'status');
+    this.createFilterChips('alvos-cargo-container', cargos, 'cargo');
+    this.createFilterChips('alvos-categoria-container', categorias, 'categoria_grupo');
+    this.createFilterChips('alvos-buntai-container', buntais, 'buntai');
+  },
+
+  createFilterChips: function(containerId, values, filterType) {
+    var container = this.modal.querySelector('#' + containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    values.forEach(function(value) {
+      var chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.setAttribute('data-filter-type', filterType);
+      chip.setAttribute('data-filter-value', value);
+      chip.textContent = value;
+      container.appendChild(chip);
+    });
+  },
+
+  setupAlvosEventListeners: function() {
+    var self = this;
+
+    // Event listeners para filtros
+    var filtersContainer = this.modal.querySelector('.alvos-filters');
+    if (filtersContainer) {
+      filtersContainer.addEventListener('click', function(ev) {
+        var chip = ev.target.closest('.chip');
+        if (!chip) return;
+
+        chip.classList.toggle('is-active');
+        console.log('🔄 Filtro toggle:', chip.textContent);
+      });
+    }
+
+    // Busca por nome
+    var searchInput = this.modal.querySelector('#alvos-busca-nome');
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        console.log('🔍 Busca:', this.value);
+      });
+    }
+
+    // Botão buscar membros
+    var btnBuscar = this.modal.querySelector('#btn-buscar-membros');
+    if (btnBuscar) {
+      btnBuscar.addEventListener('click', function() {
+        self.executarBuscaMembros();
+      });
+    }
+
+    // Botão limpar filtros
+    var btnLimpar = this.modal.querySelector('#btn-limpar-filtros-alvos');
+    if (btnLimpar) {
+      btnLimpar.addEventListener('click', function() {
+        self.limparFiltrosAlvos();
+      });
+    }
+
+    // Botões de seleção
+    var btnSelecionarTodos = this.modal.querySelector('#btn-selecionar-todos');
+    var btnDesselecionar = this.modal.querySelector('#btn-desselecionar-todos');
+
+    if (btnSelecionarTodos) {
+      btnSelecionarTodos.addEventListener('click', function() {
+        self.selecionarTodosMembros();
+      });
+    }
+
+    if (btnDesselecionar) {
+      btnDesselecionar.addEventListener('click', function() {
+        self.desselecionarTodosMembros();
+      });
+    }
+
+    // Botão definir alvos
+    var btnDefinir = this.modal.querySelector('#btn-definir-alvos');
+    if (btnDefinir) {
+      btnDefinir.addEventListener('click', function() {
+        self.definirAlvosSelecionados();
+      });
+    }
+  },
+
+  executarBuscaMembros: function() {
+    console.log('🔍 Executando busca de membros...');
+
+    // Coleta filtros ativos
+    var filtros = this.coletarFiltrosAtivos();
+    console.log('Filtros coletados:', filtros);
+
+    // Busca membros
+    API.searchMembersByCriteria(filtros)
+      .then(function(result) {
+        if (result.ok) {
+          this.renderResultadosBusca(result.items);
+        } else {
+          console.error('Erro na busca:', result.error);
+          UI.toast('Erro ao buscar membros', 'err');
+        }
+      }.bind(this))
+      .catch(function(error) {
+        console.error('Erro na API:', error);
+        UI.toast('Erro na busca de membros', 'err');
+      });
+  },
+
+  coletarFiltrosAtivos: function() {
+    var filtros = {};
+
+    // Coleta chips ativos
+    var chipsAtivos = this.modal.querySelectorAll('.alvos-filters .chip.is-active');
+    chipsAtivos.forEach(function(chip) {
+      var filterType = chip.getAttribute('data-filter-type');
+      var filterValue = chip.getAttribute('data-filter-value');
+
+      if (!filtros[filterType]) filtros[filterType] = [];
+      filtros[filterType].push(filterValue);
+    });
+
+    // Busca por nome
+    var searchInput = this.modal.querySelector('#alvos-busca-nome');
+    if (searchInput && searchInput.value.trim()) {
+      filtros.nome = searchInput.value.trim();
+    }
+
+    return filtros;
+  },
+
+  renderResultadosBusca: function(membros) {
+    console.log('🎨 Renderizando resultados:', membros.length, 'membros');
+
+    var container = this.modal.querySelector('#alvos-resultados');
+    var lista = this.modal.querySelector('#alvos-lista');
+    var count = this.modal.querySelector('#alvos-count');
+
+    if (!container || !lista || !count) return;
+
+    count.textContent = membros.length + ' membros encontrados';
+    container.style.display = 'block';
+
+    if (membros.length === 0) {
+      lista.innerHTML = '<div class="empty-state" style="padding: 20px; text-align: center; color: var(--muted);">Nenhum membro encontrado com os filtros aplicados.</div>';
+      return;
+    }
+
+    var html = '';
+    membros.forEach(function(membro) {
+      html += this.renderMembroItem(membro);
+    }.bind(this));
+
+    lista.innerHTML = html;
+
+    // Adiciona event listeners para checkboxes
+    this.setupMembrosCheckboxes();
+    this.atualizarContadorSelecionados();
+  },
+
+  renderMembroItem: function(membro) {
+    var detalhes = [];
+    if (membro.dojo) detalhes.push(membro.dojo);
+    if (membro.cargo) detalhes.push(membro.cargo);
+    if (membro.categoria_grupo) detalhes.push(membro.categoria_grupo);
+
+    return '<div class="alvo-item" data-member-id="' + membro.id + '">' +
+      '<input type="checkbox" class="alvo-checkbox" data-member-id="' + membro.id + '">' +
+      '<div class="alvo-info">' +
+        '<div class="alvo-nome">' + membro.nome + '</div>' +
+        '<div class="alvo-detalhes">' + detalhes.join(' • ') + '</div>' +
+      '</div>' +
+    '</div>';
+  },
+
+  setupMembrosCheckboxes: function() {
+    var checkboxes = this.modal.querySelectorAll('.alvo-checkbox');
+    checkboxes.forEach(function(checkbox) {
+      checkbox.addEventListener('change', function() {
+        var item = checkbox.closest('.alvo-item');
+        item.classList.toggle('selected', checkbox.checked);
+        this.atualizarContadorSelecionados();
+      }.bind(this));
+    }.bind(this));
+  },
+
+  atualizarContadorSelecionados: function() {
+    var selecionados = this.modal.querySelectorAll('.alvo-checkbox:checked').length;
+    var countEl = this.modal.querySelector('#alvos-selecionados');
+    if (countEl) {
+      countEl.textContent = selecionados + ' selecionados';
+    }
+  },
+
+  selecionarTodosMembros: function() {
+    var checkboxes = this.modal.querySelectorAll('.alvo-checkbox');
+    checkboxes.forEach(function(checkbox) {
+      checkbox.checked = true;
+      checkbox.closest('.alvo-item').classList.add('selected');
+    });
+    this.atualizarContadorSelecionados();
+  },
+
+  desselecionarTodosMembros: function() {
+    var checkboxes = this.modal.querySelectorAll('.alvo-checkbox');
+    checkboxes.forEach(function(checkbox) {
+      checkbox.checked = false;
+      checkbox.closest('.alvo-item').classList.remove('selected');
+    });
+    this.atualizarContadorSelecionados();
+  },
+
+  limparFiltrosAlvos: function() {
+    // Remove classe active de todos os chips
+    var chips = this.modal.querySelectorAll('.alvos-filters .chip');
+    chips.forEach(function(chip) {
+      chip.classList.remove('is-active');
+    });
+
+    // Limpa busca por nome
+    var searchInput = this.modal.querySelector('#alvos-busca-nome');
+    if (searchInput) {
+      searchInput.value = '';
+    }
+
+    // Esconde resultados
+    var container = this.modal.querySelector('#alvos-resultados');
+    if (container) {
+      container.style.display = 'none';
+    }
+
+    console.log('✅ Filtros de alvos limpos');
+  },
+
+  definirAlvosSelecionados: function() {
+    var checkboxes = this.modal.querySelectorAll('.alvo-checkbox:checked');
+    var memberIds = [];
+
+    checkboxes.forEach(function(checkbox) {
+      memberIds.push(checkbox.getAttribute('data-member-id'));
+    });
+
+    if (memberIds.length === 0) {
+      UI.toast('Selecione pelo menos um membro', 'warn');
+      return;
+    }
+
+    console.log('🎯 Definindo alvos:', memberIds);
+
+    API.defineTargets(this.currentActivityId, memberIds)
+      .then(function(result) {
+        if (result.ok) {
+          UI.toast('Alvos definidos com sucesso!', 'success');
+          this.switchTab('controlar-participacoes'); // Muda para próxima aba
+        } else {
+          UI.toast('Erro ao definir alvos: ' + result.error, 'err');
+        }
+      }.bind(this))
+      .catch(function(error) {
+        console.error('Erro ao definir alvos:', error);
+        UI.toast('Erro ao definir alvos', 'err');
+      });
   },
 
   loadParticipacoesTab: function() {
@@ -2655,6 +2963,17 @@ window.ParticipacaoSystem = {
   setElementText: function(id, text) {
     var el = this.modal.querySelector('#' + id);
     if (el) el.textContent = text || '-';
+  },
+
+  findActivityById: function(activityId) {
+    if (!State.cache || !State.cache.atividades) return null;
+
+    for (var i = 0; i < State.cache.atividades.length; i++) {
+      if (State.cache.atividades[i].id === activityId) {
+        return State.cache.atividades[i];
+      }
+    }
+    return null;
   }
 };
 
