@@ -61,6 +61,8 @@ Este documento especifica a **estrutura completa de dados** do Sistema Dojotai, 
 ### Planilhas
 **Propósito**: Configuração dinâmica de conexões com planilhas Google
 
+> **🔧 ARQUITETURA CENTRAL**: Esta tabela é fundamental para todo o sistema, permitindo conectar dinamicamente com diferentes Google Sheets sem hardcode no código. Cada registro define como acessar uma tabela específica.
+
 | Campo | Tipo | Descrição | Status |
 |-------|------|-----------|--------|
 | `arquivo` | String | Nome do arquivo (organização) | ✅ Implementado |
@@ -71,6 +73,12 @@ Este documento especifica a **estrutura completa de dados** do Sistema Dojotai, 
 | `range_a1` | String | Range A1 (ex: A1:Z) | ✅ Implementado |
 | `descricao` | String | Descrição para documentação | ✅ Implementado |
 | `status` | String | Ativo/Inativo **[Obrigatório]** | ✅ Implementado |
+
+**🔑 Padrão de Uso no Código**:
+- Função: `readTableByNome_('nome_da_tabela')`
+- Esta função consulta a tabela "Planilhas" para encontrar as configurações de acesso
+- Prioridade: named_range → range_a1 → planilha inteira
+- Permite múltiplas planilhas Google sem alteração de código
 
 ### Menu
 **Propósito**: Sistema de navegação dinâmico configurável
@@ -124,18 +132,34 @@ Este documento especifica a **estrutura completa de dados** do Sistema Dojotai, 
 | `ordem` | Number | Ordem de exibição | ✅ Implementado |
 | `status` | String | Ativo/Inativo **[Obrigatório]** | ✅ Implementado |
 
-### Activity_Participation
-**Propósito**: Controle de participação em atividades
+### Participacoes
+**Propósito**: Controle de participação em atividades (implementado 17/09/2025)
 
 | Campo | Tipo | Descrição | Status |
 |-------|------|-----------|--------|
-| `id` | String | ID único (PART-0001) **[PK]** **[Gerado]** | 🔄 Planejado |
-| `activity_id` | String | **[FK→Atividades.id]** **[Obrigatório]** | 🔄 Planejado |
-| `member_id` | String | **[FK→Membros.id]** **[Obrigatório]** | 🔄 Planejado |
-| `status` | String | convidado, confirmado, ausente, presente | 🔄 Planejado |
-| `data_resposta` | DateTime | Quando confirmou/recusou | 🔄 Planejado |
-| `presente` | Boolean | Compareceu à atividade | 🔄 Planejado |
-| `observacoes` | String | Comentários sobre a participação | 🔄 Planejado |
+| `id` | String | ID único (PART-0001) **[PK]** **[Gerado]** | ✅ Implementado |
+| `id_atividade` | String | **[FK→Atividades.id]** **[Obrigatório]** | ✅ Implementado |
+| `id_membro` | String | **[FK→Membros.id]** **[Obrigatório]** | ✅ Implementado |
+| `tipo` | String | alvo, extra **[Obrigatório]** | ✅ Implementado |
+| `confirmou` | String | sim, não, pendente **[Obrigatório]** | ✅ Implementado |
+| `confirmado_em` | DateTime | Data/hora da confirmação | ✅ Implementado |
+| `participou` | String | sim, não, pendente **[Obrigatório]** | ✅ Implementado |
+| `chegou_tarde` | String | sim, não | ✅ Implementado |
+| `saiu_cedo` | String | sim, não | ✅ Implementado |
+| `status_participacao` | String | Status geral da participação | ✅ Implementado |
+| `justificativa` | String | Justificativa para ausência | ✅ Implementado |
+| `observacoes` | String | Comentários sobre a participação | ✅ Implementado |
+| `marcado_em` | DateTime | Data/hora da marcação **[Gerado]** | ✅ Implementado |
+| `marcado_por` | String | **[FK→Usuarios.uid]** Quem marcou | ✅ Implementado |
+
+**📋 Status e Fluxo de Participação**:
+- **tipo**: "alvo" (definido previamente) ou "extra" (adicionado no momento)
+- **confirmou**: "pendente" → "sim"/"não" (resposta antecipada)
+- **participou**: "pendente" → "sim"/"não" (presença efetiva)
+- **chegou_tarde/saiu_cedo**: Controle detalhado de pontualidade
+- **status_participacao**: Status consolidado considerando todos os fatores
+- **Auditoria**: `marcado_em` e `marcado_por` registram quem fez alterações
+- **APIs disponíveis**: `listParticipacoes`, `defineTargets`, `markParticipacao`, `confirmarParticipacao`
 
 ---
 

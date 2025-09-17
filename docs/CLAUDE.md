@@ -4,7 +4,7 @@ Este arquivo fornece orientação para o Claude Code (claude.ai/code) ao trabalh
 
 ## Visão Geral do Projeto
 
-**Sistema Dojotai** é uma aplicação web baseada em Google Apps Script para gestão de dojos. É uma Single Page Application (SPA) que usa Google Sheets como banco de dados e serve HTML/CSS/JavaScript através da funcionalidade web app do Google Apps Script.
+**Sistema Dojotai** é uma aplicação web standalone baseada em Google Apps Script para gestão de dojos. É uma Single Page Application (SPA) que usa Google Sheets como banco de dados e serve HTML/CSS/JavaScript através da funcionalidade web app do Google Apps Script, rodando independentemente das planilhas de dados.
 
 ## Principais Tecnologias e Arquitetura
 
@@ -95,10 +95,40 @@ A aplicação usa um sistema de configuração dinâmica via tabela "Planilhas" 
 - Estados de loading e tratamento de erros
 
 ### Fluxo de Dados
-1. JavaScript frontend faz chamadas para funções backend
-2. Funções Google Apps Script consultam/atualizam Google Sheets
-3. Sistema de configuração dinâmica determina quais planilhas/ranges usar
-4. Resultados retornados ao frontend via JSON
+1. JavaScript frontend faz chamadas para funções backend via `google.script.run`
+2. Funções Google Apps Script consultam/atualizam Google Sheets usando `readTableByNome_()`
+3. Sistema de configuração dinâmica determina quais planilhas/ranges usar via tabela "Planilhas"
+4. Resultados retornados ao frontend via JSON com estrutura padronizada
+
+### Arquitetura API com Fallbacks
+**Padrão de Chamada API (app_api.html)**:
+```javascript
+function_name: function(params) {
+  return new Promise(function(resolve, reject) {
+    console.log('📡 API.function_name:', params);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.ok) {
+          resolve(res);
+        } else if (res === null) {
+          reject('Erro: Função falhou no backend');
+        } else {
+          reject(res.error || 'Erro desconhecido');
+        }
+      })
+      .withFailureHandler(function(error) {
+        reject('Erro de conexão: ' + error.toString());
+      })
+      .backend_function_name(params);
+  });
+}
+```
+
+**Sistema de Dados Exclusivamente Real (17/09/2025)**:
+- **Primeira Tentativa**: Função backend específica (ex: `listParticipacoes`)
+- **Error handling**: Robusto sem dados mock ou fallbacks simulados
+- **Logging**: Console detalhado para debugging (`📡 API.function_name`)
+- **Validação**: Verificação de `res.ok` e tratamento de `null` responses
 
 ## Configuração Importante
 
@@ -112,6 +142,13 @@ const APP = {
   PLANILHAS_A1: 'Planilhas!A1:H' // Range fallback
 };
 ```
+
+**⚡ Aplicação Standalone (Otimizado 17/09/2025)**:
+- A aplicação roda **independentemente** das planilhas de dados
+- Todos os acessos a planilhas usam SSIDs explícitos via `SpreadsheetApp.openById()`
+- **Não há mais fallbacks** para `getActiveSpreadsheet()` ou `'ACTIVE'`
+- Cada entrada na tabela "Planilhas" deve ter um SSID válido
+- **Performance melhorada**: Removidos condicionais desnecessários
 
 ### Estrutura Necessária do Google Sheets
 O sistema requer uma planilha de configuração principal com tabelas para:
@@ -139,14 +176,61 @@ Este é um projeto Google Apps Script, então não há testes unitários tradici
 4. Fazer commit das alterações no repositório git
 5. Documentar alterações em `docs/roadmap_dojotai.md`
 
-## Problemas Comuns
+## Problemas Comuns e Troubleshooting
 
-- **Encoding de arquivos**: Garantir encoding UTF-8 para texto em português
+### Problemas de Conectividade Backend
+- **Função retorna `null`**: Verificar se função está publicada corretamente no Google Apps Script
+- **"Função não disponível"**: Confirmar deploy com `clasp push` e verificar permissões
+- **Timeout de API**: Funções que demoram >6 minutos no Google Apps Script causam timeout
 - **Permissões**: Acesso ao Google Sheets requer permissões de compartilhamento adequadas
-- **Cache**: Browser pode cachear versões antigas; use hard refresh durante desenvolvimento
+
+### Debugging de Problemas de Dados
+- **Dados não carregam**: Verificar console do browser para erros de API (`📡 API.function_name`)
+- **Checkboxes incorretos**: Validar se dados na planilha estão como "sim"/"não" (case-insensitive)
+- **Tabela não encontrada**: Verificar configuração na tabela "Planilhas" com status "Ativo"
+- **Named range inválido**: Fallback automático para range_a1 se named_range falhar
+
+### Troubleshooting de Desenvolvimento
+- **Cache**: Browser pode cachear versões antigas; use hard refresh (Ctrl+F5) durante desenvolvimento
+- **Encoding**: Garantir encoding UTF-8 para texto em português
 - **Viewport mobile**: Usa cálculo customizado de altura do viewport para mobile Safari
+- **Logs Google Apps Script**: Verificar logs no editor do Apps Script para erros backend
+
+### Checklist de Debugging Pós-Rollback (17/09/2025)
+1. ✅ **Deploy atualizado**: Sempre fazer `clasp push` após mudanças
+2. ✅ **Sistema standalone**: Verificar se não há dependência de `getActiveSpreadsheet()`
+3. ✅ **Console logging**: Usar `📡 API.function_name` para rastrear chamadas
+4. ✅ **Tabela "Planilhas"**: Validar configuração de acesso aos dados
+5. ✅ **Error handling**: Verificar se res.ok e tratamento de null estão implementados
+6. ✅ **Estado funcional**: Preferir rollback a debugging excessivo quando necessário
 
 ## Histórico de Mudanças Recentes
+
+### 17/09/2025 - Otimizações Pós-Rollback e Documentação
+
+**🔄 Rollback Estratégico para Estado Funcional**
+- Rollback para commit `47c74fa` após debugging excessivo
+- Restauração completa da funcionalidade do sistema de participações
+- Lição aprendida: Preferir estado funcional conhecido vs debugging prolongado
+
+**⚡ Otimizações de Performance e Arquitetura**
+- Remoção completa de fallbacks `'ACTIVE'` e `getActiveSpreadsheet()` em `utils.gs`
+- Aplicação 100% standalone sem dependências de planilhas ativas
+- Simplificação de condicionais desnecessárias para melhor performance
+- Todos os acessos agora usam exclusivamente `SpreadsheetApp.openById()`
+
+**📚 Melhoria Abrangente da Documentação**
+- Atualização completa da tabela "Participacoes" com 14 campos reais implementados
+- Documentação da tabela "Planilhas" como arquitetura central do sistema
+- Guias detalhados de troubleshooting e debugging pós-rollback
+- Padrões de API e fluxo de dados claramente documentados
+- Checklist de debugging para prevenir problemas futuros
+
+**🛠️ Padrões de Desenvolvimento Estabelecidos**
+- **Rollback preventivo**: Preferir volta ao estado funcional vs debugging excessivo
+- **Deploy incremental**: Uma melhoria por vez com teste intermediário
+- **Documentação proativa**: Atualizar docs simultaneamente com implementação
+- **Logging estruturado**: Usar padrão `📡 API.function_name` para debugging
 
 ### 16/09/2025 - Sistema de Membros Completo
 

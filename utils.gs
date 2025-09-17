@@ -7,7 +7,7 @@ const APP = {
   TZ: 'America/Sao_Paulo',
   TS_FORMAT: 'yyyy-MM-dd HH:mm:ss',
 
-  // A própria tabela "Planilhas" (se estiver no mesmo arquivo, mantenha 'ACTIVE'):
+  // A tabela "Planilhas" no Google Sheets (SSID específico para standalone):
   PLANILHAS_SSID: '1hfl-CeO6nK4FLYl4uacK5NncBoJ3q-8PPzUWh7W6PmY',
 
   // Você criou este named range (singular):
@@ -28,9 +28,7 @@ function getPlanilhas_() {
   let keyToUse = null;
   if (APP.PLANILHAS_NAMED && /^[A-Za-z0-9_]+$/.test(APP.PLANILHAS_NAMED)) {
     try {
-      const ss = (APP.PLANILHAS_SSID && APP.PLANILHAS_SSID !== 'ACTIVE')
-        ? SpreadsheetApp.openById(APP.PLANILHAS_SSID)
-        : SpreadsheetApp.getActiveSpreadsheet();
+      const ss = SpreadsheetApp.openById(APP.PLANILHAS_SSID);
       const testRange = ss.getRangeByName(APP.PLANILHAS_NAMED);
       if (testRange) keyToUse = APP.PLANILHAS_NAMED;
     } catch (e) { /* ignora e usa fallback */ }
@@ -57,7 +55,7 @@ function getPlanilhas_() {
     if (!isActive) continue;
 
     const nome        = String(row[idx('nome')] || '').trim();
-    const ssid        = String(row[idx('ssid')] || '').trim() || 'ACTIVE';
+    const ssid        = String(row[idx('ssid')] || '').trim();
     const planilha    = idx('planilha')    != null ? String(row[idx('planilha')]||'').trim()    : '';
     const named_range = idx('named_range') != null ? String(row[idx('named_range')]||'').trim() : '';
     const range_a1    = idx('range_a1')    != null ? String(row[idx('range_a1')]||'').trim()    : '';
@@ -83,9 +81,7 @@ function getPlanRef_(nome) {
 
 /** Monta contexto com prioridade para named_range; senão usa planilha!range_a1 */
 function getContextFromRef_(ref) {
-  const file = (ref.ssid && ref.ssid !== 'ACTIVE')
-    ? SpreadsheetApp.openById(ref.ssid)
-    : SpreadsheetApp.getActiveSpreadsheet();
+  const file = SpreadsheetApp.openById(ref.ssid);
 
   if (ref.named_range) {
     const range = file.getRangeByName(ref.named_range);
@@ -105,9 +101,7 @@ function getContextFromRef_(ref) {
 
 /** Lê uma tabela onde a 1ª linha é cabeçalho; retorna { values, headerIndex, ctx } */
 function readNamedTable_(ssidOrActive, namedOrA1) {
-  const ss = (ssidOrActive && ssidOrActive !== 'ACTIVE')
-    ? SpreadsheetApp.openById(ssidOrActive)
-    : SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(ssidOrActive);
 
   let range;
   if (namedOrA1 && !String(namedOrA1).includes('!') && /^[A-Za-z0-9_]+$/.test(namedOrA1)) {
@@ -169,8 +163,8 @@ function readTableByNome_(nome) {
   const ref = getPlanRef_(nome);
   const ctx = getContextFromRef_(ref);
   const resp = ctx.namedRange
-    ? readNamedTable_((ref.ssid || 'ACTIVE'), ctx.namedRange)
-    : readNamedTable_((ref.ssid || 'ACTIVE'), ctx.rangeStr);
+    ? readNamedTable_(ref.ssid, ctx.namedRange)
+    : readNamedTable_(ref.ssid, ctx.rangeStr);
 
   // 1) corta cauda vazia genérica
   resp.values = trimTrailingEmptyRows_(resp.values);
