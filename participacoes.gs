@@ -392,12 +392,22 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
     console.log('📋 Tentando abrir planilha:', spreadsheetId);
 
     const ss = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = ss.getSheetByName('Participacoes');
+
+    // Tenta diferentes variações do nome da aba
+    let sheet = ss.getSheetByName('participacoes');
+    if (!sheet) sheet = ss.getSheetByName('Participacoes');
+    if (!sheet) sheet = ss.getSheetByName('participações');
+    if (!sheet) sheet = ss.getSheetByName('Participações');
+
     console.log('📋 Aba encontrada:', !!sheet);
 
     if (!sheet) {
-      console.log('❌ Aba "Participacoes" não encontrada');
-      return { ok: false, error: 'Aba "Participacoes" não encontrada na planilha.' };
+      // Lista todas as abas disponíveis para debug
+      const allSheets = ss.getSheets().map(s => s.getName());
+      console.log('📋 Abas disponíveis na planilha:', allSheets);
+
+      console.log('❌ Nenhuma aba de participações encontrada');
+      return { ok: false, error: 'Aba de participações não encontrada. Abas disponíveis: ' + allSheets.join(', ') };
     }
 
     // Lê os dados da planilha diretamente
