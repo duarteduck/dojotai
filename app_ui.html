@@ -3112,12 +3112,19 @@ window.ParticipacaoSystem = {
 
     console.log('👤 Renderizando participação:', {memberId, memberNome, participacao});
     var confirmacao = participacao.confirmacao || participacao.confirmou || 'pendente';
-    var participou = participacao.participacao || participacao.participou;
+    var participou = participacao.participacao || participacao.participou || '';
     var chegouTarde = participacao.chegou_tarde === 'sim';
     var saiuCedo = participacao.saiu_cedo === 'sim';
     var observacoes = participacao.observacoes || participacao.justificativa || '';
     var isTarget = participacao.isTarget || false;
     var isExtra = participacao.isExtra || false;
+
+    console.log('🔍 Estados dos checkboxes:', {
+      participou: participou,
+      participouSim: participou === 'sim',
+      chegouTarde: chegouTarde,
+      saiuCedo: saiuCedo
+    });
 
     var confirmacaoClass = '';
     var confirmacaoText = '';
