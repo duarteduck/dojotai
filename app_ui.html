@@ -3064,17 +3064,16 @@ window.ParticipacaoSystem = {
     var participouChecked = participou === 'sim' ? ' checked' : '';
     var chegouTardeChecked = chegouTarde ? ' checked' : '';
     var saiuCedoChecked = saiuCedo ? ' checked' : '';
-    var mostrarDetalhes = participou === 'sim' ? '' : ' style="display: none;"';
+    var mostrarDetalhes = participou === 'sim' ? ' style="display: flex;"' : ' style="display: none;"';
 
     return '<div class="participacao-item-novo" data-member-id="' + memberId + '">' +
-      // Linha 1: Nome + Tipo + Status de Confirmação
+
       '<div class="participacao-linha-1">' +
         '<span class="participacao-nome-principal">' + memberNome + '</span>' +
-        tipoChip +
-        '<span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
+        (tipoChip ? ' ' + tipoChip : '') +
+        ' <span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
       '</div>' +
 
-      // Linha 2: Participou + Detalhes condicionais (chegou tarde/saiu cedo)
       '<div class="participacao-linha-2">' +
         '<label class="checkbox-participou">' +
           '<input type="checkbox" data-field="participacao"' + participouChecked + '> Participou' +
@@ -3089,10 +3088,10 @@ window.ParticipacaoSystem = {
         '</div>' +
       '</div>' +
 
-      // Linha 3: Observações
       '<div class="participacao-linha-3">' +
         '<textarea placeholder="Observações..." data-field="observacoes">' + observacoes + '</textarea>' +
       '</div>' +
+
     '</div>';
   },
 

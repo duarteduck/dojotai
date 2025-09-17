@@ -1014,6 +1014,8 @@
   padding: 12px;
   margin-bottom: 8px;
   transition: all 0.2s ease;
+  display: block !important;
+  width: 100%;
 }
 
 .participacao-item-novo:hover {
@@ -3277,34 +3279,7 @@
   background: var(--bg);
 }
 
-.participacao-item {
-  display: grid;
-  grid-template-columns: 2fr 120px 100px 100px 1fr;
-  gap: 12px;
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  align-items: center;
-}
-
-.participacao-item:last-child {
-  border-bottom: none;
-}
-
-.participacao-membro {
-  display: flex;
-  flex-direction: column;
-}
-
-.participacao-nome {
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.participacao-detalhes {
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-top: 2px;
-}
+/* CSS antigo removido - usando novo layout participacao-item-novo */
 
 .participacao-confirmacao {
   display: flex;
@@ -3477,10 +3452,7 @@
     grid-template-columns: 1fr;
   }
 
-  .participacao-item {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
+  /* participacao-item antigo removido */
 
   .alvos-actions,
   .participacoes-busca,
