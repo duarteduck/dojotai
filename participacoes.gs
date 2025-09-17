@@ -457,25 +457,50 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
     });
 
     // Usa o contexto da tabela para escrita, igual ao activities.gs
+    console.log('🔧 Obtendo referência para escrita...');
     const ref = getPlanRef_('participacoes');
+    console.log('🔧 Referência obtida:', ref);
+
     const ctxPlan = getContextFromRef_(ref);
+    console.log('🔧 Contexto da planilha:', ctxPlan);
 
     let sheet;
     if (ctxPlan.namedRange) {
+      console.log('🔧 Usando named range:', ctxPlan.namedRange);
       const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
         ? SpreadsheetApp.openById(ref.ssid)
         : SpreadsheetApp.getActiveSpreadsheet();
-      const rng = ss.getRangeByName(ctxPlan.namedRange);
-      sheet = rng.getSheet();
+      console.log('🔧 Planilha aberta, tentando buscar range...');
+
+      try {
+        const rng = ss.getRangeByName(ctxPlan.namedRange);
+        sheet = rng.getSheet();
+        console.log('✅ Named range encontrado, sheet obtida');
+      } catch (e) {
+        console.error('❌ Erro ao buscar named range:', e);
+      }
     } else {
+      console.log('🔧 Usando aba direta:', ctxPlan.planilha);
       const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
         ? SpreadsheetApp.openById(ref.ssid)
         : SpreadsheetApp.getActiveSpreadsheet();
-      sheet = ss.getSheetByName(ctxPlan.planilha);
+      console.log('🔧 Planilha aberta, tentando buscar aba...');
+
+      try {
+        sheet = ss.getSheetByName(ctxPlan.planilha);
+        console.log('🔧 Aba encontrada:', !!sheet);
+        if (!sheet) {
+          const allSheets = ss.getSheets().map(s => s.getName());
+          console.log('🔧 Abas disponíveis:', allSheets);
+        }
+      } catch (e) {
+        console.error('❌ Erro ao buscar aba:', e);
+      }
     }
 
     if (!sheet) {
-      return { ok: false, error: 'Não foi possível acessar a planilha de participações para escrita.' };
+      console.error('❌ Sheet não encontrada após tentativas');
+      return { ok: false, error: 'Não foi possível acessar a planilha de participações para escrita. Ref: ' + JSON.stringify(ref) + ', Ctx: ' + JSON.stringify(ctxPlan) };
     }
 
     // Adiciona as novas linhas no final da planilha
