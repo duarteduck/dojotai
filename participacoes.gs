@@ -487,11 +487,34 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
       console.log('🔧 Planilha aberta, tentando buscar aba...');
 
       try {
+        // Tenta o nome configurado primeiro
         sheet = ss.getSheetByName(ctxPlan.planilha);
-        console.log('🔧 Aba encontrada:', !!sheet);
+        console.log('🔧 Aba encontrada com nome configurado:', !!sheet);
+
+        // Se não encontrar, tenta variações
+        if (!sheet) {
+          const variations = [
+            'participacoes',
+            'Participacoes',
+            'participações',
+            'Participações',
+            'PARTICIPACOES'
+          ];
+
+          for (const variation of variations) {
+            if (variation !== ctxPlan.planilha) { // Não tenta de novo o que já testou
+              sheet = ss.getSheetByName(variation);
+              if (sheet) {
+                console.log('✅ Aba encontrada com variação:', variation);
+                break;
+              }
+            }
+          }
+        }
+
         if (!sheet) {
           const allSheets = ss.getSheets().map(s => s.getName());
-          console.log('🔧 Abas disponíveis:', allSheets);
+          console.log('🔧 Abas disponíveis na planilha:', allSheets);
         }
       } catch (e) {
         console.error('❌ Erro ao buscar aba:', e);
