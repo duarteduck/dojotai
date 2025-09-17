@@ -3040,6 +3040,14 @@ window.ParticipacaoSystem = {
       var memberId = participacao.memberId || participacao.id_membro;
       var membro = membrosMap[memberId] || membrosMap[String(memberId)];
 
+      console.log('🔍 Processando participação:', {
+        memberId: memberId,
+        participacao: participacao,
+        participou: participacao.participou,
+        chegou_tarde: participacao.chegou_tarde,
+        saiu_cedo: participacao.saiu_cedo
+      });
+
       if (membro) {
         return Object.assign({}, participacao, {
           memberNome: membro.nome || membro.nomeCompleto || membro.name || ('Membro ' + memberId),
@@ -3111,15 +3119,24 @@ window.ParticipacaoSystem = {
     }
 
     console.log('👤 Renderizando participação:', {memberId, memberNome, participacao});
+
+    // Lê valores diretamente da participação
     var confirmacao = participacao.confirmacao || participacao.confirmou || 'pendente';
-    var participou = participacao.participacao || participacao.participou || '';
-    var chegouTarde = participacao.chegou_tarde === 'sim';
-    var saiuCedo = participacao.saiu_cedo === 'sim';
+    var participou = participacao.participou || ''; // Campo direto da planilha
+    var chegouTarde = String(participacao.chegou_tarde || '').toLowerCase() === 'sim';
+    var saiuCedo = String(participacao.saiu_cedo || '').toLowerCase() === 'sim';
     var observacoes = participacao.observacoes || participacao.justificativa || '';
     var isTarget = participacao.isTarget || false;
     var isExtra = participacao.isExtra || false;
 
-    console.log('🔍 Estados dos checkboxes:', {
+    console.log('🔍 Valores da planilha:', {
+      'participacao.participou': participacao.participou,
+      'participacao.chegou_tarde': participacao.chegou_tarde,
+      'participacao.saiu_cedo': participacao.saiu_cedo,
+      'confirmacao': confirmacao
+    });
+
+    console.log('🔍 Estados dos checkboxes calculados:', {
       participou: participou,
       participouSim: participou === 'sim',
       chegouTarde: chegouTarde,
