@@ -1,6 +1,67 @@
 // participacoes.gs - Sistema de Gestão de Participações em Atividades
 
 /**
+ * Lista participações diretamente da planilha (bypass de contexto)
+ * @param {string} activityId - ID da atividade
+ * @returns {Object} { ok: boolean, items: Array }
+ */
+function listParticipacoesDirectly(activityId) {
+  try {
+    if (!activityId) {
+      return { ok: false, error: 'ID da atividade não informado.' };
+    }
+
+    const { values, headerIndex } = readTableByNome_('participacoes');
+
+    if (!values || values.length < 2) {
+      return { ok: true, items: [] };
+    }
+
+    // Campos obrigatórios
+    const required = ['id', 'id_atividade', 'id_membro', 'tipo'];
+    const missing = required.filter(k => headerIndex[k] === undefined);
+    if (missing.length) {
+      return { ok: false, error: 'Colunas faltando na tabela Participacoes: ' + missing.join(', ') };
+    }
+
+    const items = [];
+
+    for (let r = 1; r < values.length; r++) {
+      const row = values[r] || [];
+
+      // Filtra apenas as participações da atividade específica
+      const rowActivityId = String(row[headerIndex['id_atividade']] || '').trim();
+      if (rowActivityId !== activityId.toString().trim()) continue;
+
+      const participacao = {
+        id: String(row[headerIndex['id']] || '').trim(),
+        id_atividade: rowActivityId,
+        id_membro: String(row[headerIndex['id_membro']] || '').trim(),
+        tipo: String(row[headerIndex['tipo']] || 'alvo').trim(),
+        confirmou: String(row[headerIndex['confirmou']] || '').trim(),
+        confirmado_em: row[headerIndex['confirmado_em']] || null,
+        participou: String(row[headerIndex['participou']] || '').trim(),
+        chegou_tarde: String(row[headerIndex['chegou_tarde']] || '').trim(),
+        saiu_cedo: String(row[headerIndex['saiu_cedo']] || '').trim(),
+        justificativa: String(row[headerIndex['justificativa']] || '').trim(),
+        observacoes: String(row[headerIndex['observacoes']] || '').trim(),
+        marcado_em: row[headerIndex['marcado_em']] || null,
+        marcado_por: String(row[headerIndex['marcado_por']] || '').trim()
+      };
+
+      // Calcula status_participacao
+      participacao.status_participacao = calculateStatusParticipacao(participacao);
+
+      items.push(participacao);
+    }
+
+    return { ok: true, items };
+  } catch (err) {
+    return { ok: false, error: 'Erro listParticipacoesDirectly: ' + (err && err.message ? err.message : err) };
+  }
+}
+
+/**
  * Lista todas as participações de uma atividade
  * @param {string} activityId - ID da atividade
  * @returns {Object} { ok: boolean, items: Array }

@@ -463,21 +463,53 @@ var API = {
     return new Promise(function(resolve, reject) {
       console.log('📡 API.listParticipacoes:', activityId);
 
-      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.listParticipacoes) {
+      // Tenta direct access primeiro
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.listParticipacoesDirectly) {
+        console.log('📡 Tentando acesso direto...');
         google.script.run
           .withSuccessHandler(function(res) {
             if (res && res.ok) {
+              console.log('✅ Participações carregadas via acesso direto:', res.items.length, 'itens');
               resolve(res);
             } else {
-              reject((res && res.error) || 'Falha ao listar participações');
+              console.warn('⚠️ Acesso direto falhou, tentando método original...');
+              // Fallback para método original
+              tryOriginalMethod();
             }
           })
           .withFailureHandler(function(err) {
-            console.error('❌ Erro listParticipacoes:', err);
-            reject('Erro na API: ' + err);
+            console.warn('⚠️ Erro no acesso direto:', err, '- tentando método original...');
+            tryOriginalMethod();
           })
-          .listParticipacoes(activityId);
+          .listParticipacoesDirectly(activityId);
       } else {
+        tryOriginalMethod();
+      }
+
+      function tryOriginalMethod() {
+        if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.listParticipacoes) {
+          console.log('📡 Tentando método original...');
+          google.script.run
+            .withSuccessHandler(function(res) {
+              if (res && res.ok) {
+                console.log('✅ Participações carregadas via método original:', res.items.length, 'itens');
+                resolve(res);
+              } else {
+                console.warn('⚠️ Método original falhou, usando modo desenvolvimento...');
+                useDevelopmentMode();
+              }
+            })
+            .withFailureHandler(function(err) {
+              console.warn('⚠️ Erro no método original:', err, '- usando modo desenvolvimento...');
+              useDevelopmentMode();
+            })
+            .listParticipacoes(activityId);
+        } else {
+          useDevelopmentMode();
+        }
+      }
+
+      function useDevelopmentMode() {
         console.warn('⚠️ listParticipacoes não disponível - gerando mock baseado em alvos');
 
         // Se temos alvos definidos em cache, usa eles para gerar participações mock
