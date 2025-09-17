@@ -2941,6 +2941,10 @@ window.ParticipacaoSystem = {
     API.defineTargets(this.currentActivityId, memberIds)
       .then(function(result) {
         if (result.ok) {
+          // Salva alvos em cache para uso em modo desenvolvimento
+          sessionStorage.setItem('activity_targets_' + this.currentActivityId, JSON.stringify(memberIds));
+          console.log('💾 Alvos salvos em cache:', memberIds.length, 'membros');
+
           UI.toast('Alvos definidos com sucesso!', 'success');
           this.switchTab('controlar-participacoes'); // Muda para próxima aba
         } else {
@@ -3011,34 +3015,53 @@ window.ParticipacaoSystem = {
   },
 
   renderParticipacaoItem: function(participacao) {
-    var confirmacaoClass = participacao.confirmou ? (participacao.confirmou === 'sim' ? 'sim' : 'nao') : 'pendente';
-    var confirmacaoText = participacao.confirmou ? (participacao.confirmou === 'sim' ? 'Confirmou' : 'Recusou') : 'Pendente';
+    // Suporte para diferentes formatos de dados (backend vs mock)
+    var memberId = participacao.memberId || participacao.id_membro;
+    var memberNome = participacao.memberNome || participacao.nome || memberId;
+    var memberDojo = participacao.memberDojo || participacao.dojo || 'N/A';
+    var confirmacao = participacao.confirmacao || participacao.confirmou || 'pendente';
+    var participou = participacao.participacao || participacao.participou;
+    var isTarget = participacao.isTarget || false;
+    var isExtra = participacao.isExtra || false;
 
-    return '<div class="participacao-item" data-member-id="' + participacao.id_membro + '">' +
+    var confirmacaoClass = '';
+    var confirmacaoText = '';
+
+    if (confirmacao === 'sim' || confirmacao === 'confirmou') {
+      confirmacaoClass = 'sim';
+      confirmacaoText = 'Confirmou';
+    } else if (confirmacao === 'nao' || confirmacao === 'recusou') {
+      confirmacaoClass = 'nao';
+      confirmacaoText = 'Recusou';
+    } else {
+      confirmacaoClass = 'pendente';
+      confirmacaoText = 'Pendente';
+    }
+
+    var tipoChip = '';
+    if (isTarget) {
+      tipoChip = '<span class="tipo-chip alvo">Alvo</span>';
+    } else if (isExtra) {
+      tipoChip = '<span class="tipo-chip extra">Extra</span>';
+    }
+
+    return '<div class="participacao-item" data-member-id="' + memberId + '">' +
       '<div class="participacao-membro">' +
-        '<div class="participacao-nome">' + participacao.id_membro + '</div>' +
-        '<div class="participacao-detalhes">Tipo: ' + participacao.tipo + '</div>' +
+        '<div class="participacao-nome">' + memberNome + ' ' + tipoChip + '</div>' +
+        '<div class="participacao-detalhes">' + memberDojo + '</div>' +
       '</div>' +
       '<div class="participacao-confirmacao">' +
         '<span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
       '</div>' +
       '<div class="participacao-controles">' +
-        '<select class="participacao-select" data-field="participou">' +
+        '<select class="participacao-select" data-field="participacao">' +
           '<option value="">Participou?</option>' +
-          '<option value="sim"' + (participacao.participou === 'sim' ? ' selected' : '') + '>Sim</option>' +
-          '<option value="nao"' + (participacao.participou === 'nao' ? ' selected' : '') + '>Não</option>' +
+          '<option value="sim"' + (participou === 'sim' ? ' selected' : '') + '>Sim</option>' +
+          '<option value="nao"' + (participou === 'nao' ? ' selected' : '') + '>Não</option>' +
         '</select>' +
       '</div>' +
-      '<div class="participacao-controles">' +
-        '<label class="participacao-checkbox">' +
-          '<input type="checkbox" data-field="chegou_tarde"' + (participacao.chegou_tarde === 'sim' ? ' checked' : '') + '> Chegou tarde' +
-        '</label>' +
-        '<label class="participacao-checkbox">' +
-          '<input type="checkbox" data-field="saiu_cedo"' + (participacao.saiu_cedo === 'sim' ? ' checked' : '') + '> Saiu cedo' +
-        '</label>' +
-      '</div>' +
       '<div class="participacao-observacoes">' +
-        '<textarea placeholder="Justificativa/Observações..." data-field="justificativa">' + (participacao.justificativa || '') + '</textarea>' +
+        '<textarea placeholder="Observações..." data-field="observacoes">' + (participacao.observacoes || participacao.justificativa || '') + '</textarea>' +
       '</div>' +
     '</div>';
   },

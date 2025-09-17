@@ -964,12 +964,46 @@
 .btn-primary {
   background: var(--primary) !important;
   border: 1px solid var(--primary) !important;
-  color: white !important;
+  color: black !important;
 }
 
 .btn-primary:hover {
   background: var(--primary-dark) !important;
   border-color: var(--primary-dark) !important;
+}
+
+.btn-large {
+  padding: 12px 24px !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+}
+
+#btn-salvar-participacoes {
+  background: var(--primary) !important;
+  color: black !important;
+  border: 1px solid var(--primary) !important;
+}
+
+/* Chips de tipo de participação */
+.tipo-chip {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.tipo-chip.alvo {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.tipo-chip.extra {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--primary);
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 /* Minhas chip active style reusing .chip.is-active */

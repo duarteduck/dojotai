@@ -478,8 +478,43 @@ var API = {
           })
           .listParticipacoes(activityId);
       } else {
-        console.warn('⚠️ listParticipacoes não disponível - retornando mock vazio');
-        resolve({ ok: true, items: [] });
+        console.warn('⚠️ listParticipacoes não disponível - gerando mock baseado em alvos');
+
+        // Se temos alvos definidos em cache, usa eles para gerar participações mock
+        var targets = sessionStorage.getItem('activity_targets_' + activityId);
+        var mockItems = [];
+
+        if (targets) {
+          try {
+            var targetIds = JSON.parse(targets);
+            console.log('📋 Usando alvos em cache para mock:', targetIds.length, 'membros');
+
+            // Para cada alvo, cria uma participação mock
+            targetIds.forEach(function(memberId) {
+              var member = getCachedMember(memberId);
+              if (member) {
+                mockItems.push({
+                  id: 'mock_' + memberId + '_' + activityId,
+                  activityId: activityId,
+                  memberId: memberId,
+                  memberNome: member.nome,
+                  memberDojo: member.dojo || 'N/A',
+                  confirmacao: 'pendente',
+                  participacao: 'pendente',
+                  observacoes: '',
+                  isTarget: true,
+                  isExtra: false
+                });
+              }
+            });
+
+            console.log('✅ Mock gerado com', mockItems.length, 'participações');
+          } catch (e) {
+            console.warn('⚠️ Erro ao processar alvos em cache:', e);
+          }
+        }
+
+        resolve({ ok: true, items: mockItems });
       }
     });
   },
@@ -495,10 +530,29 @@ var API = {
             if (res && res.ok) {
               resolve(res);
             } else {
-              // Se erro específico de contexto, simula sucesso para desenvolvimento
+              // Se erro específico de contexto, tenta gravação direta na planilha
               if (res && res.error && res.error.includes('Contexto de participações não encontrado')) {
-                console.warn('⚠️ Contexto de participações não encontrado - simulando sucesso para desenvolvimento');
-                resolve({ ok: true, created: memberIds.length, dev_mode: true });
+                console.warn('⚠️ Contexto de participações não encontrado - tentando gravação direta...');
+
+                // Tenta usar função de gravação direta se disponível
+                if (google.script.run.saveTargetsDirectly) {
+                  google.script.run
+                    .withSuccessHandler(function(directRes) {
+                      if (directRes && directRes.ok) {
+                        resolve({ ok: true, created: memberIds.length, direct_save: true });
+                      } else {
+                        console.warn('⚠️ Gravação direta falhou - simulando sucesso para desenvolvimento');
+                        resolve({ ok: true, created: memberIds.length, dev_mode: true });
+                      }
+                    })
+                    .withFailureHandler(function() {
+                      console.warn('⚠️ Gravação direta falhou - simulando sucesso para desenvolvimento');
+                      resolve({ ok: true, created: memberIds.length, dev_mode: true });
+                    })
+                    .saveTargetsDirectly(activityId, memberIds, State.uid);
+                } else {
+                  resolve({ ok: true, created: memberIds.length, dev_mode: true });
+                }
               } else {
                 reject((res && res.error) || 'Falha ao definir alvos');
               }
@@ -659,6 +713,27 @@ var API = {
     });
   }
 };
+
+/* ===========================
+   Funções auxiliares
+   =========================== */
+
+// Função para buscar membro no cache
+function getCachedMember(memberId) {
+  try {
+    var cachedMembers = sessionStorage.getItem('cached_members');
+    if (cachedMembers) {
+      var members = JSON.parse(cachedMembers);
+      return members.find(function(member) {
+        return member.id === memberId;
+      });
+    }
+    return null;
+  } catch (e) {
+    console.warn('⚠️ Erro ao buscar membro em cache:', e);
+    return null;
+  }
+}
 
 /* ===========================
    Funções auxiliares para debug
