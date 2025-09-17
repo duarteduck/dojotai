@@ -380,23 +380,16 @@ function addExtraMember(activityId, memberId, uid) {
  */
 function saveTargetsDirectly(activityId, memberIds, uid) {
   try {
-    console.log('🔧 saveTargetsDirectly chamada:', { activityId, memberIds, uid });
-
     if (!activityId || !memberIds || !Array.isArray(memberIds)) {
-      console.log('❌ Parâmetros inválidos');
       return { ok: false, error: 'Parâmetros inválidos.' };
     }
 
     // Usa o mesmo padrão de acesso que activities.gs
-    console.log('📋 Buscando referência de participacoes na aba Planilhas...');
-
     const { values, headerIndex } = readTableByNome_('participacoes');
 
     if (!values || values.length === 0) {
       return { ok: false, error: 'Tabela "participacoes" não encontrada ou vazia.' };
     }
-
-    console.log('📋 Dados carregados da tabela participacoes:', values.length, 'linhas');
 
     // Campos obrigatórios conforme o padrão existente
     const required = ['id', 'id_atividade', 'id_membro', 'tipo'];
@@ -457,73 +450,43 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
     });
 
     // Usa o contexto da tabela para escrita, igual ao activities.gs
-    console.log('🔧 Obtendo referência para escrita...');
     const ref = getPlanRef_('participacoes');
-    console.log('🔧 Referência obtida:', ref);
-
     const ctxPlan = getContextFromRef_(ref);
-    console.log('🔧 Contexto da planilha:', ctxPlan);
 
     let sheet;
     if (ctxPlan.namedRange) {
-      console.log('🔧 Usando named range:', ctxPlan.namedRange);
       const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
         ? SpreadsheetApp.openById(ref.ssid)
         : SpreadsheetApp.getActiveSpreadsheet();
-      console.log('🔧 Planilha aberta, tentando buscar range...');
 
       try {
         const rng = ss.getRangeByName(ctxPlan.namedRange);
         sheet = rng.getSheet();
-        console.log('✅ Named range encontrado, sheet obtida');
       } catch (e) {
-        console.error('❌ Erro ao buscar named range:', e);
+        return { ok: false, error: 'Erro ao acessar named range: ' + e.message };
       }
     } else {
-      console.log('🔧 Usando aba direta:', ctxPlan.planilha);
       const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
         ? SpreadsheetApp.openById(ref.ssid)
         : SpreadsheetApp.getActiveSpreadsheet();
-      console.log('🔧 Planilha aberta, tentando buscar aba...');
 
-      try {
-        // Tenta o nome configurado primeiro
-        sheet = ss.getSheetByName(ctxPlan.planilha);
-        console.log('🔧 Aba encontrada com nome configurado:', !!sheet);
+      // Tenta o nome configurado primeiro, depois variações
+      const sheetNames = [
+        ctxPlan.planilha,
+        'participacoes',
+        'Participacoes',
+        'participações',
+        'Participações'
+      ];
 
-        // Se não encontrar, tenta variações
-        if (!sheet) {
-          const variations = [
-            'participacoes',
-            'Participacoes',
-            'participações',
-            'Participações',
-            'PARTICIPACOES'
-          ];
-
-          for (const variation of variations) {
-            if (variation !== ctxPlan.planilha) { // Não tenta de novo o que já testou
-              sheet = ss.getSheetByName(variation);
-              if (sheet) {
-                console.log('✅ Aba encontrada com variação:', variation);
-                break;
-              }
-            }
-          }
-        }
-
-        if (!sheet) {
-          const allSheets = ss.getSheets().map(s => s.getName());
-          console.log('🔧 Abas disponíveis na planilha:', allSheets);
-        }
-      } catch (e) {
-        console.error('❌ Erro ao buscar aba:', e);
+      for (const name of sheetNames) {
+        sheet = ss.getSheetByName(name);
+        if (sheet) break;
       }
     }
 
     if (!sheet) {
-      console.error('❌ Sheet não encontrada após tentativas');
-      return { ok: false, error: 'Não foi possível acessar a planilha de participações para escrita. Ref: ' + JSON.stringify(ref) + ', Ctx: ' + JSON.stringify(ctxPlan) };
+      return { ok: false, error: 'Aba de participações não encontrada na planilha de destino.' };
     }
 
     // Adiciona as novas linhas no final da planilha
@@ -531,18 +494,12 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
     const startRow = currentLastRow + 1;
 
     if (rowsToAdd.length > 0) {
-      console.log('📝 Escrevendo', rowsToAdd.length, 'linhas a partir da linha', startRow);
       sheet.getRange(startRow, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
-      console.log('✅ Dados escritos com sucesso');
-    } else {
-      console.log('ℹ️ Nenhuma linha para escrever');
     }
 
-    console.log('✅ saveTargetsDirectly concluída com sucesso');
     return { ok: true, created: newMemberIds.length };
 
   } catch (err) {
-    console.error('❌ Erro em saveTargetsDirectly:', err);
     return { ok: false, error: 'Erro saveTargetsDirectly: ' + (err && err.message ? err.message : err) };
   }
 }
