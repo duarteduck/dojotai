@@ -3245,21 +3245,21 @@ window.ParticipacaoSystem = {
   },
 
   salvarAlteracoesParticipacoes: function() {
-    console.log('💾 Salvando alterações das participações...');
+    console.log('💾 Salvando todas as participações...');
 
     var lista = this.modal.querySelector('#participacoes-lista');
-    var itemsModificados = lista.querySelectorAll('.participacao-item-novo.modified');
+    var todosItens = lista.querySelectorAll('.participacao-item-novo');
 
-    if (itemsModificados.length === 0) {
-      UI.toast('Nenhuma alteração para salvar', 'info');
+    if (todosItens.length === 0) {
+      UI.toast('Nenhuma participação para salvar', 'info');
       return;
     }
 
-    console.log('📝 Salvando', itemsModificados.length, 'participações modificadas');
+    console.log('📝 Salvando', todosItens.length, 'participações (modificadas e não modificadas)');
 
     var promises = [];
 
-    itemsModificados.forEach(function(item) {
+    todosItens.forEach(function(item) {
       var memberId = item.getAttribute('data-member-id');
       var dados = this.coletarDadosParticipacao(item);
 
@@ -3269,7 +3269,7 @@ window.ParticipacaoSystem = {
       var promise = API.markParticipacao(this.currentActivityId, memberId, dados)
         .then(function(result) {
           if (result.ok) {
-            // Remove classe modified e atualiza valores iniciais
+            // Remove classe modified e atualiza valores iniciais para todos
             item.classList.remove('modified');
             this.atualizarValoresIniciais(item, dados);
             return {memberId, success: true};
@@ -3291,11 +3291,11 @@ window.ParticipacaoSystem = {
         var erros = results.filter(function(r) { return !r.success; }).length;
 
         if (erros === 0) {
-          UI.toast('Todas as alterações foram salvas!', 'success');
+          UI.toast('Todas as participações foram salvas!', 'success');
         } else if (sucessos > 0) {
-          UI.toast(sucessos + ' alterações salvas, ' + erros + ' falharam', 'warning');
+          UI.toast(sucessos + ' participações salvas, ' + erros + ' falharam', 'warning');
         } else {
-          UI.toast('Erro ao salvar alterações', 'err');
+          UI.toast('Erro ao salvar participações', 'err');
         }
 
         console.log('✅ Resultado do salvamento:', {sucessos, erros});
@@ -3307,10 +3307,13 @@ window.ParticipacaoSystem = {
   },
 
   coletarDadosParticipacao: function(item) {
+    var participou = item.querySelector('[data-field="participacao"]').checked;
+
     return {
-      participou: item.querySelector('[data-field="participacao"]').checked ? 'sim' : 'nao',
-      chegou_tarde: item.querySelector('[data-field="chegou_tarde"]').checked ? 'sim' : 'nao',
-      saiu_cedo: item.querySelector('[data-field="saiu_cedo"]').checked ? 'sim' : 'nao',
+      participou: participou ? 'sim' : 'nao',
+      // Se não participou, força chegou_tarde e saiu_cedo como 'nao'
+      chegou_tarde: participou && item.querySelector('[data-field="chegou_tarde"]').checked ? 'sim' : 'nao',
+      saiu_cedo: participou && item.querySelector('[data-field="saiu_cedo"]').checked ? 'sim' : 'nao',
       observacoes: item.querySelector('[data-field="observacoes"]').value.trim()
     };
   },
