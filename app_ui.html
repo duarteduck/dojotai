@@ -2562,12 +2562,33 @@ window.ParticipacaoSystem = {
 
     // Carrega membros para extrair valores únicos dos filtros
     if (!State.cache || !State.cache.membros) {
-      console.warn('⚠️ Cache de membros não disponível');
+      console.warn('⚠️ Cache de membros não disponível - carregando...');
+      this.loadMembrosForFilters();
       return;
     }
 
     var membros = State.cache.membros;
     this.createAlvosFilterChips(membros);
+  },
+
+  loadMembrosForFilters: function() {
+    console.log('📡 Carregando membros para filtros...');
+
+    API.listMembers()
+      .then(function(membros) {
+        console.log('✅ Membros carregados para filtros:', membros.length);
+
+        // Salva no cache se não existir
+        if (!State.cache) State.cache = {};
+        State.cache.membros = membros;
+
+        // Cria os filtros agora
+        this.createAlvosFilterChips(membros);
+      }.bind(this))
+      .catch(function(error) {
+        console.error('❌ Erro ao carregar membros:', error);
+        UI.toast('Erro ao carregar membros para filtros', 'err');
+      });
   },
 
   createAlvosFilterChips: function(membros) {
@@ -2687,7 +2708,7 @@ window.ParticipacaoSystem = {
     var filtros = this.coletarFiltrosAtivos();
     console.log('Filtros coletados:', filtros);
 
-    // Busca membros
+    // Tenta usar API específica, senão usa listMembers com filtro local
     API.searchMembersByCriteria(filtros)
       .then(function(result) {
         if (result.ok) {
@@ -2698,9 +2719,75 @@ window.ParticipacaoSystem = {
         }
       }.bind(this))
       .catch(function(error) {
-        console.error('Erro na API:', error);
-        UI.toast('Erro na busca de membros', 'err');
+        console.warn('API searchMembersByCriteria falhou, usando fallback:', error);
+        this.executarBuscaComFallback(filtros);
+      }.bind(this));
+  },
+
+  executarBuscaComFallback: function(filtros) {
+    console.log('🔄 Usando busca com fallback...');
+
+    // Usa listMembers e filtra localmente
+    API.listMembers()
+      .then(function(membros) {
+        var resultados = this.filtrarMembrosLocalmente(membros, filtros);
+        this.renderResultadosBusca(resultados);
+      }.bind(this))
+      .catch(function(error) {
+        console.error('❌ Fallback também falhou:', error);
+        UI.toast('Erro ao buscar membros', 'err');
       });
+  },
+
+  filtrarMembrosLocalmente: function(membros, filtros) {
+    console.log('🔍 Filtrando', membros.length, 'membros localmente...');
+
+    return membros.filter(function(membro) {
+      // Filtro por dojo
+      if (filtros.dojo && filtros.dojo.length > 0) {
+        if (!membro.dojo || filtros.dojo.indexOf(membro.dojo) === -1) {
+          return false;
+        }
+      }
+
+      // Filtro por status
+      if (filtros.status && filtros.status.length > 0) {
+        if (!membro.status || filtros.status.indexOf(membro.status) === -1) {
+          return false;
+        }
+      }
+
+      // Filtro por cargo
+      if (filtros.cargo && filtros.cargo.length > 0) {
+        if (!membro.cargo || filtros.cargo.indexOf(membro.cargo) === -1) {
+          return false;
+        }
+      }
+
+      // Filtro por categoria_grupo
+      if (filtros.categoria_grupo && filtros.categoria_grupo.length > 0) {
+        if (!membro.categoria_grupo || filtros.categoria_grupo.indexOf(membro.categoria_grupo) === -1) {
+          return false;
+        }
+      }
+
+      // Filtro por buntai
+      if (filtros.buntai && filtros.buntai.length > 0) {
+        if (!membro.buntai || filtros.buntai.indexOf(membro.buntai) === -1) {
+          return false;
+        }
+      }
+
+      // Filtro por nome
+      if (filtros.nome) {
+        var nome = filtros.nome.toLowerCase();
+        if (!membro.nome || membro.nome.toLowerCase().indexOf(nome) === -1) {
+          return false;
+        }
+      }
+
+      return true;
+    });
   },
 
   coletarFiltrosAtivos: function() {
