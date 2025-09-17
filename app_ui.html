@@ -2488,14 +2488,11 @@ window.ParticipacaoSystem = {
       title.textContent = 'Participações - ' + activityTitle;
     }
 
-    // Abre na primeira aba
-    this.switchTab('definir-alvos');
-
     // Mostra o modal
     this.modal.style.display = 'block';
 
-    // Carrega dados iniciais
-    this.loadData();
+    // Abre na primeira aba (que vai carregar os dados automaticamente)
+    this.switchTab('definir-alvos');
   },
 
   closeModal: function() {
@@ -2510,6 +2507,14 @@ window.ParticipacaoSystem = {
 
   switchTab: function(tabName) {
     console.log('🔄 Mudando para aba:', tabName);
+
+    // Evita múltiplas chamadas rápidas
+    if (this.currentTab === tabName) {
+      console.log('⚠️ Aba já está ativa, ignorando');
+      return;
+    }
+
+    this.currentTab = tabName;
 
     // Remove classe active de todas as abas
     var tabBtns = this.modal.querySelectorAll('.tab-btn');
