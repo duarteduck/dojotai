@@ -1006,6 +1006,139 @@
   border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
+/* Layout otimizado da lista de participações */
+.participacao-item-novo {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.participacao-item-novo:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.participacao-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.participacao-info {
+  flex: 1;
+}
+
+.participacao-nome {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.participacao-confirmacao {
+  font-size: 0.875rem;
+}
+
+.participacao-checkbox-principal {
+  margin-left: 16px;
+}
+
+.checkbox-participou {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.checkbox-participou input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.participacao-detalhes {
+  margin-left: 16px;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.participacao-checkbox-detalhes {
+  display: flex;
+  gap: 16px;
+}
+
+.checkbox-detalhe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.checkbox-detalhe input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.participacao-observacoes {
+  margin-top: 8px;
+}
+
+.participacao-observacoes textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.participacao-observacoes textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Indicador de item modificado */
+.participacao-item-novo.modified {
+  border-left: 4px solid var(--warning);
+  background: rgba(255, 193, 7, 0.05);
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 768px) {
+  .participacao-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .participacao-checkbox-principal {
+    margin-left: 0;
+    text-align: center;
+  }
+
+  .participacao-checkbox-detalhes {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .participacao-detalhes {
+    margin-left: 0;
+  }
+}
+
 /* Minhas chip active style reusing .chip.is-active */
 #chip-minhas.is-active{}
 

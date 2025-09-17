@@ -2977,6 +2977,7 @@ window.ParticipacaoSystem = {
       .then(function(result) {
         console.log('✅ Participações carregadas:', result);
         this.renderParticipacoes(result.items);
+        this.setupParticipacoesEvents();
       }.bind(this))
       .catch(function(error) {
         console.error('❌ Erro ao carregar participações:', error);
@@ -3030,10 +3031,12 @@ window.ParticipacaoSystem = {
   renderParticipacaoItem: function(participacao) {
     // Suporte para diferentes formatos de dados (backend vs mock)
     var memberId = participacao.memberId || participacao.id_membro;
-    var memberNome = participacao.memberNome || participacao.nome || memberId;
-    var memberDojo = participacao.memberDojo || participacao.dojo || 'N/A';
+    var memberNome = participacao.memberNome || participacao.nome || 'Membro ' + memberId;
     var confirmacao = participacao.confirmacao || participacao.confirmou || 'pendente';
     var participou = participacao.participacao || participacao.participou;
+    var chegouTarde = participacao.chegou_tarde === 'sim';
+    var saiuCedo = participacao.saiu_cedo === 'sim';
+    var observacoes = participacao.observacoes || participacao.justificativa || '';
     var isTarget = participacao.isTarget || false;
     var isExtra = participacao.isExtra || false;
 
@@ -3058,25 +3061,74 @@ window.ParticipacaoSystem = {
       tipoChip = '<span class="tipo-chip extra">Extra</span>';
     }
 
-    return '<div class="participacao-item" data-member-id="' + memberId + '">' +
-      '<div class="participacao-membro">' +
-        '<div class="participacao-nome">' + memberNome + ' ' + tipoChip + '</div>' +
-        '<div class="participacao-detalhes">' + memberDojo + '</div>' +
+    var participouChecked = participou === 'sim' ? ' checked' : '';
+    var chegouTardeChecked = chegouTarde ? ' checked' : '';
+    var saiuCedoChecked = saiuCedo ? ' checked' : '';
+    var mostrarDetalhes = participou === 'sim' ? '' : ' style="display: none;"';
+
+    return '<div class="participacao-item-novo" data-member-id="' + memberId + '">' +
+      '<div class="participacao-header">' +
+        '<div class="participacao-info">' +
+          '<div class="participacao-nome">' + memberNome + ' ' + tipoChip + '</div>' +
+          '<div class="participacao-confirmacao">' +
+            '<span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="participacao-checkbox-principal">' +
+          '<label class="checkbox-participou">' +
+            '<input type="checkbox" data-field="participacao"' + participouChecked + '> Participou' +
+          '</label>' +
+        '</div>' +
       '</div>' +
-      '<div class="participacao-confirmacao">' +
-        '<span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
-      '</div>' +
-      '<div class="participacao-controles">' +
-        '<select class="participacao-select" data-field="participacao">' +
-          '<option value="">Participou?</option>' +
-          '<option value="sim"' + (participou === 'sim' ? ' selected' : '') + '>Sim</option>' +
-          '<option value="nao"' + (participou === 'nao' ? ' selected' : '') + '>Não</option>' +
-        '</select>' +
+      '<div class="participacao-detalhes"' + mostrarDetalhes + '>' +
+        '<div class="participacao-checkbox-detalhes">' +
+          '<label class="checkbox-detalhe">' +
+            '<input type="checkbox" data-field="chegou_tarde"' + chegouTardeChecked + '> Chegou tarde' +
+          '</label>' +
+          '<label class="checkbox-detalhe">' +
+            '<input type="checkbox" data-field="saiu_cedo"' + saiuCedoChecked + '> Saiu cedo' +
+          '</label>' +
+        '</div>' +
       '</div>' +
       '<div class="participacao-observacoes">' +
-        '<textarea placeholder="Observações..." data-field="observacoes">' + (participacao.observacoes || participacao.justificativa || '') + '</textarea>' +
+        '<textarea placeholder="Observações..." data-field="observacoes">' + observacoes + '</textarea>' +
       '</div>' +
     '</div>';
+  },
+
+  setupParticipacoesEvents: function() {
+    var lista = this.modal.querySelector('#participacoes-lista');
+    if (!lista) return;
+
+    // Event delegation para checkboxes de participação
+    lista.addEventListener('change', function(e) {
+      if (e.target.type === 'checkbox' && e.target.getAttribute('data-field') === 'participacao') {
+        var participacaoItem = e.target.closest('.participacao-item-novo');
+        var detalhesSection = participacaoItem.querySelector('.participacao-detalhes');
+
+        if (e.target.checked) {
+          // Mostra opções de chegou tarde/saiu cedo
+          detalhesSection.style.display = 'block';
+        } else {
+          // Esconde opções e desmarca checkboxes
+          detalhesSection.style.display = 'none';
+          var checkboxesConcluded = detalhesSection.querySelectorAll('input[type="checkbox"]');
+          checkboxesConcluded.forEach(function(cb) {
+            cb.checked = false;
+          });
+        }
+      }
+    });
+
+    // Event delegation para outros checkboxes e textarea
+    lista.addEventListener('change', function(e) {
+      if (e.target.type === 'checkbox' || e.target.tagName === 'TEXTAREA') {
+        // Aqui podemos adicionar lógica para salvar automaticamente
+        // ou marcar como "alterado" para salvar depois
+        var participacaoItem = e.target.closest('.participacao-item-novo');
+        participacaoItem.classList.add('modified');
+      }
+    });
   },
 
   renderEstatisticas: function(stats) {
