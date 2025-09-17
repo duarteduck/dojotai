@@ -2973,16 +2973,28 @@ window.ParticipacaoSystem = {
   loadParticipacoesTab: function() {
     console.log('✅ Carregando aba de participações...');
 
-    API.listParticipacoes(this.currentActivityId)
-      .then(function(result) {
-        console.log('✅ Participações carregadas:', result);
-        this.renderParticipacoes(result.items);
-        this.setupParticipacoesEvents();
-      }.bind(this))
-      .catch(function(error) {
-        console.error('❌ Erro ao carregar participações:', error);
-        UI.toast('Erro ao carregar participações', 'err');
-      });
+    // Carrega participações e membros em paralelo
+    Promise.all([
+      API.listParticipacoes(this.currentActivityId),
+      API.listMembers()
+    ])
+    .then(function(results) {
+      var participacoes = results[0];
+      var membros = results[1];
+
+      console.log('✅ Participações carregadas:', participacoes);
+      console.log('✅ Membros carregados:', membros);
+
+      // Enriquece participações com nomes dos membros
+      var participacoesEnriquecidas = this.enrichParticipacoes(participacoes.items, membros);
+
+      this.renderParticipacoes(participacoesEnriquecidas);
+      this.setupParticipacoesEvents();
+    }.bind(this))
+    .catch(function(error) {
+      console.error('❌ Erro ao carregar participações:', error);
+      UI.toast('Erro ao carregar participações', 'err');
+    });
   },
 
   loadEstatisticasTab: function() {
@@ -3009,6 +3021,45 @@ window.ParticipacaoSystem = {
     this.setElementText('resumo-ausentes', stats.ausentes);
   },
 
+  enrichParticipacoes: function(participacoes, membros) {
+    console.log('🔗 Enriquecendo participações com dados dos membros...');
+
+    if (!participacoes || !membros) {
+      console.warn('⚠️ Dados insuficientes para enriquecer participações');
+      return participacoes || [];
+    }
+
+    // Cria mapa de membros por ID para busca rápida
+    var membrosMap = {};
+    membros.forEach(function(membro) {
+      membrosMap[membro.id] = membro;
+    });
+
+    // Enriquece cada participação com dados do membro
+    var participacoesEnriquecidas = participacoes.map(function(participacao) {
+      var memberId = participacao.memberId || participacao.id_membro;
+      var membro = membrosMap[memberId] || membrosMap[String(memberId)];
+
+      if (membro) {
+        return Object.assign({}, participacao, {
+          memberNome: membro.nome || membro.nomeCompleto || membro.name || ('Membro ' + memberId),
+          memberDojo: membro.dojo || 'N/A',
+          memberEmail: membro.email || '',
+          memberStatus: membro.status || ''
+        });
+      } else {
+        console.warn('⚠️ Membro não encontrado para ID:', memberId);
+        return Object.assign({}, participacao, {
+          memberNome: 'Membro ' + memberId,
+          memberDojo: 'N/A'
+        });
+      }
+    });
+
+    console.log('✅ Participações enriquecidas:', participacoesEnriquecidas.length);
+    return participacoesEnriquecidas;
+  },
+
   renderParticipacoes: function(participacoes) {
     console.log('🎨 Renderizando lista de participações:', participacoes);
 
@@ -3031,7 +3082,35 @@ window.ParticipacaoSystem = {
   renderParticipacaoItem: function(participacao) {
     // Suporte para diferentes formatos de dados (backend vs mock)
     var memberId = participacao.memberId || participacao.id_membro;
-    var memberNome = participacao.memberNome || participacao.nome || 'Membro ' + memberId;
+
+    // Tenta várias maneiras de obter o nome
+    var memberNome = participacao.memberNome || participacao.nome || participacao.nomeCompleto;
+
+    // Se ainda não tem nome, busca no cache de membros
+    if (!memberNome || memberNome.startsWith('Membro ')) {
+      var cachedMembers = sessionStorage.getItem('cached_members');
+      if (cachedMembers) {
+        try {
+          var members = JSON.parse(cachedMembers);
+          var foundMember = members.find(function(m) {
+            return m.id === memberId || m.id === String(memberId);
+          });
+          if (foundMember) {
+            memberNome = foundMember.nome || foundMember.nomeCompleto || foundMember.name;
+            console.log('🔍 Nome encontrado no cache:', memberNome, 'para membro', memberId);
+          }
+        } catch (e) {
+          console.warn('Erro ao buscar no cache:', e);
+        }
+      }
+    }
+
+    // Se ainda não tem nome, usa fallback
+    if (!memberNome) {
+      memberNome = 'Membro ' + memberId;
+    }
+
+    console.log('👤 Renderizando participação:', {memberId, memberNome, participacao});
     var confirmacao = participacao.confirmacao || participacao.confirmou || 'pendente';
     var participou = participacao.participacao || participacao.participou;
     var chegouTarde = participacao.chegou_tarde === 'sim';
