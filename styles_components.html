@@ -1006,7 +1006,7 @@
   border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
-/* Layout otimizado da lista de participações */
+/* Layout otimizado da lista de participações - 3 linhas */
 .participacao-item-novo {
   background: var(--card);
   border: 1px solid var(--border);
@@ -1021,31 +1021,27 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.participacao-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.participacao-info {
-  flex: 1;
-}
-
-.participacao-nome {
-  font-weight: 500;
-  margin-bottom: 4px;
+/* Linha 1: Nome + Tipo + Status */
+.participacao-linha-1 {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
-.participacao-confirmacao {
-  font-size: 0.875rem;
+.participacao-nome-principal {
+  font-weight: 500;
+  font-size: 1rem;
 }
 
-.participacao-checkbox-principal {
-  margin-left: 16px;
+/* Linha 2: Participou + Detalhes inline */
+.participacao-linha-2 {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
 .checkbox-participou {
@@ -1062,17 +1058,10 @@
   cursor: pointer;
 }
 
-.participacao-detalhes {
-  margin-left: 16px;
-  padding: 8px 12px;
-  background: rgba(59, 130, 246, 0.05);
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-
-.participacao-checkbox-detalhes {
+.participacao-detalhes-inline {
   display: flex;
   gap: 16px;
+  align-items: center;
 }
 
 .checkbox-detalhe {
@@ -1081,6 +1070,7 @@
   gap: 6px;
   font-size: 0.875rem;
   cursor: pointer;
+  color: var(--text-secondary);
 }
 
 .checkbox-detalhe input[type="checkbox"] {
@@ -1089,13 +1079,14 @@
   cursor: pointer;
 }
 
-.participacao-observacoes {
-  margin-top: 8px;
+/* Linha 3: Observações */
+.participacao-linha-3 {
+  margin-top: 4px;
 }
 
-.participacao-observacoes textarea {
+.participacao-linha-3 textarea {
   width: 100%;
-  min-height: 60px;
+  min-height: 50px;
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -1104,7 +1095,7 @@
   resize: vertical;
 }
 
-.participacao-observacoes textarea:focus {
+.participacao-linha-3 textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
@@ -1118,24 +1109,23 @@
 
 /* Responsividade para telas menores */
 @media (max-width: 768px) {
-  .participacao-header {
+  .participacao-linha-2 {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
     gap: 8px;
   }
 
-  .participacao-checkbox-principal {
-    margin-left: 0;
-    text-align: center;
-  }
-
-  .participacao-checkbox-detalhes {
+  .participacao-detalhes-inline {
     flex-direction: column;
+    align-items: flex-start;
     gap: 8px;
+    margin-left: 24px;
   }
 
-  .participacao-detalhes {
-    margin-left: 0;
+  .participacao-linha-1 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }
 

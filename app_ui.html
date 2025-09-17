@@ -3067,21 +3067,19 @@ window.ParticipacaoSystem = {
     var mostrarDetalhes = participou === 'sim' ? '' : ' style="display: none;"';
 
     return '<div class="participacao-item-novo" data-member-id="' + memberId + '">' +
-      '<div class="participacao-header">' +
-        '<div class="participacao-info">' +
-          '<div class="participacao-nome">' + memberNome + ' ' + tipoChip + '</div>' +
-          '<div class="participacao-confirmacao">' +
-            '<span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="participacao-checkbox-principal">' +
-          '<label class="checkbox-participou">' +
-            '<input type="checkbox" data-field="participacao"' + participouChecked + '> Participou' +
-          '</label>' +
-        '</div>' +
+      // Linha 1: Nome + Tipo + Status de Confirmação
+      '<div class="participacao-linha-1">' +
+        '<span class="participacao-nome-principal">' + memberNome + '</span>' +
+        tipoChip +
+        '<span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
       '</div>' +
-      '<div class="participacao-detalhes"' + mostrarDetalhes + '>' +
-        '<div class="participacao-checkbox-detalhes">' +
+
+      // Linha 2: Participou + Detalhes condicionais (chegou tarde/saiu cedo)
+      '<div class="participacao-linha-2">' +
+        '<label class="checkbox-participou">' +
+          '<input type="checkbox" data-field="participacao"' + participouChecked + '> Participou' +
+        '</label>' +
+        '<div class="participacao-detalhes-inline"' + mostrarDetalhes + '>' +
           '<label class="checkbox-detalhe">' +
             '<input type="checkbox" data-field="chegou_tarde"' + chegouTardeChecked + '> Chegou tarde' +
           '</label>' +
@@ -3090,7 +3088,9 @@ window.ParticipacaoSystem = {
           '</label>' +
         '</div>' +
       '</div>' +
-      '<div class="participacao-observacoes">' +
+
+      // Linha 3: Observações
+      '<div class="participacao-linha-3">' +
         '<textarea placeholder="Observações..." data-field="observacoes">' + observacoes + '</textarea>' +
       '</div>' +
     '</div>';
@@ -3104,11 +3104,11 @@ window.ParticipacaoSystem = {
     lista.addEventListener('change', function(e) {
       if (e.target.type === 'checkbox' && e.target.getAttribute('data-field') === 'participacao') {
         var participacaoItem = e.target.closest('.participacao-item-novo');
-        var detalhesSection = participacaoItem.querySelector('.participacao-detalhes');
+        var detalhesSection = participacaoItem.querySelector('.participacao-detalhes-inline');
 
         if (e.target.checked) {
           // Mostra opções de chegou tarde/saiu cedo
-          detalhesSection.style.display = 'block';
+          detalhesSection.style.display = 'flex';
         } else {
           // Esconde opções e desmarca checkboxes
           detalhesSection.style.display = 'none';
