@@ -62,63 +62,49 @@ function listParticipacoesDirectly(activityId) {
 }
 
 /**
- * Lista todas as participações de uma atividade
- * @param {string} activityId - ID da atividade
- * @returns {Object} { ok: boolean, items: Array }
+ * IMPLEMENTAÇÃO MÍNIMA - Lista participações usando acesso direto
  */
 function listParticipacoes(activityId) {
-  try {
-    if (!activityId) {
-      return { ok: false, error: 'ID da atividade não informado.' };
-    }
+  // ACESSO DIRETO - SEM CONFIGURAÇÃO DINÂMICA
+  var ssid = '1IAR4_Y3-F5Ca2ZfBF7Z3gzC6u6ut-yQsfGtTasmmQHw'; // SSID fixo da participações
 
-    const { values, headerIndex } = readTableByNome_('participacoes');
+  try {
+    var ss = SpreadsheetApp.openById(ssid);
+    var sheet = ss.getSheetByName('Participacoes'); // Nome da aba fixo
+    var range = sheet.getRange('A1:N1000'); // Range fixo
+    var values = range.getValues();
 
     if (!values || values.length < 2) {
       return { ok: true, items: [] };
     }
 
-    // Campos obrigatórios
-    const required = ['id', 'id_atividade', 'id_membro', 'tipo'];
-    const missing = required.filter(k => headerIndex[k] === undefined);
-    if (missing.length) {
-      return { ok: false, error: 'Colunas faltando na tabela Participacoes: ' + missing.join(', ') };
+    // Header fixo baseado na estrutura que você mencionou
+    var items = [];
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+      if (!row[0]) break; // Para quando não há mais dados
+
+      var idAtividade = String(row[1] || '').trim(); // Coluna B = id_atividade
+
+      if (idAtividade === String(activityId).trim()) {
+        items.push({
+          id: String(row[0] || '').trim(),           // A = id
+          id_atividade: idAtividade,                 // B = id_atividade
+          id_membro: String(row[2] || '').trim(),    // C = id_membro
+          tipo: String(row[3] || '').trim(),         // D = tipo
+          confirmou: String(row[4] || '').trim(),    // E = confirmou
+          participou: String(row[6] || '').trim(),   // G = participou
+          chegou_tarde: String(row[7] || '').trim(), // H = chegou_tarde
+          saiu_cedo: String(row[8] || '').trim(),    // I = saiu_cedo
+          observacoes: String(row[11] || '').trim()  // L = observacoes
+        });
+      }
     }
 
-    const items = [];
+    return { ok: true, items: items };
 
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r] || [];
-
-      // Filtra apenas as participações da atividade específica
-      const rowActivityId = String(row[headerIndex['id_atividade']] || '').trim();
-      if (rowActivityId !== activityId.toString().trim()) continue;
-
-      const participacao = {
-        id: String(row[headerIndex['id']] || '').trim(),
-        id_atividade: rowActivityId,
-        id_membro: String(row[headerIndex['id_membro']] || '').trim(),
-        tipo: String(row[headerIndex['tipo']] || 'alvo').trim(),
-        confirmou: String(row[headerIndex['confirmou']] || '').trim(),
-        confirmado_em: row[headerIndex['confirmado_em']] || null,
-        participou: String(row[headerIndex['participou']] || '').trim(),
-        chegou_tarde: String(row[headerIndex['chegou_tarde']] || '').trim(),
-        saiu_cedo: String(row[headerIndex['saiu_cedo']] || '').trim(),
-        justificativa: String(row[headerIndex['justificativa']] || '').trim(),
-        observacoes: String(row[headerIndex['observacoes']] || '').trim(),
-        marcado_em: row[headerIndex['marcado_em']] || null,
-        marcado_por: String(row[headerIndex['marcado_por']] || '').trim()
-      };
-
-      // Calcula status_participacao
-      participacao.status_participacao = calculateStatusParticipacao(participacao);
-
-      items.push(participacao);
-    }
-
-    return { ok: true, items };
-  } catch (err) {
-    return { ok: false, error: 'Erro listParticipacoes: ' + (err && err.message ? err.message : err) };
+  } catch (error) {
+    return { ok: false, error: 'Erro: ' + error.message };
   }
 }
 

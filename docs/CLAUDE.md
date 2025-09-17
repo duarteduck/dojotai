@@ -157,6 +157,19 @@ O sistema requer uma planilha de configuração principal com tabelas para:
 - Categoria_Atividades (Categorias de Atividades)
 - Membros (Membros)
 - Menu (Configuração do Menu)
+- Participacoes (Participações em Atividades)
+
+**Tabela "Planilhas" - Configuração Central**:
+Cabeçalho: `arquivo | nome | ssid | planilha | named_range | range_a1 | descrição | status`
+
+- `arquivo`: Nome do arquivo para organização humana (não usado no código)
+- `nome`: **Campo usado pelo código** para identificar a tabela (ex: "participacoes", "membros")
+- `ssid`: ID da Google Sheet (usado em SpreadsheetApp.openById)
+- `planilha`: Nome da aba/sheet dentro do arquivo Google Sheets
+- `named_range`: Nome do range nomeado (opcional, usado primeiro)
+- `range_a1`: Range em notação A1 como fallback
+- `descrição`: Descrição da funcionalidade
+- `status`: "Ativo" ou "Inativo" (apenas "Ativo" é processado)
 
 Veja `docs/dados_dojotai.md` para o esquema completo do banco de dados.
 

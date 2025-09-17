@@ -461,108 +461,30 @@ var API = {
   /* listParticipacoes(activityId) -> { ok, items } */
   listParticipacoes: function(activityId) {
     return new Promise(function(resolve, reject) {
-      console.log('📡 API.listParticipacoes:', activityId);
+      console.log('📡 API.listParticipacoes ÚNICA CHAMADA:', activityId);
 
-      // Tenta direct access primeiro
-      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.listParticipacoesDirectly) {
-        console.log('📡 Tentando acesso direto...');
-        google.script.run
-          .withSuccessHandler(function(res) {
-            if (res && res.ok) {
-              console.log('✅ Participações carregadas via acesso direto:', res.items.length, 'itens');
-              resolve(res);
-            } else {
-              console.warn('⚠️ Acesso direto falhou, tentando método original...');
-              // Fallback para método original
-              tryOriginalMethod();
-            }
-          })
-          .withFailureHandler(function(err) {
-            console.warn('⚠️ Erro no acesso direto:', err, '- tentando método original...');
-            tryOriginalMethod();
-          })
-          .listParticipacoesDirectly(activityId);
-      } else {
-        tryOriginalMethod();
+      if (!activityId) {
+        reject('ID da atividade é obrigatório');
+        return;
       }
 
-      function tryOriginalMethod() {
-        if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.listParticipacoes) {
-          console.log('📡 Tentando método original...');
-          google.script.run
-            .withSuccessHandler(function(res) {
-              if (res && res.ok) {
-                console.log('✅ Participações carregadas via método original:', res.items.length, 'itens');
-                resolve(res);
-              } else {
-                console.warn('⚠️ Método original falhou, usando modo desenvolvimento...');
-                useDevelopmentMode();
-              }
-            })
-            .withFailureHandler(function(err) {
-              console.warn('⚠️ Erro no método original:', err, '- usando modo desenvolvimento...');
-              useDevelopmentMode();
-            })
-            .listParticipacoes(activityId);
-        } else {
-          useDevelopmentMode();
-        }
-      }
-
-      function useDevelopmentMode() {
-        console.warn('⚠️ listParticipacoes não disponível - gerando mock baseado em alvos');
-
-        // Se temos alvos definidos em cache, usa eles para gerar participações mock
-        var targets = sessionStorage.getItem('activity_targets_' + activityId);
-        var mockItems = [];
-
-        if (targets) {
-          try {
-            var targetIds = JSON.parse(targets);
-            console.log('📋 Usando alvos em cache para mock:', targetIds.length, 'membros');
-
-            // Para cada alvo, cria uma participação mock
-            targetIds.forEach(function(memberId) {
-              var member = getCachedMember(memberId);
-              console.log('🔍 Buscando membro', memberId, ':', member);
-              if (member) {
-                mockItems.push({
-                  id: 'mock_' + memberId + '_' + activityId,
-                  activityId: activityId,
-                  memberId: memberId,
-                  memberNome: member.nome || member.nomeCompleto || ('Membro ' + memberId),
-                  memberDojo: member.dojo || 'N/A',
-                  confirmacao: 'pendente',
-                  participacao: '',
-                  observacoes: '',
-                  isTarget: true,
-                  isExtra: false
-                });
-              } else {
-                // Se não encontrar o membro em cache, cria com ID
-                mockItems.push({
-                  id: 'mock_' + memberId + '_' + activityId,
-                  activityId: activityId,
-                  memberId: memberId,
-                  memberNome: 'Membro ' + memberId,
-                  memberDojo: 'N/A',
-                  confirmacao: 'pendente',
-                  participacao: '',
-                  observacoes: '',
-                  isTarget: true,
-                  isExtra: false
-                });
-              }
-            });
-
-            console.log('✅ Mock gerado com', mockItems.length, 'participações');
-          } catch (e) {
-            console.warn('⚠️ Erro ao processar alvos em cache:', e);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          console.log('📡 Resposta listParticipacoes:', res);
+          if (res && res.ok) {
+            console.log('✅ Participações carregadas:', res.items.length, 'itens');
+            resolve(res);
+          } else if (res === null) {
+            reject('Erro: Função falhou no backend');
+          } else {
+            reject(res.error || 'Erro desconhecido');
           }
-        }
-
-        resolve({ ok: true, items: mockItems });
-      }
+        })
+        .withFailureHandler(function(error) {
+          console.error('❌ Erro listParticipacoes:', error);
+          reject('Erro de conexão: ' + error.toString());
+        })
+        .listParticipacoes(activityId);
     });
   },
 
