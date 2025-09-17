@@ -524,50 +524,57 @@ var API = {
     return new Promise(function(resolve, reject) {
       console.log('📡 API.defineTargets:', activityId, memberIds);
 
-      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.defineTargets) {
-        google.script.run
-          .withSuccessHandler(function(res) {
-            if (res && res.ok) {
-              resolve(res);
-            } else {
-              // Se erro específico de contexto, tenta gravação direta na planilha
-              if (res && res.error && res.error.includes('Contexto de participações não encontrado')) {
-                console.warn('⚠️ Contexto de participações não encontrado - tentando gravação direta...');
-
-                // Tenta usar função de gravação direta se disponível
-                if (google.script.run.saveTargetsDirectly) {
-                  google.script.run
-                    .withSuccessHandler(function(directRes) {
-                      if (directRes && directRes.ok) {
-                        resolve({ ok: true, created: memberIds.length, direct_save: true });
-                      } else {
-                        console.warn('⚠️ Gravação direta falhou - simulando sucesso para desenvolvimento');
-                        resolve({ ok: true, created: memberIds.length, dev_mode: true });
-                      }
-                    })
-                    .withFailureHandler(function() {
-                      console.warn('⚠️ Gravação direta falhou - simulando sucesso para desenvolvimento');
-                      resolve({ ok: true, created: memberIds.length, dev_mode: true });
-                    })
-                    .saveTargetsDirectly(activityId, memberIds, State.uid);
-                } else {
-                  resolve({ ok: true, created: memberIds.length, dev_mode: true });
-                }
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        // Primeira tentativa: saveTargetsDirectly (gravação direta)
+        if (google.script.run.saveTargetsDirectly) {
+          console.log('🎯 Tentando gravação direta na planilha...');
+          google.script.run
+            .withSuccessHandler(function(directRes) {
+              console.log('✅ Resultado da gravação direta:', directRes);
+              if (directRes && directRes.ok) {
+                resolve({ ok: true, created: directRes.created, method: 'direct_save' });
               } else {
-                reject((res && res.error) || 'Falha ao definir alvos');
+                console.warn('⚠️ Gravação direta retornou erro:', directRes.error);
+                // Se gravação direta falhar, tenta método original
+                tryOriginalMethod();
               }
-            }
-          })
-          .withFailureHandler(function(err) {
-            console.error('❌ Erro defineTargets:', err);
-            // Simula sucesso em caso de erro de rede/backend
-            console.warn('⚠️ Erro de backend - simulando sucesso para desenvolvimento');
-            resolve({ ok: true, created: memberIds.length, dev_mode: true });
-          })
-          .defineTargets(activityId, memberIds, State.uid);
+            })
+            .withFailureHandler(function(err) {
+              console.error('❌ Erro na gravação direta:', err);
+              // Se gravação direta falhar, tenta método original
+              tryOriginalMethod();
+            })
+            .saveTargetsDirectly(activityId, memberIds, State.uid);
+        } else {
+          // Se função não disponível, tenta método original
+          tryOriginalMethod();
+        }
+
+        function tryOriginalMethod() {
+          if (google.script.run.defineTargets) {
+            console.log('🔄 Tentando método original defineTargets...');
+            google.script.run
+              .withSuccessHandler(function(res) {
+                if (res && res.ok) {
+                  resolve({ ok: true, created: res.created, method: 'original' });
+                } else {
+                  console.warn('⚠️ Método original falhou:', res.error);
+                  resolve({ ok: true, created: memberIds.length, method: 'dev_mode' });
+                }
+              })
+              .withFailureHandler(function(err) {
+                console.error('❌ Erro método original:', err);
+                resolve({ ok: true, created: memberIds.length, method: 'dev_mode' });
+              })
+              .defineTargets(activityId, memberIds, State.uid);
+          } else {
+            console.warn('⚠️ Nenhum método disponível - modo desenvolvimento');
+            resolve({ ok: true, created: memberIds.length, method: 'dev_mode' });
+          }
+        }
       } else {
-        console.warn('⚠️ defineTargets não disponível - simulando sucesso');
-        resolve({ ok: true, created: memberIds.length });
+        console.warn('⚠️ Google Apps Script não disponível - modo desenvolvimento');
+        resolve({ ok: true, created: memberIds.length, method: 'dev_mode' });
       }
     });
   },

@@ -2941,11 +2941,24 @@ window.ParticipacaoSystem = {
     API.defineTargets(this.currentActivityId, memberIds)
       .then(function(result) {
         if (result.ok) {
-          // Salva alvos em cache para uso em modo desenvolvimento
-          sessionStorage.setItem('activity_targets_' + this.currentActivityId, JSON.stringify(memberIds));
-          console.log('💾 Alvos salvos em cache:', memberIds.length, 'membros');
+          console.log('✅ Alvos definidos usando método:', result.method);
 
-          UI.toast('Alvos definidos com sucesso!', 'success');
+          // Só salva em cache se for modo desenvolvimento
+          if (result.method === 'dev_mode') {
+            sessionStorage.setItem('activity_targets_' + this.currentActivityId, JSON.stringify(memberIds));
+            console.log('💾 Alvos salvos em cache (modo desenvolvimento):', memberIds.length, 'membros');
+            UI.toast('Alvos definidos (modo desenvolvimento)', 'success');
+          } else if (result.method === 'direct_save') {
+            console.log('📋 Alvos gravados diretamente na planilha:', result.created, 'membros');
+            UI.toast('Alvos gravados na planilha!', 'success');
+            // Também salva em cache para uso local
+            sessionStorage.setItem('activity_targets_' + this.currentActivityId, JSON.stringify(memberIds));
+          } else if (result.method === 'original') {
+            console.log('📋 Alvos gravados pelo método original:', result.created, 'membros');
+            UI.toast('Alvos definidos com sucesso!', 'success');
+            sessionStorage.setItem('activity_targets_' + this.currentActivityId, JSON.stringify(memberIds));
+          }
+
           // this.switchTab('controlar-participacoes'); // Comentado - mantém na aba atual
         } else {
           UI.toast('Erro ao definir alvos: ' + result.error, 'err');
