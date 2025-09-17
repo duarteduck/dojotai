@@ -3140,7 +3140,12 @@ window.ParticipacaoSystem = {
     var saiuCedoChecked = saiuCedo ? ' checked' : '';
     var mostrarDetalhes = participou === 'sim' ? ' style="display: flex;"' : ' style="display: none;"';
 
-    return '<div class="participacao-item-novo" data-member-id="' + memberId + '">' +
+    return '<div class="participacao-item-novo" data-member-id="' + memberId + '"' +
+      ' data-initial-participou="' + (participou === 'sim') + '"' +
+      ' data-initial-chegou-tarde="' + chegouTarde + '"' +
+      ' data-initial-saiu-cedo="' + saiuCedo + '"' +
+      ' data-initial-observacoes="' + (observacoes || '').replace(/"/g, '&quot;') + '"' +
+    '>' +
 
       '<div class="participacao-linha-1">' +
         '<span class="participacao-nome-principal">' + memberNome + '</span>' +
@@ -3195,12 +3200,126 @@ window.ParticipacaoSystem = {
     // Event delegation para outros checkboxes e textarea
     lista.addEventListener('change', function(e) {
       if (e.target.type === 'checkbox' || e.target.tagName === 'TEXTAREA') {
-        // Aqui podemos adicionar lógica para salvar automaticamente
-        // ou marcar como "alterado" para salvar depois
         var participacaoItem = e.target.closest('.participacao-item-novo');
-        participacaoItem.classList.add('modified');
+
+        // Verifica se há alguma alteração nos dados
+        var hasChanges = this.checkIfParticipacaoChanged(participacaoItem);
+
+        if (hasChanges) {
+          participacaoItem.classList.add('modified');
+        } else {
+          participacaoItem.classList.remove('modified');
+        }
       }
-    });
+    }.bind(this));
+
+    // Event listener para o botão salvar
+    var btnSalvar = this.modal.querySelector('#btn-salvar-participacoes');
+    if (btnSalvar) {
+      btnSalvar.addEventListener('click', function() {
+        this.salvarAlteracoesParticipacoes();
+      }.bind(this));
+    }
+  },
+
+  checkIfParticipacaoChanged: function(participacaoItem) {
+    // Coleta os valores atuais dos campos
+    var participouChecked = participacaoItem.querySelector('[data-field="participacao"]').checked;
+    var chegouTardeChecked = participacaoItem.querySelector('[data-field="chegou_tarde"]').checked;
+    var saiuCedoChecked = participacaoItem.querySelector('[data-field="saiu_cedo"]').checked;
+    var observacoes = participacaoItem.querySelector('[data-field="observacoes"]').value.trim();
+
+    // Valores iniciais (salvos como data attributes quando renderiza)
+    var initialParticipou = participacaoItem.getAttribute('data-initial-participou') === 'true';
+    var initialChegouTarde = participacaoItem.getAttribute('data-initial-chegou-tarde') === 'true';
+    var initialSaiuCedo = participacaoItem.getAttribute('data-initial-saiu-cedo') === 'true';
+    var initialObservacoes = participacaoItem.getAttribute('data-initial-observacoes') || '';
+
+    // Verifica se há mudanças
+    return (
+      participouChecked !== initialParticipou ||
+      chegouTardeChecked !== initialChegouTarde ||
+      saiuCedoChecked !== initialSaiuCedo ||
+      observacoes !== initialObservacoes
+    );
+  },
+
+  salvarAlteracoesParticipacoes: function() {
+    console.log('💾 Salvando alterações das participações...');
+
+    var lista = this.modal.querySelector('#participacoes-lista');
+    var itemsModificados = lista.querySelectorAll('.participacao-item-novo.modified');
+
+    if (itemsModificados.length === 0) {
+      UI.toast('Nenhuma alteração para salvar', 'info');
+      return;
+    }
+
+    console.log('📝 Salvando', itemsModificados.length, 'participações modificadas');
+
+    var promises = [];
+
+    itemsModificados.forEach(function(item) {
+      var memberId = item.getAttribute('data-member-id');
+      var dados = this.coletarDadosParticipacao(item);
+
+      console.log('💾 Salvando participação:', {memberId, dados});
+
+      // Usa API para marcar participação
+      var promise = API.markParticipacao(this.currentActivityId, memberId, dados)
+        .then(function(result) {
+          if (result.ok) {
+            // Remove classe modified e atualiza valores iniciais
+            item.classList.remove('modified');
+            this.atualizarValoresIniciais(item, dados);
+            return {memberId, success: true};
+          } else {
+            return {memberId, success: false, error: result.error};
+          }
+        }.bind(this))
+        .catch(function(error) {
+          console.error('Erro ao salvar participação do membro', memberId, ':', error);
+          return {memberId, success: false, error: error};
+        });
+
+      promises.push(promise);
+    }.bind(this));
+
+    Promise.all(promises)
+      .then(function(results) {
+        var sucessos = results.filter(function(r) { return r.success; }).length;
+        var erros = results.filter(function(r) { return !r.success; }).length;
+
+        if (erros === 0) {
+          UI.toast('Todas as alterações foram salvas!', 'success');
+        } else if (sucessos > 0) {
+          UI.toast(sucessos + ' alterações salvas, ' + erros + ' falharam', 'warning');
+        } else {
+          UI.toast('Erro ao salvar alterações', 'err');
+        }
+
+        console.log('✅ Resultado do salvamento:', {sucessos, erros});
+      })
+      .catch(function(error) {
+        console.error('❌ Erro geral no salvamento:', error);
+        UI.toast('Erro ao salvar alterações', 'err');
+      });
+  },
+
+  coletarDadosParticipacao: function(item) {
+    return {
+      participou: item.querySelector('[data-field="participacao"]').checked ? 'sim' : 'nao',
+      chegou_tarde: item.querySelector('[data-field="chegou_tarde"]').checked ? 'sim' : 'nao',
+      saiu_cedo: item.querySelector('[data-field="saiu_cedo"]').checked ? 'sim' : 'nao',
+      observacoes: item.querySelector('[data-field="observacoes"]').value.trim()
+    };
+  },
+
+  atualizarValoresIniciais: function(item, dados) {
+    item.setAttribute('data-initial-participou', dados.participou === 'sim');
+    item.setAttribute('data-initial-chegou-tarde', dados.chegou_tarde === 'sim');
+    item.setAttribute('data-initial-saiu-cedo', dados.saiu_cedo === 'sim');
+    item.setAttribute('data-initial-observacoes', dados.observacoes);
   },
 
   renderEstatisticas: function(stats) {

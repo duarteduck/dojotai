@@ -504,6 +504,115 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
   }
 }
 
+/**
+ * Função alternativa para salvar participação diretamente na planilha
+ * @param {string} activityId - ID da atividade
+ * @param {string} memberId - ID do membro
+ * @param {Object} dados - Dados da participação
+ * @param {string} uid - UID do usuário
+ * @returns {Object} { ok: boolean }
+ */
+function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
+  try {
+    if (!activityId || !memberId || !dados) {
+      return { ok: false, error: 'Parâmetros inválidos.' };
+    }
+
+    // Usa o mesmo padrão de acesso que a função de alvos
+    const { values, headerIndex } = readTableByNome_('participacoes');
+
+    if (!values || values.length === 0) {
+      return { ok: false, error: 'Tabela "participacoes" não encontrada.' };
+    }
+
+    // Campos obrigatórios
+    const required = ['id', 'id_atividade', 'id_membro'];
+    const missing = required.filter(k => headerIndex[k] === undefined);
+    if (missing.length) {
+      return { ok: false, error: 'Colunas faltando na tabela Participacoes: ' + missing.join(', ') };
+    }
+
+    // Encontra a linha da participação
+    let foundRowIndex = -1;
+    for (let r = 1; r < values.length; r++) {
+      const row = values[r] || [];
+      const rowActivityId = String(row[headerIndex['id_atividade']] || '').trim();
+      const rowMemberId = String(row[headerIndex['id_membro']] || '').trim();
+
+      if (rowActivityId === activityId.toString().trim() && rowMemberId === memberId.toString()) {
+        foundRowIndex = r;
+        break;
+      }
+    }
+
+    if (foundRowIndex === -1) {
+      return { ok: false, error: 'Participação não encontrada para o membro.' };
+    }
+
+    // Usa o contexto da tabela para escrita
+    const ref = getPlanRef_('participacoes');
+    const ctxPlan = getContextFromRef_(ref);
+
+    let sheet;
+    if (ctxPlan.namedRange) {
+      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
+        ? SpreadsheetApp.openById(ref.ssid)
+        : SpreadsheetApp.getActiveSpreadsheet();
+      const rng = ss.getRangeByName(ctxPlan.namedRange);
+      sheet = rng.getSheet();
+    } else {
+      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
+        ? SpreadsheetApp.openById(ref.ssid)
+        : SpreadsheetApp.getActiveSpreadsheet();
+
+      const sheetNames = [
+        ctxPlan.planilha,
+        'participacoes',
+        'Participacoes',
+        'participações',
+        'Participações'
+      ];
+
+      for (const name of sheetNames) {
+        sheet = ss.getSheetByName(name);
+        if (sheet) break;
+      }
+    }
+
+    if (!sheet) {
+      return { ok: false, error: 'Aba de participações não encontrada.' };
+    }
+
+    // Atualiza os campos na linha encontrada
+    const actualRowNumber = foundRowIndex + 1; // +1 porque foundRowIndex é 0-based, mas sheet rows são 1-based
+    const nowStr = nowString_();
+
+    if (headerIndex['participou'] !== undefined) {
+      sheet.getRange(actualRowNumber, headerIndex['participou'] + 1).setValue(dados.participou || '');
+    }
+    if (headerIndex['chegou_tarde'] !== undefined) {
+      sheet.getRange(actualRowNumber, headerIndex['chegou_tarde'] + 1).setValue(dados.chegou_tarde || '');
+    }
+    if (headerIndex['saiu_cedo'] !== undefined) {
+      sheet.getRange(actualRowNumber, headerIndex['saiu_cedo'] + 1).setValue(dados.saiu_cedo || '');
+    }
+    if (headerIndex['observacoes'] !== undefined) {
+      sheet.getRange(actualRowNumber, headerIndex['observacoes'] + 1).setValue(dados.observacoes || '');
+    }
+    if (headerIndex['marcado_em'] !== undefined) {
+      sheet.getRange(actualRowNumber, headerIndex['marcado_em'] + 1).setValue(nowStr);
+    }
+    if (headerIndex['marcado_por'] !== undefined) {
+      sheet.getRange(actualRowNumber, headerIndex['marcado_por'] + 1).setValue(uid || '');
+    }
+
+    return { ok: true };
+
+  } catch (err) {
+    return { ok: false, error: 'Erro saveParticipacaoDirectly: ' + (err && err.message ? err.message : err) };
+  }
+}
+
 // Funções auxiliares
 
 function getParticipacaesCtx_() {
