@@ -478,8 +478,8 @@ var API = {
           })
           .listParticipacoes(activityId);
       } else {
-        console.warn('⚠️ listParticipacoes não disponível');
-        reject('Funcionalidade não implementada no mock');
+        console.warn('⚠️ listParticipacoes não disponível - retornando mock vazio');
+        resolve({ ok: true, items: [] });
       }
     });
   },
@@ -608,8 +608,19 @@ var API = {
           })
           .getParticipacaoStats(activityId);
       } else {
-        console.warn('⚠️ getParticipacaoStats não disponível');
-        reject('Funcionalidade não implementada no mock');
+        console.warn('⚠️ getParticipacaoStats não disponível - retornando mock');
+        resolve({
+          ok: true,
+          stats: {
+            total: 0,
+            confirmados: 0,
+            recusados: 0,
+            participaram: 0,
+            ausentes: 0,
+            pendentes: 0,
+            percentualParticipacao: 0
+          }
+        });
       }
     });
   },

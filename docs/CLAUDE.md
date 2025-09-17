@@ -179,3 +179,34 @@ Este é um projeto Google Apps Script, então não há testes unitários tradici
 3. **Interface Responsiva**: Design consistente mobile/desktop
 4. **Navegação Funcional**: Integração completa com roteamento SPA
 5. **Estados Visuais**: Loading, erro, vazio para melhor UX
+
+### 16/09/2025 - Sistema de Participação em Atividades
+
+**⚠️ IMPLEMENTAÇÃO PARCIAL - REQUER VALIDAÇÃO E AJUSTES**
+
+**Sistema de Gestão de Participantes implementado mas necessita testes e validação**
+- Nova tabela "Participacoes" com estrutura completa (id, id_atividade, id_membro, tipo, confirmou, participou, etc.)
+- 7 novas APIs para gestão completa: listParticipacoes, defineTargets, markParticipacao, confirmarParticipacao, etc.
+- Modal com 3 abas: Definir Alvos, Marcar Participações, Estatísticas
+- Botão "👥 Participantes" integrado nos cards de atividades
+- Interface responsiva para marcar presenças no mobile
+
+**⚠️ Melhorias Pendentes - Requer Validação:**
+1. **Configuração da Tabela**: Tabela "Participacoes" precisa ser criada no Google Sheets
+2. **Teste das APIs**: Backend necessita verificação e possíveis ajustes
+3. **Integração Modal**: Sistema de modal pode precisar de correções de CSS/JS
+4. **Filtros de Alvos**: Interface de definição de alvos precisa implementação completa
+5. **Estatísticas nos Cards**: Display "X/Y participantes (Z%)" necessita integração
+6. **Validação de Regras**: Regras de negócio (status atividade vs. funcionalidades) precisam teste
+
+**Arquivos Criados/Modificados:**
+- **Novos**: `participacoes.gs`, `view_participacoes_modal.html`
+- **Modificados**: `app_api.html`, `app_ui.html`, `view_component_activityCard.html`, `styles_components.html`, `index.html`
+
+**Próximos Passos para Validação:**
+1. Configurar tabela "Participacoes" no Google Sheets
+2. Testar APIs no ambiente Google Apps Script
+3. Validar funcionamento do modal e abas
+4. Ajustar interface de filtros para definir alvos
+5. Implementar cálculo de estatísticas nos cards
+6. Testes de usabilidade mobile

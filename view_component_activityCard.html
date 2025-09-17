@@ -23,12 +23,6 @@
 
       <div class="meta-author">Responsável: {{usuarioNome}}</div>
 
-      {{#hasParticipacaoInfo}}
-      <div class="meta-participacao">
-        <span class="participacao-stats">{{participacaoStats}}</span>
-      </div>
-      {{/hasParticipacaoInfo}}
-
       {{#hasUltimaAcao}}
       <div class="meta-last">Última ação de {{atualizadoPorNome}} <br>em {{atualizadoEm}}</div>
       {{/hasUltimaAcao}}
@@ -38,11 +32,8 @@
       {{#isPendente}}
         <button class="btn btn-concluir">Concluir</button>
         <button class="btn btn-alt">Alterar</button>
-        <button class="btn btn-participantes" data-activity-id="{{id}}">👥 Participantes</button>
       {{/isPendente}}
-      {{#isConcluida}}
-        <button class="btn btn-participantes" data-activity-id="{{id}}">👥 Participantes</button>
-      {{/isConcluida}}
+      <button class="btn btn-participantes" data-activity-id="{{id}}">👥 Participantes</button>
     </div>
   </div>
 </div>

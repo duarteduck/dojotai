@@ -2488,20 +2488,35 @@ window.ParticipacaoSystem = {
   },
 
   loadData: function() {
-    console.log('📡 Carregando dados de participação...');
+    console.log('📡 Carregando dados de participação para:', this.currentActivityId);
 
-    if (!this.currentActivityId) return;
+    if (!this.currentActivityId) {
+      console.error('❌ currentActivityId não definido!');
+      return;
+    }
 
     // Carrega estatísticas básicas
     API.getParticipacaoStats(this.currentActivityId)
       .then(function(result) {
         console.log('✅ Estatísticas carregadas:', result);
-        this.updateStats(result.stats);
+        if (result && result.stats) {
+          this.updateStats(result.stats);
+        } else {
+          console.warn('⚠️ Resultado de estatísticas inválido:', result);
+        }
       }.bind(this))
       .catch(function(error) {
         console.error('❌ Erro ao carregar estatísticas:', error);
-        UI.toast('Erro ao carregar dados de participação', 'err');
-      });
+        UI.toast('Sistema de participações em desenvolvimento', 'info');
+
+        // Define stats zeradas como fallback
+        this.updateStats({
+          total: 0,
+          confirmados: 0,
+          participaram: 0,
+          ausentes: 0
+        });
+      }.bind(this));
   },
 
   loadTabData: function(tabName) {
@@ -2522,7 +2537,17 @@ window.ParticipacaoSystem = {
 
   loadAlvosTab: function() {
     console.log('🎯 Carregando aba de alvos...');
-    // TODO: Implementar carregamento de filtros para definir alvos
+
+    // Mostra mensagem de desenvolvimento
+    var alvosContainer = this.modal.querySelector('#alvos-resultados');
+    if (alvosContainer) {
+      alvosContainer.style.display = 'block';
+      alvosContainer.innerHTML = '<div class="development-notice" style="padding: 20px; text-align: center; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid var(--primary);">' +
+        '<h4 style="color: var(--primary); margin-bottom: 10px;">🚧 Em Desenvolvimento</h4>' +
+        '<p>A funcionalidade de definir alvos está sendo implementada.</p>' +
+        '<p>Em breve você poderá selecionar membros por filtros.</p>' +
+        '</div>';
+    }
   },
 
   loadParticipacoesTab: function() {
@@ -2638,16 +2663,57 @@ function openParticipacaoModal(activityId) {
   console.log('🚀 openParticipacaoModal chamada para:', activityId);
 
   if (!window.ParticipacaoSystem) {
-    console.error('❌ ParticipacaoSystem não disponível');
-    return;
+    console.error('❌ ParticipacaoSystem não disponível - tentando inicializar...');
+
+    // Tenta inicializar na hora
+    if (window.ParticipacaoSystem) {
+      window.ParticipacaoSystem.init();
+    } else {
+      UI.toast('Sistema de participações não disponível', 'err');
+      return;
+    }
+  }
+
+  // Verifica se o modal foi criado
+  if (!ParticipacaoSystem.modal) {
+    console.log('🔄 Modal não existe, criando...');
+    ParticipacaoSystem.init();
   }
 
   ParticipacaoSystem.openModal(activityId);
 }
 
+// Função para debug manual
+window.debugParticipacaoSystem = function() {
+  console.log('🔍 Debug ParticipacaoSystem:');
+  console.log('- window.ParticipacaoSystem:', !!window.ParticipacaoSystem);
+  console.log('- ParticipacaoSystem.modal:', !!ParticipacaoSystem?.modal);
+  console.log('- Template tpl-participacoes-modal:', !!document.getElementById('tpl-participacoes-modal'));
+
+  if (window.ParticipacaoSystem) {
+    console.log('🔄 Forçando inicialização...');
+    ParticipacaoSystem.init();
+  }
+};
+
 // Inicializa o sistema quando a página carrega
 document.addEventListener('DOMContentLoaded', function() {
-  if (window.ParticipacaoSystem) {
+  console.log('🔄 DOMContentLoaded - Inicializando ParticipacaoSystem');
+  setTimeout(function() {
+    if (window.ParticipacaoSystem) {
+      console.log('✅ ParticipacaoSystem encontrado, inicializando...');
+      ParticipacaoSystem.init();
+    } else {
+      console.error('❌ ParticipacaoSystem não encontrado!');
+    }
+  }, 100);
+});
+
+// Também inicializa quando o window carrega (backup)
+window.addEventListener('load', function() {
+  console.log('🔄 Window load - Verificando ParticipacaoSystem');
+  if (window.ParticipacaoSystem && !window.ParticipacaoSystem.modal) {
+    console.log('✅ Inicializando ParticipacaoSystem como backup');
     ParticipacaoSystem.init();
   }
 });

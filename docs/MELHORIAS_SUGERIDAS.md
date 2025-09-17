@@ -605,9 +605,44 @@ clasp open
 
 ### **Sprint 1 (1 semana) - Correções Críticas**
 - [x] Renomear arquivo `activies_categories.gs` ✅ **Concluído**
+- [x] Sistema de membros completo ✅ **Concluído**
+- [⚠️] Sistema de participações em atividades ⚠️ **Requer Validação**
 - [ ] Implementar validações server-side
 - [ ] Padronizar tratamento de erros
 - [ ] Adicionar loading states faltantes
+
+### **⚠️ Funcionalidades Implementadas Pendentes de Validação**
+
+#### **Sistema de Participação em Atividades**
+**Status**: 🔄 Implementado mas necessita testes e ajustes
+**Prioridade**: Alta
+**Estimativa**: 1-2 dias para validação e correções
+
+**Implementações Concluídas**:
+- ✅ Nova tabela "Participacoes" com estrutura completa
+- ✅ 7 APIs backend: listParticipacoes, defineTargets, markParticipacao, etc.
+- ✅ Modal com 3 abas (Definir Alvos, Marcar Participações, Estatísticas)
+- ✅ Botão "👥 Participantes" integrado nos cards
+- ✅ Interface responsiva para mobile
+- ✅ CSS completo e sistema de abas
+
+**Validações Necessárias**:
+1. **Configuração Google Sheets**: Criar tabela "Participacoes" com colunas corretas
+2. **Teste APIs Backend**: Verificar se funções em `participacoes.gs` funcionam no Apps Script
+3. **Modal e Abas**: Testar funcionamento do sistema de abas JavaScript
+4. **Filtros de Alvos**: Interface de definição de alvos precisa implementação completa
+5. **Integração Cards**: Estatísticas "X/Y participantes (Z%)" nos cards de atividades
+6. **Regras de Negócio**: Validar comportamento por status da atividade
+
+**Possíveis Problemas Identificados**:
+- Template modal pode não estar sendo carregado corretamente
+- Event listeners do ParticipacaoSystem podem conflitar
+- APIs podem ter problemas de compatibilidade com Apps Script
+- CSS do modal pode ter conflitos com sistema existente
+
+**Plano de Validação**:
+1. **Dia 1**: Configurar tabela e testar APIs básicas
+2. **Dia 2**: Corrigir problemas de frontend e finalizar integração
 
 ### **Sprint 2 (2 semanas) - Refatoração JavaScript**
 - [ ] Modernizar sintaxe JavaScript (ES6+)
