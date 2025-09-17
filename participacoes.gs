@@ -387,44 +387,16 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
       return { ok: false, error: 'Parâmetros inválidos.' };
     }
 
-    // Acesso direto à planilha, sem depender de configuração
-    const spreadsheetId = '1hfl-CeO6nK4FLYl4uacK5NncBoJ3q-8PPzUWh7W6PmY';
-    console.log('📋 Tentando abrir planilha:', spreadsheetId);
+    // Usa o mesmo padrão de acesso que activities.gs
+    console.log('📋 Buscando referência de participacoes na aba Planilhas...');
 
-    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const { values, headerIndex } = readTableByNome_('participacoes');
 
-    // Tenta diferentes variações do nome da aba
-    let sheet = ss.getSheetByName('participacoes');
-    if (!sheet) sheet = ss.getSheetByName('Participacoes');
-    if (!sheet) sheet = ss.getSheetByName('participações');
-    if (!sheet) sheet = ss.getSheetByName('Participações');
-
-    console.log('📋 Aba encontrada:', !!sheet);
-
-    if (!sheet) {
-      // Lista todas as abas disponíveis para debug
-      const allSheets = ss.getSheets().map(s => s.getName());
-      console.log('📋 Abas disponíveis na planilha:', allSheets);
-
-      console.log('❌ Nenhuma aba de participações encontrada');
-      return { ok: false, error: 'Aba de participações não encontrada. Abas disponíveis: ' + allSheets.join(', ') };
-    }
-
-    // Lê os dados da planilha diretamente
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 1) {
-      return { ok: false, error: 'Planilha "Participacoes" está vazia.' };
-    }
-
-    const values = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
     if (!values || values.length === 0) {
-      return { ok: false, error: 'Não foi possível ler dados da planilha "Participacoes".' };
+      return { ok: false, error: 'Tabela "participacoes" não encontrada ou vazia.' };
     }
 
-    // Cria headerIndex manualmente
-    const header = values[0].map(h => (h||'').toString().trim().toLowerCase());
-    const headerIndex = {};
-    header.forEach((name, i) => headerIndex[name] = i);
+    console.log('📋 Dados carregados da tabela participacoes:', values.length, 'linhas');
 
     // Campos obrigatórios conforme o padrão existente
     const required = ['id', 'id_atividade', 'id_membro', 'tipo'];
@@ -483,6 +455,28 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
 
       rowsToAdd.push(rowArray);
     });
+
+    // Usa o contexto da tabela para escrita, igual ao activities.gs
+    const ref = getPlanRef_('participacoes');
+    const ctxPlan = getContextFromRef_(ref);
+
+    let sheet;
+    if (ctxPlan.namedRange) {
+      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
+        ? SpreadsheetApp.openById(ref.ssid)
+        : SpreadsheetApp.getActiveSpreadsheet();
+      const rng = ss.getRangeByName(ctxPlan.namedRange);
+      sheet = rng.getSheet();
+    } else {
+      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
+        ? SpreadsheetApp.openById(ref.ssid)
+        : SpreadsheetApp.getActiveSpreadsheet();
+      sheet = ss.getSheetByName(ctxPlan.planilha);
+    }
+
+    if (!sheet) {
+      return { ok: false, error: 'Não foi possível acessar a planilha de participações para escrita.' };
+    }
 
     // Adiciona as novas linhas no final da planilha
     const currentLastRow = sheet.getLastRow();
