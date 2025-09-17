@@ -2946,7 +2946,7 @@ window.ParticipacaoSystem = {
           console.log('💾 Alvos salvos em cache:', memberIds.length, 'membros');
 
           UI.toast('Alvos definidos com sucesso!', 'success');
-          this.switchTab('controlar-participacoes'); // Muda para próxima aba
+          // this.switchTab('controlar-participacoes'); // Comentado - mantém na aba atual
         } else {
           UI.toast('Erro ao definir alvos: ' + result.error, 'err');
         }

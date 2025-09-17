@@ -370,6 +370,109 @@ function addExtraMember(activityId, memberId, uid) {
   }
 }
 
+/**
+ * Função alternativa para salvar alvos diretamente na planilha
+ * Similar ao padrão usado em activities.gs - não depende do contexto
+ * @param {string} activityId - ID da atividade
+ * @param {Array} memberIds - Array de IDs dos membros
+ * @param {string} uid - UID do usuário
+ * @returns {Object} { ok: boolean, created: number }
+ */
+function saveTargetsDirectly(activityId, memberIds, uid) {
+  try {
+    if (!activityId || !memberIds || !Array.isArray(memberIds)) {
+      return { ok: false, error: 'Parâmetros inválidos.' };
+    }
+
+    // Usa o mesmo padrão de leitura da tabela que activities.gs
+    const { values, headerIndex } = readTableByNome_('participacoes');
+
+    if (!values || values.length === 0) {
+      return { ok: false, error: 'Tabela "participacoes" não encontrada ou vazia.' };
+    }
+
+    // Campos obrigatórios conforme o padrão existente
+    const required = ['id', 'id_atividade', 'id_membro', 'tipo'];
+    const missing = required.filter(k => headerIndex[k] === undefined);
+    if (missing.length) {
+      return { ok: false, error: 'Colunas faltando na tabela Participacoes: ' + missing.join(', ') };
+    }
+
+    // Verifica duplicatas existentes
+    const existingMemberIds = [];
+    for (let r = 1; r < values.length; r++) {
+      const row = values[r] || [];
+      const rowActivityId = String(row[headerIndex['id_atividade']] || '').trim();
+      if (rowActivityId === activityId.toString().trim()) {
+        existingMemberIds.push(String(row[headerIndex['id_membro']] || '').trim());
+      }
+    }
+
+    const newMemberIds = memberIds.filter(id => !existingMemberIds.includes(id.toString()));
+
+    if (newMemberIds.length === 0) {
+      return { ok: true, created: 0, message: 'Todos os membros já estão na lista.' };
+    }
+
+    // Gera novos IDs seguindo o padrão
+    let maxId = 0;
+    for (let r = 1; r < values.length; r++) {
+      const row = values[r] || [];
+      const id = String(row[headerIndex['id']] || '');
+      const match = id.match(/^PART-(\d+)$/);
+      if (match) {
+        maxId = Math.max(maxId, parseInt(match[1], 10));
+      }
+    }
+
+    const nowStr = nowString_();
+    const rowsToAdd = [];
+
+    newMemberIds.forEach((memberId, index) => {
+      const newId = `PART-${String(maxId + index + 1).padStart(4, '0')}`;
+      const rowArray = new Array(Object.keys(headerIndex).length);
+
+      rowArray[headerIndex['id']] = newId;
+      rowArray[headerIndex['id_atividade']] = activityId;
+      rowArray[headerIndex['id_membro']] = memberId;
+      rowArray[headerIndex['tipo']] = 'alvo';
+      rowArray[headerIndex['confirmou']] = '';
+      rowArray[headerIndex['confirmado_em']] = '';
+      rowArray[headerIndex['participou']] = '';
+      rowArray[headerIndex['chegou_tarde']] = '';
+      rowArray[headerIndex['saiu_cedo']] = '';
+      rowArray[headerIndex['justificativa']] = '';
+      rowArray[headerIndex['observacoes']] = '';
+      rowArray[headerIndex['marcado_em']] = '';
+      rowArray[headerIndex['marcado_por']] = '';
+
+      rowsToAdd.push(rowArray);
+    });
+
+    // Usa o método de escrita direto na planilha, igual ao activities.gs
+    const spreadsheetId = '1hfl-CeO6nK4FLYl4uacK5NncBoJ3q-8PPzUWh7W6PmY'; // Mesmo ID usado no APP
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = ss.getSheetByName('Participacoes');
+
+    if (!sheet) {
+      return { ok: false, error: 'Aba "Participacoes" não encontrada na planilha.' };
+    }
+
+    // Adiciona as novas linhas no final da planilha
+    const lastRow = sheet.getLastRow();
+    const startRow = lastRow + 1;
+
+    if (rowsToAdd.length > 0) {
+      sheet.getRange(startRow, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
+    }
+
+    return { ok: true, created: newMemberIds.length };
+
+  } catch (err) {
+    return { ok: false, error: 'Erro saveTargetsDirectly: ' + (err && err.message ? err.message : err) };
+  }
+}
+
 // Funções auxiliares
 
 function getParticipacaesCtx_() {
