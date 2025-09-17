@@ -245,6 +245,16 @@ var UI = {
         })(a,btnConcluir);
       }
 
+      // participantes
+      var btnParticipantes = card.querySelector('.btn-participantes');
+      if (btnParticipantes) {
+        (function(atividade, botao) {
+          botao.addEventListener('click', function() {
+            openParticipacaoModal(atividade.id);
+          });
+        })(a, btnParticipantes);
+      }
+
       el.appendChild(card);
     }
   }
@@ -2340,4 +2350,305 @@ window.initResponsiveCalendar = function(containerId, options) {
   
   return calendar;
 };
+
+/* ===========================
+   Sistema de Participações
+   =========================== */
+
+window.ParticipacaoSystem = {
+  currentActivityId: null,
+  modal: null,
+  extraModal: null,
+
+  init: function() {
+    console.log('🎯 ParticipacaoSystem.init');
+
+    // Cria o modal se não existir
+    if (!this.modal) {
+      this.createModal();
+    }
+
+    this.setupEventListeners();
+  },
+
+  createModal: function() {
+    console.log('📄 Criando modal de participações...');
+
+    // Busca o template
+    var template = document.getElementById('tpl-participacoes-modal');
+    if (!template) {
+      console.error('❌ Template tpl-participacoes-modal não encontrado!');
+      return;
+    }
+
+    // Cria o modal
+    var modalHtml = template.innerHTML;
+    var div = document.createElement('div');
+    div.innerHTML = modalHtml;
+
+    this.modal = div.firstElementChild;
+    this.extraModal = div.children[1]; // segundo modal (membro extra)
+
+    document.body.appendChild(this.modal);
+    if (this.extraModal) {
+      document.body.appendChild(this.extraModal);
+    }
+
+    console.log('✅ Modal de participações criado');
+  },
+
+  setupEventListeners: function() {
+    if (!this.modal) return;
+
+    // Fechar modal principal
+    var closeBtn = this.modal.querySelector('#participacoes-modal-close');
+    var cancelBtn = this.modal.querySelector('#participacoes-modal-cancel');
+
+    if (closeBtn) closeBtn.addEventListener('click', this.closeModal.bind(this));
+    if (cancelBtn) cancelBtn.addEventListener('click', this.closeModal.bind(this));
+
+    // Clicar fora do modal
+    this.modal.addEventListener('click', function(ev) {
+      if (ev.target === this.modal) {
+        this.closeModal();
+      }
+    }.bind(this));
+
+    // Abas
+    var tabBtns = this.modal.querySelectorAll('.tab-btn');
+    tabBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var tab = btn.getAttribute('data-tab');
+        this.switchTab(tab);
+      }.bind(this));
+    }.bind(this));
+
+    console.log('✅ Event listeners configurados');
+  },
+
+  openModal: function(activityId) {
+    console.log('🔓 Abrindo modal de participações para atividade:', activityId);
+
+    if (!this.modal) {
+      this.init();
+    }
+
+    this.currentActivityId = activityId;
+
+    // Define título
+    var title = this.modal.querySelector('#participacoes-modal-title');
+    if (title) {
+      title.textContent = 'Participações - ' + activityId;
+    }
+
+    // Abre na primeira aba
+    this.switchTab('definir-alvos');
+
+    // Mostra o modal
+    this.modal.style.display = 'block';
+
+    // Carrega dados iniciais
+    this.loadData();
+  },
+
+  closeModal: function() {
+    console.log('🔒 Fechando modal de participações');
+
+    if (this.modal) {
+      this.modal.style.display = 'none';
+    }
+
+    this.currentActivityId = null;
+  },
+
+  switchTab: function(tabName) {
+    console.log('🔄 Mudando para aba:', tabName);
+
+    // Remove classe active de todas as abas
+    var tabBtns = this.modal.querySelectorAll('.tab-btn');
+    var tabContents = this.modal.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+
+    tabContents.forEach(function(content) {
+      content.classList.remove('active');
+    });
+
+    // Ativa a aba selecionada
+    var activeBtn = this.modal.querySelector('[data-tab="' + tabName + '"]');
+    var activeContent = this.modal.querySelector('#content-' + tabName);
+
+    if (activeBtn) activeBtn.classList.add('active');
+    if (activeContent) activeContent.classList.add('active');
+
+    // Carrega dados específicos da aba
+    this.loadTabData(tabName);
+  },
+
+  loadData: function() {
+    console.log('📡 Carregando dados de participação...');
+
+    if (!this.currentActivityId) return;
+
+    // Carrega estatísticas básicas
+    API.getParticipacaoStats(this.currentActivityId)
+      .then(function(result) {
+        console.log('✅ Estatísticas carregadas:', result);
+        this.updateStats(result.stats);
+      }.bind(this))
+      .catch(function(error) {
+        console.error('❌ Erro ao carregar estatísticas:', error);
+        UI.toast('Erro ao carregar dados de participação', 'err');
+      });
+  },
+
+  loadTabData: function(tabName) {
+    console.log('📊 Carregando dados da aba:', tabName);
+
+    switch (tabName) {
+      case 'definir-alvos':
+        this.loadAlvosTab();
+        break;
+      case 'controlar-participacoes':
+        this.loadParticipacoesTab();
+        break;
+      case 'estatisticas':
+        this.loadEstatisticasTab();
+        break;
+    }
+  },
+
+  loadAlvosTab: function() {
+    console.log('🎯 Carregando aba de alvos...');
+    // TODO: Implementar carregamento de filtros para definir alvos
+  },
+
+  loadParticipacoesTab: function() {
+    console.log('✅ Carregando aba de participações...');
+
+    API.listParticipacoes(this.currentActivityId)
+      .then(function(result) {
+        console.log('✅ Participações carregadas:', result);
+        this.renderParticipacoes(result.items);
+      }.bind(this))
+      .catch(function(error) {
+        console.error('❌ Erro ao carregar participações:', error);
+        UI.toast('Erro ao carregar participações', 'err');
+      });
+  },
+
+  loadEstatisticasTab: function() {
+    console.log('📊 Carregando aba de estatísticas...');
+
+    API.getParticipacaoStats(this.currentActivityId)
+      .then(function(result) {
+        console.log('✅ Estatísticas detalhadas carregadas:', result);
+        this.renderEstatisticas(result.stats);
+      }.bind(this))
+      .catch(function(error) {
+        console.error('❌ Erro ao carregar estatísticas:', error);
+        UI.toast('Erro ao carregar estatísticas', 'err');
+      });
+  },
+
+  updateStats: function(stats) {
+    console.log('📊 Atualizando estatísticas:', stats);
+
+    // Atualiza resumo na aba de participações
+    this.setElementText('resumo-total', stats.total);
+    this.setElementText('resumo-confirmados', stats.confirmados);
+    this.setElementText('resumo-participaram', stats.participaram);
+    this.setElementText('resumo-ausentes', stats.ausentes);
+  },
+
+  renderParticipacoes: function(participacoes) {
+    console.log('🎨 Renderizando lista de participações:', participacoes);
+
+    var lista = this.modal.querySelector('#participacoes-lista');
+    if (!lista) return;
+
+    if (!participacoes || participacoes.length === 0) {
+      lista.innerHTML = '<div class="empty-state"><p>Nenhuma participação definida ainda.</p><p>Use a aba "Definir Alvos" para começar.</p></div>';
+      return;
+    }
+
+    var html = '';
+    participacoes.forEach(function(p) {
+      html += this.renderParticipacaoItem(p);
+    }.bind(this));
+
+    lista.innerHTML = html;
+  },
+
+  renderParticipacaoItem: function(participacao) {
+    var confirmacaoClass = participacao.confirmou ? (participacao.confirmou === 'sim' ? 'sim' : 'nao') : 'pendente';
+    var confirmacaoText = participacao.confirmou ? (participacao.confirmou === 'sim' ? 'Confirmou' : 'Recusou') : 'Pendente';
+
+    return '<div class="participacao-item" data-member-id="' + participacao.id_membro + '">' +
+      '<div class="participacao-membro">' +
+        '<div class="participacao-nome">' + participacao.id_membro + '</div>' +
+        '<div class="participacao-detalhes">Tipo: ' + participacao.tipo + '</div>' +
+      '</div>' +
+      '<div class="participacao-confirmacao">' +
+        '<span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
+      '</div>' +
+      '<div class="participacao-controles">' +
+        '<select class="participacao-select" data-field="participou">' +
+          '<option value="">Participou?</option>' +
+          '<option value="sim"' + (participacao.participou === 'sim' ? ' selected' : '') + '>Sim</option>' +
+          '<option value="nao"' + (participacao.participou === 'nao' ? ' selected' : '') + '>Não</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="participacao-controles">' +
+        '<label class="participacao-checkbox">' +
+          '<input type="checkbox" data-field="chegou_tarde"' + (participacao.chegou_tarde === 'sim' ? ' checked' : '') + '> Chegou tarde' +
+        '</label>' +
+        '<label class="participacao-checkbox">' +
+          '<input type="checkbox" data-field="saiu_cedo"' + (participacao.saiu_cedo === 'sim' ? ' checked' : '') + '> Saiu cedo' +
+        '</label>' +
+      '</div>' +
+      '<div class="participacao-observacoes">' +
+        '<textarea placeholder="Justificativa/Observações..." data-field="justificativa">' + (participacao.justificativa || '') + '</textarea>' +
+      '</div>' +
+    '</div>';
+  },
+
+  renderEstatisticas: function(stats) {
+    console.log('📊 Renderizando estatísticas:', stats);
+
+    this.setElementText('stat-total-participantes', stats.total);
+    this.setElementText('stat-percentual', stats.percentualParticipacao + '%');
+    this.setElementText('stat-confirmaram', stats.confirmados);
+    this.setElementText('stat-recusaram', stats.recusados);
+    this.setElementText('stat-presentes', stats.participaram);
+    this.setElementText('stat-ausentes-stat', stats.ausentes);
+    this.setElementText('stat-pendentes', stats.pendentes);
+  },
+
+  setElementText: function(id, text) {
+    var el = this.modal.querySelector('#' + id);
+    if (el) el.textContent = text || '-';
+  }
+};
+
+// Função global para abrir modal de participações
+function openParticipacaoModal(activityId) {
+  console.log('🚀 openParticipacaoModal chamada para:', activityId);
+
+  if (!window.ParticipacaoSystem) {
+    console.error('❌ ParticipacaoSystem não disponível');
+    return;
+  }
+
+  ParticipacaoSystem.openModal(activityId);
+}
+
+// Inicializa o sistema quando a página carrega
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.ParticipacaoSystem) {
+    ParticipacaoSystem.init();
+  }
+});
 </script>

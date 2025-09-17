@@ -2838,4 +2838,492 @@
   }
 }
 
+/* Informações de participação nos cards */
+.meta-participacao {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 4px;
+  border-left: 3px solid var(--primary);
+}
+
+.participacao-stats {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.btn-participantes {
+  background: var(--primary);
+  color: white;
+  border: 1px solid var(--primary);
+}
+
+.btn-participantes:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+/* ===== SISTEMA DE PARTICIPAÇÕES ===== */
+
+/* Modal de participações */
+.large-modal .modal-content {
+  max-width: 900px;
+  width: 95%;
+  max-height: 90vh;
+}
+
+/* Abas do modal */
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.tab-btn:hover {
+  color: var(--fg);
+  background: var(--bg-hover);
+}
+
+/* Conteúdo das abas */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.section-subtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+/* Filtros para alvos */
+.alvos-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-weight: 600;
+  color: var(--fg);
+  font-size: 0.85rem;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Ações dos filtros */
+.alvos-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Resultados da busca de alvos */
+.alvos-resultados {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.resultados-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.resultados-info {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.resultados-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.alvos-lista {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.alvo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  background: var(--card);
+  transition: all 0.2s ease;
+}
+
+.alvo-item:hover {
+  border-color: var(--primary);
+}
+
+.alvo-item.selected {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.alvo-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.alvo-info {
+  flex: 1;
+}
+
+.alvo-nome {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.alvo-detalhes {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.resultados-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+/* Resumo de participações */
+.participacoes-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.resumo-item {
+  text-align: center;
+  padding: 12px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.resumo-number {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.resumo-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Busca de participações */
+.participacoes-busca {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.participacoes-busca .input {
+  flex: 1;
+}
+
+/* Lista de participações */
+.participacoes-lista {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.participacao-item {
+  display: grid;
+  grid-template-columns: 2fr 120px 100px 100px 1fr;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.participacao-item:last-child {
+  border-bottom: none;
+}
+
+.participacao-membro {
+  display: flex;
+  flex-direction: column;
+}
+
+.participacao-nome {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.participacao-detalhes {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.participacao-confirmacao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.confirmacao-chip {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.confirmacao-chip.sim {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.confirmacao-chip.nao {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.confirmacao-chip.pendente {
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+}
+
+.participacao-controles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participacao-select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.85rem;
+}
+
+.participacao-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.participacao-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.participacao-observacoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participacao-observacoes textarea {
+  min-height: 40px;
+  resize: vertical;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.85rem;
+}
+
+.participacoes-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+
+/* Estatísticas */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 20px;
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.stats-breakdown {
+  background: var(--bg-subtle);
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+/* Modal de membro extra */
+.extra-member-results {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 12px;
+}
+
+.extra-member-list {
+  padding: 8px;
+}
+
+.extra-member-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  background: var(--card);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.extra-member-item:hover {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .large-modal .modal-content {
+    width: 98%;
+    max-height: 95vh;
+  }
+
+  .alvos-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .participacao-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .alvos-actions,
+  .participacoes-busca,
+  .resultados-header,
+  .resultados-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .resultados-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .alvo-item.selected {
+    background: rgba(59, 130, 246, 0.2);
+  }
+
+  .extra-member-item:hover {
+    background: rgba(59, 130, 246, 0.2);
+  }
+}
+
 </style>

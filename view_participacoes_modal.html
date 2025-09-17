@@ -1,0 +1,217 @@
+<!-- Modal de Gestão de Participações -->
+<div id="participacoes-modal" class="modal" style="display: none;">
+  <div class="modal-overlay">
+    <div class="modal-content large-modal">
+      <div class="modal-header">
+        <h3 id="participacoes-modal-title">Participações</h3>
+        <button class="modal-close" id="participacoes-modal-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Abas -->
+        <div class="modal-tabs">
+          <button class="tab-btn active" data-tab="definir-alvos" id="tab-definir-alvos">
+            🎯 Definir Alvos
+          </button>
+          <button class="tab-btn" data-tab="controlar-participacoes" id="tab-controlar-participacoes">
+            ✅ Marcar Participações
+          </button>
+          <button class="tab-btn" data-tab="estatisticas" id="tab-estatisticas">
+            📊 Estatísticas
+          </button>
+        </div>
+
+        <!-- Tab 1: Definir Alvos -->
+        <div class="tab-content active" id="content-definir-alvos">
+          <div class="section-header">
+            <h4>Definir membros que deveriam participar</h4>
+            <p class="section-subtitle">Selecione membros por filtros ou busca individual</p>
+          </div>
+
+          <!-- Filtros para seleção de membros -->
+          <div class="alvos-filters">
+            <div class="filter-group">
+              <label class="filter-label">Dojo</label>
+              <div id="alvos-dojos-container" class="filter-chips"></div>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Status</label>
+              <div id="alvos-status-container" class="filter-chips"></div>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Cargo</label>
+              <div id="alvos-cargo-container" class="filter-chips"></div>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Categoria/Grupo</label>
+              <div id="alvos-categoria-container" class="filter-chips"></div>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Buntai</label>
+              <div id="alvos-buntai-container" class="filter-chips"></div>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Busca por nome</label>
+              <input type="text" id="alvos-busca-nome" class="input" placeholder="Digite o nome do membro...">
+            </div>
+          </div>
+
+          <!-- Botões de ação para filtros -->
+          <div class="alvos-actions">
+            <button class="btn btn-secondary" id="btn-limpar-filtros-alvos">Limpar Filtros</button>
+            <button class="btn btn-primary" id="btn-buscar-membros">🔍 Buscar Membros</button>
+          </div>
+
+          <!-- Lista de membros encontrados -->
+          <div id="alvos-resultados" class="alvos-resultados" style="display: none;">
+            <div class="resultados-header">
+              <div class="resultados-info">
+                <span id="alvos-count">0 membros encontrados</span>
+              </div>
+              <div class="resultados-actions">
+                <button class="btn btn-small" id="btn-selecionar-todos">Selecionar Todos</button>
+                <button class="btn btn-small" id="btn-desselecionar-todos">Desselecionar Todos</button>
+              </div>
+            </div>
+            <div id="alvos-lista" class="alvos-lista"></div>
+            <div class="resultados-footer">
+              <span id="alvos-selecionados">0 selecionados</span>
+              <button class="btn btn-primary" id="btn-definir-alvos">✅ Definir como Alvos</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Controlar Participações -->
+        <div class="tab-content" id="content-controlar-participacoes">
+          <div class="section-header">
+            <h4>Marcar participações</h4>
+            <p class="section-subtitle">Controle quem participou da atividade</p>
+          </div>
+
+          <!-- Resumo rápido -->
+          <div class="participacoes-resumo">
+            <div class="resumo-item">
+              <span class="resumo-number" id="resumo-total">-</span>
+              <span class="resumo-label">Total</span>
+            </div>
+            <div class="resumo-item">
+              <span class="resumo-number" id="resumo-confirmados">-</span>
+              <span class="resumo-label">Confirmaram</span>
+            </div>
+            <div class="resumo-item">
+              <span class="resumo-number" id="resumo-participaram">-</span>
+              <span class="resumo-label">Participaram</span>
+            </div>
+            <div class="resumo-item">
+              <span class="resumo-number" id="resumo-ausentes">-</span>
+              <span class="resumo-label">Ausentes</span>
+            </div>
+          </div>
+
+          <!-- Busca na lista de participações -->
+          <div class="participacoes-busca">
+            <input type="text" id="participacoes-search" class="input" placeholder="🔍 Buscar membro...">
+            <button class="btn" id="btn-adicionar-extra">+ Adicionar Membro Extra</button>
+          </div>
+
+          <!-- Lista de participações -->
+          <div id="participacoes-lista" class="participacoes-lista"></div>
+
+          <!-- Botão salvar -->
+          <div class="participacoes-footer">
+            <button class="btn btn-primary btn-large" id="btn-salvar-participacoes">💾 Salvar Alterações</button>
+          </div>
+        </div>
+
+        <!-- Tab 3: Estatísticas -->
+        <div class="tab-content" id="content-estatisticas">
+          <div class="section-header">
+            <h4>Estatísticas de Participação</h4>
+            <p class="section-subtitle">Resumo geral da atividade</p>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number" id="stat-total-participantes">-</div>
+              <div class="stat-label">Total de Participantes</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-number" id="stat-percentual" style="color: var(--primary);">-%</div>
+              <div class="stat-label">Taxa de Participação</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-number" id="stat-confirmaram" style="color: var(--success);">-</div>
+              <div class="stat-label">Confirmaram Antecipadamente</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-number" id="stat-recusaram" style="color: var(--warning);">-</div>
+              <div class="stat-label">Recusaram Antecipadamente</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-number" id="stat-presentes" style="color: var(--success);">-</div>
+              <div class="stat-label">Presentes</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-number" id="stat-ausentes-stat" style="color: var(--danger);">-</div>
+              <div class="stat-label">Ausentes</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-number" id="stat-pendentes" style="color: var(--muted);">-</div>
+              <div class="stat-label">Pendentes</div>
+            </div>
+          </div>
+
+          <!-- Breakdown detalhado -->
+          <div class="stats-breakdown">
+            <h5>Detalhamento</h5>
+            <div class="breakdown-list" id="stats-breakdown-list">
+              <!-- Será preenchido dinamicamente -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="participacoes-modal-cancel">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para adicionar membro extra -->
+<div id="extra-member-modal" class="modal" style="display: none;">
+  <div class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Adicionar Membro Extra</h3>
+        <button class="modal-close" id="extra-member-modal-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Buscar membro</label>
+          <input type="text" id="extra-member-search" class="input" placeholder="Digite o nome do membro...">
+        </div>
+
+        <div id="extra-member-results" class="extra-member-results" style="display: none;">
+          <div id="extra-member-list" class="extra-member-list"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="extra-member-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -454,6 +454,190 @@ var API = {
         }).catch(reject);
       }
     });
+  },
+
+  /* === APIs DE PARTICIPAÇÃO === */
+
+  /* listParticipacoes(activityId) -> { ok, items } */
+  listParticipacoes: function(activityId) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.listParticipacoes:', activityId);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.listParticipacoes) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res);
+            } else {
+              reject((res && res.error) || 'Falha ao listar participações');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro listParticipacoes:', err);
+            reject('Erro na API: ' + err);
+          })
+          .listParticipacoes(activityId);
+      } else {
+        console.warn('⚠️ listParticipacoes não disponível');
+        reject('Funcionalidade não implementada no mock');
+      }
+    });
+  },
+
+  /* defineTargets(activityId, memberIds, uid) -> { ok, created } */
+  defineTargets: function(activityId, memberIds) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.defineTargets:', activityId, memberIds);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.defineTargets) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res);
+            } else {
+              reject((res && res.error) || 'Falha ao definir alvos');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro defineTargets:', err);
+            reject('Erro na API: ' + err);
+          })
+          .defineTargets(activityId, memberIds, State.uid);
+      } else {
+        console.warn('⚠️ defineTargets não disponível');
+        reject('Funcionalidade não implementada no mock');
+      }
+    });
+  },
+
+  /* markParticipacao(activityId, memberId, dados) -> { ok } */
+  markParticipacao: function(activityId, memberId, dados) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.markParticipacao:', activityId, memberId, dados);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.markParticipacao) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res);
+            } else {
+              reject((res && res.error) || 'Falha ao marcar participação');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro markParticipacao:', err);
+            reject('Erro na API: ' + err);
+          })
+          .markParticipacao(activityId, memberId, dados, State.uid);
+      } else {
+        console.warn('⚠️ markParticipacao não disponível');
+        reject('Funcionalidade não implementada no mock');
+      }
+    });
+  },
+
+  /* confirmarParticipacao(activityId, memberId, confirmou) -> { ok } */
+  confirmarParticipacao: function(activityId, memberId, confirmou) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.confirmarParticipacao:', activityId, memberId, confirmou);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.confirmarParticipacao) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res);
+            } else {
+              reject((res && res.error) || 'Falha ao confirmar participação');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro confirmarParticipacao:', err);
+            reject('Erro na API: ' + err);
+          })
+          .confirmarParticipacao(activityId, memberId, confirmou, State.uid);
+      } else {
+        console.warn('⚠️ confirmarParticipacao não disponível');
+        reject('Funcionalidade não implementada no mock');
+      }
+    });
+  },
+
+  /* searchMembersByCriteria(filters) -> { ok, items } */
+  searchMembersByCriteria: function(filters) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.searchMembersByCriteria:', filters);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.searchMembersByCriteria) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res);
+            } else {
+              reject((res && res.error) || 'Falha ao buscar membros');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro searchMembersByCriteria:', err);
+            reject('Erro na API: ' + err);
+          })
+          .searchMembersByCriteria(filters);
+      } else {
+        console.warn('⚠️ searchMembersByCriteria não disponível');
+        reject('Funcionalidade não implementada no mock');
+      }
+    });
+  },
+
+  /* getParticipacaoStats(activityId) -> { ok, stats } */
+  getParticipacaoStats: function(activityId) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.getParticipacaoStats:', activityId);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.getParticipacaoStats) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res);
+            } else {
+              reject((res && res.error) || 'Falha ao obter estatísticas');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro getParticipacaoStats:', err);
+            reject('Erro na API: ' + err);
+          })
+          .getParticipacaoStats(activityId);
+      } else {
+        console.warn('⚠️ getParticipacaoStats não disponível');
+        reject('Funcionalidade não implementada no mock');
+      }
+    });
+  },
+
+  /* addExtraMember(activityId, memberId) -> { ok } */
+  addExtraMember: function(activityId, memberId) {
+    return new Promise(function(resolve, reject) {
+      console.log('📡 API.addExtraMember:', activityId, memberId);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.addExtraMember) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.ok) {
+              resolve(res);
+            } else {
+              reject((res && res.error) || 'Falha ao adicionar membro extra');
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.error('❌ Erro addExtraMember:', err);
+            reject('Erro na API: ' + err);
+          })
+          .addExtraMember(activityId, memberId, State.uid);
+      } else {
+        console.warn('⚠️ addExtraMember não disponível');
+        reject('Funcionalidade não implementada no mock');
+      }
+    });
   }
 };
 
