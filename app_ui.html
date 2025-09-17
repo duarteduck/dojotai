@@ -3054,12 +3054,7 @@ window.ParticipacaoSystem = {
       confirmacaoText = 'Pendente';
     }
 
-    var tipoChip = '';
-    if (isTarget) {
-      tipoChip = '<span class="tipo-chip alvo">Alvo</span>';
-    } else if (isExtra) {
-      tipoChip = '<span class="tipo-chip extra">Extra</span>';
-    }
+    // Não usar tipo chip - removido conforme solicitado
 
     var participouChecked = participou === 'sim' ? ' checked' : '';
     var chegouTardeChecked = chegouTarde ? ' checked' : '';
@@ -3070,8 +3065,7 @@ window.ParticipacaoSystem = {
 
       '<div class="participacao-linha-1">' +
         '<span class="participacao-nome-principal">' + memberNome + '</span>' +
-        (tipoChip ? ' ' + tipoChip : '') +
-        ' <span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
+        '<span class="confirmacao-chip ' + confirmacaoClass + '">' + confirmacaoText + '</span>' +
       '</div>' +
 
       '<div class="participacao-linha-2">' +

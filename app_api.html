@@ -492,15 +492,30 @@ var API = {
             // Para cada alvo, cria uma participação mock
             targetIds.forEach(function(memberId) {
               var member = getCachedMember(memberId);
+              console.log('🔍 Buscando membro', memberId, ':', member);
               if (member) {
                 mockItems.push({
                   id: 'mock_' + memberId + '_' + activityId,
                   activityId: activityId,
                   memberId: memberId,
-                  memberNome: member.nome,
+                  memberNome: member.nome || member.nomeCompleto || ('Membro ' + memberId),
                   memberDojo: member.dojo || 'N/A',
                   confirmacao: 'pendente',
-                  participacao: 'pendente',
+                  participacao: '',
+                  observacoes: '',
+                  isTarget: true,
+                  isExtra: false
+                });
+              } else {
+                // Se não encontrar o membro em cache, cria com ID
+                mockItems.push({
+                  id: 'mock_' + memberId + '_' + activityId,
+                  activityId: activityId,
+                  memberId: memberId,
+                  memberNome: 'Membro ' + memberId,
+                  memberDojo: 'N/A',
+                  confirmacao: 'pendente',
+                  participacao: '',
                   observacoes: '',
                   isTarget: true,
                   isExtra: false
