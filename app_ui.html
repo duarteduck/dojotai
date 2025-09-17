@@ -2364,6 +2364,45 @@ window.ParticipacaoSystem = {
   modal: null,
   extraModal: null,
 
+  // Funções helper para loading
+  showLoading: function(elementId) {
+    var element = document.getElementById(elementId);
+    if (element) {
+      element.style.display = 'flex';
+    }
+  },
+
+  hideLoading: function(elementId) {
+    var element = document.getElementById(elementId);
+    if (element) {
+      element.style.display = 'none';
+    }
+  },
+
+  showElement: function(elementId) {
+    var element = document.getElementById(elementId);
+    if (element) {
+      element.style.display = 'block';
+    }
+  },
+
+  hideElement: function(elementId) {
+    var element = document.getElementById(elementId);
+    if (element) {
+      element.style.display = 'none';
+    }
+  },
+
+  setButtonLoading: function(buttonElement, loading) {
+    if (loading) {
+      buttonElement.classList.add('is-loading');
+      buttonElement.disabled = true;
+    } else {
+      buttonElement.classList.remove('is-loading');
+      buttonElement.disabled = false;
+    }
+  },
+
   init: function() {
     console.log('🎯 ParticipacaoSystem.init');
 
@@ -2563,6 +2602,12 @@ window.ParticipacaoSystem = {
     // Carrega membros para extrair valores únicos dos filtros
     if (!State.cache || !State.cache.membros) {
       console.warn('⚠️ Cache de membros não disponível - carregando...');
+
+      // Mostra loading enquanto carrega dados para os combobox
+      this.showLoading('filtros-loading');
+      this.hideElement('alvos-filters-simple');
+      this.hideElement('alvos-actions');
+
       this.loadMembrosForFilters();
       return;
     }
@@ -2584,11 +2629,19 @@ window.ParticipacaoSystem = {
 
         // Cria os filtros agora
         this.createAlvosFilterChips(membros);
+
+        // Esconde loading e mostra filtros preenchidos
+        this.hideLoading('filtros-loading');
+        this.showElement('alvos-filters-simple');
+        this.showElement('alvos-actions');
       }.bind(this))
       .catch(function(error) {
         console.error('❌ Erro ao carregar membros:', error);
         UI.toast('Erro ao carregar membros para filtros', 'err');
-      });
+
+        // Esconde loading em caso de erro
+        this.hideLoading('filtros-loading');
+      }.bind(this));
   },
 
   createAlvosFilterChips: function(membros) {
@@ -2695,6 +2748,16 @@ window.ParticipacaoSystem = {
   executarBuscaMembros: function() {
     console.log('🔍 Executando busca de membros...');
 
+    // Mostra loading e esconde resultados
+    this.showLoading('alvos-loading');
+    this.hideElement('alvos-resultados');
+
+    // Adiciona loading ao botão
+    var btnBuscar = document.getElementById('btn-buscar-membros');
+    if (btnBuscar) {
+      this.setButtonLoading(btnBuscar, true);
+    }
+
     // Coleta filtros ativos
     var filtros = this.coletarFiltrosAtivos();
     console.log('Filtros coletados:', filtros);
@@ -2708,6 +2771,13 @@ window.ParticipacaoSystem = {
           console.error('Erro na busca:', result.error);
           UI.toast('Erro ao buscar membros', 'err');
         }
+
+        // Remove loading
+        this.hideLoading('alvos-loading');
+        this.showElement('alvos-resultados');
+        if (btnBuscar) {
+          this.setButtonLoading(btnBuscar, false);
+        }
       }.bind(this))
       .catch(function(error) {
         console.warn('API searchMembersByCriteria falhou, usando fallback:', error);
@@ -2718,11 +2788,20 @@ window.ParticipacaoSystem = {
   executarBuscaComFallback: function(filtros) {
     console.log('🔄 Usando busca com fallback...');
 
+    var btnBuscar = document.getElementById('btn-buscar-membros');
+
     // Usa listMembers e filtra localmente
     API.listMembers()
       .then(function(membros) {
         var resultados = this.filtrarMembrosLocalmente(membros, filtros);
         this.renderResultadosBusca(resultados);
+
+        // Remove loading
+        this.hideLoading('alvos-loading');
+        this.showElement('alvos-resultados');
+        if (btnBuscar) {
+          this.setButtonLoading(btnBuscar, false);
+        }
       }.bind(this))
       .catch(function(error) {
         console.error('❌ Fallback também falhou:', error);
@@ -2973,6 +3052,11 @@ window.ParticipacaoSystem = {
   loadParticipacoesTab: function() {
     console.log('✅ Carregando aba de participações...');
 
+    // Mostra loading
+    this.showLoading('participacoes-loading');
+    this.hideElement('participacoes-resumo');
+    this.hideElement('participacoes-lista');
+
     // Carrega participações e membros em paralelo
     Promise.all([
       API.listParticipacoes(this.currentActivityId),
@@ -2990,25 +3074,46 @@ window.ParticipacaoSystem = {
 
       this.renderParticipacoes(participacoesEnriquecidas);
       this.setupParticipacoesEvents();
+
+      // Esconde loading e mostra conteúdo
+      this.hideLoading('participacoes-loading');
+      this.showElement('participacoes-resumo');
+      this.showElement('participacoes-lista');
     }.bind(this))
     .catch(function(error) {
       console.error('❌ Erro ao carregar participações:', error);
       UI.toast('Erro ao carregar participações', 'err');
-    });
+
+      // Esconde loading em caso de erro
+      this.hideLoading('participacoes-loading');
+    }.bind(this));
   },
 
   loadEstatisticasTab: function() {
     console.log('📊 Carregando aba de estatísticas...');
 
+    // Mostra loading
+    this.showLoading('estatisticas-loading');
+    this.hideElement('stats-grid');
+    this.hideElement('stats-breakdown');
+
     API.getParticipacaoStats(this.currentActivityId)
       .then(function(result) {
         console.log('✅ Estatísticas detalhadas carregadas:', result);
         this.renderEstatisticas(result.stats);
+
+        // Esconde loading e mostra conteúdo
+        this.hideLoading('estatisticas-loading');
+        this.showElement('stats-grid');
+        this.showElement('stats-breakdown');
       }.bind(this))
       .catch(function(error) {
         console.error('❌ Erro ao carregar estatísticas:', error);
         UI.toast('Erro ao carregar estatísticas', 'err');
-      });
+
+        // Esconde loading em caso de erro
+        this.hideLoading('estatisticas-loading');
+      }.bind(this));
   },
 
   updateStats: function(stats) {

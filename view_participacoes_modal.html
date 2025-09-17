@@ -28,6 +28,12 @@
             <p class="section-subtitle">Selecione membros por filtros ou busca individual</p>
           </div>
 
+          <!-- Loading para carregamento inicial dos filtros -->
+          <div id="filtros-loading" class="loading-container" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Carregando filtros...</p>
+          </div>
+
           <!-- Filtros para seleção de membros -->
           <div class="alvos-filters-simple">
             <div class="filters-row">
@@ -81,6 +87,12 @@
             <button class="btn btn-primary" id="btn-buscar-membros">🔍 Buscar Membros</button>
           </div>
 
+          <!-- Loading para busca de alvos -->
+          <div id="alvos-loading" class="loading-container" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Buscando membros...</p>
+          </div>
+
           <!-- Lista de membros encontrados -->
           <div id="alvos-resultados" class="alvos-resultados" style="display: none;">
             <div class="resultados-header">
@@ -105,6 +117,12 @@
           <div class="section-header">
             <h4>Marcar participações</h4>
             <p class="section-subtitle">Controle quem participou da atividade</p>
+          </div>
+
+          <!-- Loading State -->
+          <div id="participacoes-loading" class="loading-container" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Carregando participações...</p>
           </div>
 
           <!-- Resumo rápido -->
@@ -147,6 +165,12 @@
           <div class="section-header">
             <h4>Estatísticas de Participação</h4>
             <p class="section-subtitle">Resumo geral da atividade</p>
+          </div>
+
+          <!-- Loading para estatísticas -->
+          <div id="estatisticas-loading" class="loading-container" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Calculando estatísticas...</p>
           </div>
 
           <div class="stats-grid">
