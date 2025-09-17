@@ -380,16 +380,41 @@ function addExtraMember(activityId, memberId, uid) {
  */
 function saveTargetsDirectly(activityId, memberIds, uid) {
   try {
+    console.log('🔧 saveTargetsDirectly chamada:', { activityId, memberIds, uid });
+
     if (!activityId || !memberIds || !Array.isArray(memberIds)) {
+      console.log('❌ Parâmetros inválidos');
       return { ok: false, error: 'Parâmetros inválidos.' };
     }
 
-    // Usa o mesmo padrão de leitura da tabela que activities.gs
-    const { values, headerIndex } = readTableByNome_('participacoes');
+    // Acesso direto à planilha, sem depender de configuração
+    const spreadsheetId = '1hfl-CeO6nK4FLYl4uacK5NncBoJ3q-8PPzUWh7W6PmY';
+    console.log('📋 Tentando abrir planilha:', spreadsheetId);
 
-    if (!values || values.length === 0) {
-      return { ok: false, error: 'Tabela "participacoes" não encontrada ou vazia.' };
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = ss.getSheetByName('Participacoes');
+    console.log('📋 Aba encontrada:', !!sheet);
+
+    if (!sheet) {
+      console.log('❌ Aba "Participacoes" não encontrada');
+      return { ok: false, error: 'Aba "Participacoes" não encontrada na planilha.' };
     }
+
+    // Lê os dados da planilha diretamente
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 1) {
+      return { ok: false, error: 'Planilha "Participacoes" está vazia.' };
+    }
+
+    const values = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
+    if (!values || values.length === 0) {
+      return { ok: false, error: 'Não foi possível ler dados da planilha "Participacoes".' };
+    }
+
+    // Cria headerIndex manualmente
+    const header = values[0].map(h => (h||'').toString().trim().toLowerCase());
+    const headerIndex = {};
+    header.forEach((name, i) => headerIndex[name] = i);
 
     // Campos obrigatórios conforme o padrão existente
     const required = ['id', 'id_atividade', 'id_membro', 'tipo'];
@@ -449,26 +474,23 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
       rowsToAdd.push(rowArray);
     });
 
-    // Usa o método de escrita direto na planilha, igual ao activities.gs
-    const spreadsheetId = '1hfl-CeO6nK4FLYl4uacK5NncBoJ3q-8PPzUWh7W6PmY'; // Mesmo ID usado no APP
-    const ss = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = ss.getSheetByName('Participacoes');
-
-    if (!sheet) {
-      return { ok: false, error: 'Aba "Participacoes" não encontrada na planilha.' };
-    }
-
     // Adiciona as novas linhas no final da planilha
-    const lastRow = sheet.getLastRow();
-    const startRow = lastRow + 1;
+    const currentLastRow = sheet.getLastRow();
+    const startRow = currentLastRow + 1;
 
     if (rowsToAdd.length > 0) {
+      console.log('📝 Escrevendo', rowsToAdd.length, 'linhas a partir da linha', startRow);
       sheet.getRange(startRow, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
+      console.log('✅ Dados escritos com sucesso');
+    } else {
+      console.log('ℹ️ Nenhuma linha para escrever');
     }
 
+    console.log('✅ saveTargetsDirectly concluída com sucesso');
     return { ok: true, created: newMemberIds.length };
 
   } catch (err) {
+    console.error('❌ Erro em saveTargetsDirectly:', err);
     return { ok: false, error: 'Erro saveTargetsDirectly: ' + (err && err.message ? err.message : err) };
   }
 }
@@ -477,7 +499,35 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
 
 function getParticipacaesCtx_() {
   try {
-    return getCtx_('participacoes');
+    const ref = getPlanRef_('participacoes');
+    const ctxPlan = getContextFromRef_(ref);
+
+    // Quando for named_range (ex.: PARTICIPACOES_TBL)
+    if (ctxPlan.namedRange) {
+      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
+        ? SpreadsheetApp.openById(ref.ssid)
+        : SpreadsheetApp.getActiveSpreadsheet();
+      const rng = ss.getRangeByName(ctxPlan.namedRange);
+      return {
+        sheet: rng.getSheet(),
+        startRow: rng.getRow(),
+        startCol: rng.getColumn()
+      };
+    }
+
+    // Fallback: planilha!range_a1
+    const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
+      ? SpreadsheetApp.openById(ref.ssid)
+      : SpreadsheetApp.getActiveSpreadsheet();
+
+    const sheet = ss.getSheetByName(ctxPlan.planilha);
+    if (!sheet) throw new Error(`Aba "${ctxPlan.planilha}" não encontrada.`);
+
+    return {
+      sheet: sheet,
+      startRow: 1,
+      startCol: 1
+    };
   } catch (err) {
     console.error('Erro getParticipacaesCtx_:', err);
     return null;
