@@ -2614,43 +2614,34 @@ window.ParticipacaoSystem = {
     categorias.sort();
     buntais.sort();
 
-    // Cria chips nos containers
-    this.createFilterChips('alvos-dojos-container', dojos, 'dojo');
-    this.createFilterChips('alvos-status-container', status, 'status');
-    this.createFilterChips('alvos-cargo-container', cargos, 'cargo');
-    this.createFilterChips('alvos-categoria-container', categorias, 'categoria_grupo');
-    this.createFilterChips('alvos-buntai-container', buntais, 'buntai');
+    // Popula os selects
+    this.populateSelect('alvos-dojo-select', dojos);
+    this.populateSelect('alvos-status-select', status);
+    this.populateSelect('alvos-cargo-select', cargos);
+    this.populateSelect('alvos-categoria-select', categorias);
+    this.populateSelect('alvos-buntai-select', buntais);
   },
 
-  createFilterChips: function(containerId, values, filterType) {
-    var container = this.modal.querySelector('#' + containerId);
-    if (!container) return;
+  populateSelect: function(selectId, values) {
+    var select = this.modal.querySelector('#' + selectId);
+    if (!select) return;
 
-    container.innerHTML = '';
+    // Mantém a primeira opção (ex: "Todos os dojos")
+    var firstOption = select.options[0];
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+
+    // Adiciona as opções
     values.forEach(function(value) {
-      var chip = document.createElement('div');
-      chip.className = 'chip';
-      chip.setAttribute('data-filter-type', filterType);
-      chip.setAttribute('data-filter-value', value);
-      chip.textContent = value;
-      container.appendChild(chip);
+      var option = document.createElement('option');
+      option.value = value;
+      option.textContent = value;
+      select.appendChild(option);
     });
   },
 
   setupAlvosEventListeners: function() {
     var self = this;
-
-    // Event listeners para filtros
-    var filtersContainer = this.modal.querySelector('.alvos-filters');
-    if (filtersContainer) {
-      filtersContainer.addEventListener('click', function(ev) {
-        var chip = ev.target.closest('.chip');
-        if (!chip) return;
-
-        chip.classList.toggle('is-active');
-        console.log('🔄 Filtro toggle:', chip.textContent);
-      });
-    }
 
     // Busca por nome
     var searchInput = this.modal.querySelector('#alvos-busca-nome');
@@ -2793,15 +2784,32 @@ window.ParticipacaoSystem = {
   coletarFiltrosAtivos: function() {
     var filtros = {};
 
-    // Coleta chips ativos
-    var chipsAtivos = this.modal.querySelectorAll('.alvos-filters .chip.is-active');
-    chipsAtivos.forEach(function(chip) {
-      var filterType = chip.getAttribute('data-filter-type');
-      var filterValue = chip.getAttribute('data-filter-value');
+    // Coleta valores dos selects
+    var dojoSelect = this.modal.querySelector('#alvos-dojo-select');
+    var statusSelect = this.modal.querySelector('#alvos-status-select');
+    var cargoSelect = this.modal.querySelector('#alvos-cargo-select');
+    var categoriaSelect = this.modal.querySelector('#alvos-categoria-select');
+    var buntaiSelect = this.modal.querySelector('#alvos-buntai-select');
 
-      if (!filtros[filterType]) filtros[filterType] = [];
-      filtros[filterType].push(filterValue);
-    });
+    if (dojoSelect && dojoSelect.value) {
+      filtros.dojo = [dojoSelect.value];
+    }
+
+    if (statusSelect && statusSelect.value) {
+      filtros.status = [statusSelect.value];
+    }
+
+    if (cargoSelect && cargoSelect.value) {
+      filtros.cargo = [cargoSelect.value];
+    }
+
+    if (categoriaSelect && categoriaSelect.value) {
+      filtros.categoria_grupo = [categoriaSelect.value];
+    }
+
+    if (buntaiSelect && buntaiSelect.value) {
+      filtros.buntai = [buntaiSelect.value];
+    }
 
     // Busca por nome
     var searchInput = this.modal.querySelector('#alvos-busca-nome');
@@ -2894,10 +2902,10 @@ window.ParticipacaoSystem = {
   },
 
   limparFiltrosAlvos: function() {
-    // Remove classe active de todos os chips
-    var chips = this.modal.querySelectorAll('.alvos-filters .chip');
-    chips.forEach(function(chip) {
-      chip.classList.remove('is-active');
+    // Reseta todos os selects para primeira opção
+    var selects = this.modal.querySelectorAll('.filter-select');
+    selects.forEach(function(select) {
+      select.selectedIndex = 0;
     });
 
     // Limpa busca por nome

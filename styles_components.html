@@ -962,13 +962,14 @@
 }
 
 .btn-primary {
-  background: var(--primary);
-  border: 1px solid var(--primary);
-  color: white;
+  background: var(--primary) !important;
+  border: 1px solid var(--primary) !important;
+  color: white !important;
 }
 
 .btn-primary:hover {
-  background: var(--primary-dark);
+  background: var(--primary-dark) !important;
+  border-color: var(--primary-dark) !important;
 }
 
 /* Minhas chip active style reusing .chip.is-active */
@@ -2920,11 +2921,8 @@
   margin-top: 4px;
 }
 
-/* Filtros para alvos */
-.alvos-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
+/* Filtros minimalistas para alvos */
+.alvos-filters-simple {
   margin-bottom: 20px;
   padding: 16px;
   background: var(--bg-subtle);
@@ -2932,22 +2930,45 @@
   border: 1px solid var(--border);
 }
 
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.filters-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.filter-label {
+.filters-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-col label {
   font-weight: 600;
   color: var(--fg);
   font-size: 0.85rem;
 }
 
-.filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+
+.filter-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.9rem;
 }
 
 /* Ações dos filtros */
@@ -2993,17 +3014,18 @@
 .alvo-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-bottom: 8px;
-  background: var(--card);
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background: var(--bg);
   transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .alvo-item:hover {
-  border-color: var(--primary);
+  background: var(--bg-hover);
 }
 
 .alvo-item.selected {
@@ -3012,24 +3034,31 @@
 }
 
 .alvo-checkbox {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
 }
 
 .alvo-info {
   flex: 1;
+  min-width: 0;
 }
 
 .alvo-nome {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .alvo-detalhes {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--muted);
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .resultados-footer {

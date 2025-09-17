@@ -29,35 +29,49 @@
           </div>
 
           <!-- Filtros para seleção de membros -->
-          <div class="alvos-filters">
-            <div class="filter-group">
-              <label class="filter-label">Dojo</label>
-              <div id="alvos-dojos-container" class="filter-chips"></div>
+          <div class="alvos-filters-simple">
+            <div class="filters-row">
+              <div class="filter-col">
+                <label>Dojo</label>
+                <select id="alvos-dojo-select" class="filter-select">
+                  <option value="">Todos os dojos</option>
+                </select>
+              </div>
+
+              <div class="filter-col">
+                <label>Status</label>
+                <select id="alvos-status-select" class="filter-select">
+                  <option value="">Todos os status</option>
+                </select>
+              </div>
+
+              <div class="filter-col">
+                <label>Cargo</label>
+                <select id="alvos-cargo-select" class="filter-select">
+                  <option value="">Todos os cargos</option>
+                </select>
+              </div>
             </div>
 
-            <div class="filter-group">
-              <label class="filter-label">Status</label>
-              <div id="alvos-status-container" class="filter-chips"></div>
-            </div>
+            <div class="filters-row">
+              <div class="filter-col">
+                <label>Categoria/Grupo</label>
+                <select id="alvos-categoria-select" class="filter-select">
+                  <option value="">Todas as categorias</option>
+                </select>
+              </div>
 
-            <div class="filter-group">
-              <label class="filter-label">Cargo</label>
-              <div id="alvos-cargo-container" class="filter-chips"></div>
-            </div>
+              <div class="filter-col">
+                <label>Buntai</label>
+                <select id="alvos-buntai-select" class="filter-select">
+                  <option value="">Todos os buntais</option>
+                </select>
+              </div>
 
-            <div class="filter-group">
-              <label class="filter-label">Categoria/Grupo</label>
-              <div id="alvos-categoria-container" class="filter-chips"></div>
-            </div>
-
-            <div class="filter-group">
-              <label class="filter-label">Buntai</label>
-              <div id="alvos-buntai-container" class="filter-chips"></div>
-            </div>
-
-            <div class="filter-group">
-              <label class="filter-label">Busca por nome</label>
-              <input type="text" id="alvos-busca-nome" class="input" placeholder="Digite o nome do membro...">
+              <div class="filter-col">
+                <label>Busca por nome</label>
+                <input type="text" id="alvos-busca-nome" class="filter-input" placeholder="Digite o nome...">
+              </div>
             </div>
           </div>
 
