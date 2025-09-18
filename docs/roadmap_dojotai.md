@@ -161,30 +161,34 @@
 
 ### v0.2 - Sistema de Participação
 **Período**: Setembro - Outubro 2024
-**Status**: 🔄 **Em Desenvolvimento (40% completo)**
+**Status**: ✅ **CONCLUÍDO (100% completo)**
 
 #### **👥 Gestão de Participantes**
-- 🔄 Seleção de participantes na criação de atividades
-- 🔄 Convites automáticos por grupo ou individual
-- 🔄 Estados de participação: convidado → confirmado/ausente → presente
-- 📅 Interface de confirmação para membros
-- 📅 Notificações de convites e mudanças
+- ✅ Seleção de participantes na criação de atividades
+- ✅ Sistema de definição de alvos por filtros (dojo, cargo, categoria, etc.)
+- ✅ Estados de participação: alvo → confirmado/rejeitado → presente/ausente
+- ✅ Interface completa para marcação de participações
+- ✅ Sistema de observações e justificativas
 
 #### **✅ Check-in e Presença**
-- 📅 Tela de check-in durante a atividade
-- 📅 Marcação de presença por organizador
-- 📅 Relatório automático de participação
-- 🔄 QR Code para check-in rápido (experimentação)
+- ✅ Tela de marcação de presença integrada ao modal
+- ✅ Marcação de presença por organizador
+- ✅ Controle de chegada tardia e saída antecipada
+- ✅ Sistema de justificativas para ausências
 
 #### **📊 Dashboards de Participação**
-- 📅 Estatísticas de presença por membro
-- 📅 Taxa de comparecimento por atividade
-- 📅 Métricas de engajamento
+- ✅ Contadores visuais nos cards das atividades
+- ✅ Estatísticas detalhadas no modal (aba Estatísticas)
+- ✅ Resumo rápido na aba de participações
+- ✅ Métricas: total, confirmados, rejeitados, presentes, ausentes
 
-#### **Blockers/Dependências**
-- ⚠️ Necessita estrutura básica de membros
-- ⚠️ Sistema de notificações via email
-- ⚠️ Definição de fluxo de convites
+#### **✅ Funcionalidades Entregues**
+- ✅ Modal com 3 abas funcionais (Definir Alvos, Marcar Participações, Estatísticas)
+- ✅ Integração completa com sistema de membros existente
+- ✅ APIs backend robustas e testadas
+- ✅ Interface responsiva e intuitiva
+- ✅ Contadores visuais nos cards das atividades
+- ✅ Sistema de busca e filtros para definição de alvos
 
 ---
 

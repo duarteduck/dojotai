@@ -34,9 +34,11 @@ var API = {
 
   /* listActivitiesApi() -> { ok, items:[...] } */
   listMinhasAtividades: function(){
+    console.log('📡 API.listMinhasAtividades chamada');
     return new Promise(function(resolve, reject){
       google.script.run
         .withSuccessHandler(function(res){
+          console.log('✅ listActivitiesApi sucesso:', res?.ok ? 'OK' : 'ERRO', '- Items:', res?.items?.length || 0);
           if(res && res.ok){
             var data = (res.items || []).map(function(a){
               return {
@@ -53,15 +55,26 @@ var API = {
                 uid: a.atribuido_uid || '',
                 usuarioNome: a.atribuido_nome || '',
                 atualizadoPorNome: a.atualizado_nome || '',
-                atualizadoEm: a.atualizado_em || ''
+                atualizadoEm: a.atualizado_em || '',
+                // Campos de participação
+                total_alvos: a.total_alvos || 0,
+                confirmados: a.confirmados || 0,
+                rejeitados: a.rejeitados || 0,
+                participantes: a.participantes || 0,
+                ausentes: a.ausentes || 0
               };
             });
+            console.log('✅ Dados normalizados:', data.length, 'atividades');
             resolve(data);
           } else {
+            console.error('❌ listActivitiesApi erro:', res?.error || 'Resultado inválido');
             reject((res && res.error) || 'Falha na listagem');
           }
         })
-        .withFailureHandler(reject)
+        .withFailureHandler(function(error) {
+          console.error('❌ listActivitiesApi falha de conexão:', error);
+          reject(error);
+        })
         .listActivitiesApi();
     });
   },

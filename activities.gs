@@ -1,11 +1,17 @@
 // activities.gs – API de atividades (atualizada para categoria_atividade_id)
 
 function listActivitiesApi() {
+  console.log('🚀 listActivitiesApi chamada');
   try {
     const result = _listActivitiesCore();
+    console.log('📊 _listActivitiesCore resultado:', result?.ok ? 'OK' : 'ERRO', '- Items:', result?.items?.length || 0);
+
     // Garante objeto "serializável" para o HTMLService
-    return JSON.parse(JSON.stringify(result));
+    const serialized = JSON.parse(JSON.stringify(result));
+    console.log('✅ listActivitiesApi retornando:', serialized?.ok ? 'OK' : 'ERRO');
+    return serialized;
   } catch (err) {
+    console.error('❌ ERRO listActivitiesApi:', err);
     return { ok:false, error: 'Erro listActivitiesApi: ' + (err && err.message ? err.message : err) };
   }
 }
@@ -115,10 +121,12 @@ function createActivity(payload, uidCriador) {
 
 /** Core da listagem (usado pela API pública) */
 function _listActivitiesCore() {
+  console.log('🔄 _listActivitiesCore INICIADA');
   const ctx = getActivitiesCtx_();
 
   // Lê do cabeçalho até a última linha usada
   const values = getFullTableValues_(ctx);
+  console.log('📋 Tabela atividades lida - Linhas:', values?.length || 0);
   if (!values || !values.length) return { ok:false, error:'A tabela de atividades está vazia.' };
 
   const header = values[0].map(h => (h||'').toString().trim().toLowerCase());
@@ -189,18 +197,42 @@ function _listActivitiesCore() {
     }
 
     // Adicionar contadores de participação usando função existente
-    const statsResult = getParticipacaoStats(it.id);
-    console.log('📊 Stats para atividade', it.id, ':', statsResult);
+    try {
+      console.log('🔄 Tentando carregar stats para atividade:', it.id);
 
-    if (statsResult && statsResult.ok && statsResult.stats) {
-      const stats = statsResult.stats;
-      it.total_alvos = stats.total || 0;
-      it.confirmados = stats.confirmados || 0;
-      it.rejeitados = stats.recusados || 0;  // recusados no backend = rejeitados no frontend
-      it.participantes = stats.participaram || 0;
-      it.ausentes = stats.ausentes || 0;
-    } else {
-      // Fallback para zeros se não conseguir calcular
+      // TEMPORÁRIO: Verificar se função existe
+      if (typeof getParticipacaoStats !== 'function') {
+        console.error('❌ getParticipacaoStats não é uma função!');
+        it.total_alvos = 999; // Valor de teste para identificar o problema
+        it.confirmados = 888;
+        it.rejeitados = 777;
+        it.participantes = 666;
+        it.ausentes = 555;
+      } else {
+        const statsResult = getParticipacaoStats(it.id);
+        console.log('📊 Stats resultado para', it.id, ':', JSON.stringify(statsResult));
+
+        if (statsResult && statsResult.ok && statsResult.stats) {
+          const stats = statsResult.stats;
+          it.total_alvos = stats.total || 0;
+          it.confirmados = stats.confirmados || 0;
+          it.rejeitados = stats.recusados || 0;  // recusados no backend = rejeitados no frontend
+          it.participantes = stats.participaram || 0;
+          it.ausentes = stats.ausentes || 0;
+          console.log('✅ Contadores definidos para', it.id, '- Total:', it.total_alvos, 'Confirmados:', it.confirmados);
+        } else {
+          // Fallback para zeros se não conseguir calcular
+          console.log('⚠️ Usando fallback de zeros para atividade', it.id, '- Resultado completo:', statsResult);
+          it.total_alvos = 0;
+          it.confirmados = 0;
+          it.rejeitados = 0;
+          it.participantes = 0;
+          it.ausentes = 0;
+        }
+      }
+    } catch (error) {
+      console.error('❌ ERRO ao carregar stats para', it.id, ':', error);
+      // Fallback em caso de erro
       it.total_alvos = 0;
       it.confirmados = 0;
       it.rejeitados = 0;

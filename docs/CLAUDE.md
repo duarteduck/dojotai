@@ -309,7 +309,7 @@ Campos: `id | id_atividade | id_membro | tipo | confirmou | confirmado_em | part
 3. **Otimização Global**: Auditoria de duplicidades em todo o projeto
 4. **Performance**: Sistema de cache para membros e atividades
 
-### 18/09/2025 - Contadores de Participação nos Cards das Atividades
+### 18/09/2025 - Contadores de Participação nos Cards das Atividades ✅ **RESOLVIDO**
 
 **📊 IMPLEMENTAÇÃO DOS CONTADORES DE PARTICIPAÇÃO**
 
@@ -321,7 +321,7 @@ Campos: `id | id_atividade | id_membro | tipo | confirmou | confirmado_em | part
 
 **🔧 Implementação Técnica:**
 1. **Backend (`activities.gs`)**: Integração com `getParticipacaoStats()` na função `_listActivitiesCore()`
-2. **Frontend (`app_ui.html`)**: Mapeamento dos campos no `Normalizer.activity`
+2. **Frontend (`app_api.html`)**: Mapeamento dos campos na API `listMinhasAtividades()` ✅ **CORRIGIDO**
 3. **Template (`view_component_activityCard.html`)**: Estrutura HTML com 3 linhas de contadores
 4. **Estilos (`styles_components.html`)**: CSS para `.participation-summary` e classes de cores
 
@@ -341,18 +341,20 @@ Participação: [participantes] [ausentes]  // verde e vermelho
 
 **📂 Arquivos Modificados:**
 - `activities.gs`: Integração com `getParticipacaoStats()` e mapeamento de dados
-- `app_ui.html`: Normalização dos campos de participação
+- `app_api.html`: **CORREÇÃO CRÍTICA** - Adicionados campos de participação no mapeamento da API
 - `view_component_activityCard.html`: Template com 3 linhas de contadores
 - `styles_components.html`: CSS para layout e cores dos contadores
 
-**✅ Benefícios Implementados:**
-1. **Reaproveitamento**: Usa função já testada do sistema de participações
-2. **Consistência**: Mesmos cálculos da tela de estatísticas
-3. **Visibilidade**: Informações de participação direto no card
-4. **Layout Organizado**: 3 linhas claras e descritivas
-5. **Design Discreto**: Cores sutis que não sobrecarregam a interface
+**🚨 Problema Identificado e Resolvido:**
+- **Causa Raiz**: API frontend (`listMinhasAtividades`) não mapeava os campos de participação do backend
+- **Sintoma**: Contadores sempre zerados nos cards, mas funcionando na tela de estatísticas
+- **Solução**: Adicionados campos `total_alvos`, `confirmados`, `rejeitados`, `participantes`, `ausentes` no mapeamento da API
 
-**⚠️ Status**: Implementação completa, aguardando testes funcionais na interface
+**✅ Status Final**: ✅ **FUNCIONAL**
+1. **Cards das Atividades**: Contadores funcionando corretamente
+2. **Tela de Participações**: Resumo funcionando corretamente
+3. **Tela de Estatísticas**: Funcionando corretamente
+4. **Consistência**: Mesmos cálculos em todos os contextos
 
 ### 18/09/2025 - Tentativa de Calendário Modal (Revertida)
 

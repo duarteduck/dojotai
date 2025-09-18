@@ -360,8 +360,14 @@ function searchMembersByCriteria(filters) {
  */
 function getParticipacaoStats(activityId) {
   try {
+    console.log('📊 getParticipacaoStats chamada para:', activityId);
     const participacoes = listParticipacoes(activityId);
-    if (!participacoes.ok) return participacoes;
+    console.log('📋 listParticipacoes resultado:', participacoes?.ok ? 'OK' : participacoes?.error, '- Items:', participacoes?.items?.length || 0);
+
+    if (!participacoes.ok) {
+      console.log('❌ listParticipacoes falhou:', participacoes.error);
+      return participacoes;
+    }
 
     const total = participacoes.items.length;
     const confirmados = participacoes.items.filter(p => p.confirmou === 'sim').length;
@@ -372,19 +378,24 @@ function getParticipacaoStats(activityId) {
 
     const percentualParticipacao = total > 0 ? Math.round((participaram / total) * 100) : 0;
 
+    const stats = {
+      total,
+      confirmados,
+      recusados,
+      participaram,
+      ausentes,
+      pendentes,
+      percentualParticipacao
+    };
+
+    console.log('✅ Stats calculadas:', JSON.stringify(stats));
+
     return {
       ok: true,
-      stats: {
-        total,
-        confirmados,
-        recusados,
-        participaram,
-        ausentes,
-        pendentes,
-        percentualParticipacao
-      }
+      stats: stats
     };
   } catch (err) {
+    console.error('❌ ERRO em getParticipacaoStats:', err);
     return { ok: false, error: 'Erro getParticipacaoStats: ' + (err && err.message ? err.message : err) };
   }
 }

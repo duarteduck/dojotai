@@ -3091,6 +3091,17 @@ window.ParticipacaoSystem = {
       this.renderParticipacoes(participacoesEnriquecidas);
       this.setupParticipacoesEvents();
 
+      // Carrega e atualiza estatísticas do resumo
+      API.getParticipacaoStats(this.currentActivityId)
+        .then(function(statsResult) {
+          if (statsResult && statsResult.stats) {
+            this.updateStats(statsResult.stats);
+          }
+        }.bind(this))
+        .catch(function(error) {
+          console.error('❌ Erro ao carregar stats do resumo:', error);
+        });
+
       // Esconde loading e mostra conteúdo
       this.hideLoading('participacoes-loading');
       this.showElement('participacoes-resumo');
