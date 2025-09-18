@@ -175,7 +175,7 @@ function _listActivitiesCore() {
     const atu = (it.atualizado_uid || '').toString().trim();
     it.atribuido_nome = users[atr]?.nome || '';
     it.atualizado_nome = users[atu]?.nome || '';
-    
+
     // Adicionar dados da categoria de atividade
     const catAtivId = (it.categoria_atividade_id || '').toString().trim();
     if (catAtivId && categoriasAtividades[catAtivId]) {
@@ -187,7 +187,27 @@ function _listActivitiesCore() {
       it.categoria_atividade_icone = '';
       it.categoria_atividade_cor = '';
     }
-    
+
+    // Adicionar contadores de participação usando função existente
+    const statsResult = getParticipacaoStats(it.id);
+    console.log('📊 Stats para atividade', it.id, ':', statsResult);
+
+    if (statsResult && statsResult.ok && statsResult.stats) {
+      const stats = statsResult.stats;
+      it.total_alvos = stats.total || 0;
+      it.confirmados = stats.confirmados || 0;
+      it.rejeitados = stats.recusados || 0;  // recusados no backend = rejeitados no frontend
+      it.participantes = stats.participaram || 0;
+      it.ausentes = stats.ausentes || 0;
+    } else {
+      // Fallback para zeros se não conseguir calcular
+      it.total_alvos = 0;
+      it.confirmados = 0;
+      it.rejeitados = 0;
+      it.participantes = 0;
+      it.ausentes = 0;
+    }
+
     // Normaliza status já no back se preferir:
     const s = (it.status || '').toString().trim().toLowerCase();
     if (s === 'pendente') it.status = 'pendente';
@@ -418,3 +438,5 @@ function getActivityById(id) {
     return { ok:false, error:'Erro getActivityById: ' + (err && err.message ? err.message : err) };
   }
 }
+
+

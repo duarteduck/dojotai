@@ -22,7 +22,12 @@ var Normalizer = {
       usuarioNome: get(a, ['usuarioNome','nomeUsuario','atribuido_nome','atribuidoNome']),
       atualizadoPorNome: get(a, ['atualizadoPorNome','atualizado_nome']),
       atualizadoEm: get(a, ['atualizadoEm','atualizado_em']),
-      data: get(a, ['data','Data'])
+      data: get(a, ['data','Data']),
+      total_alvos: get(a, ['total_alvos'], 0),
+      confirmados: get(a, ['confirmados'], 0),
+      rejeitados: get(a, ['rejeitados'], 0),
+      participantes: get(a, ['participantes'], 0),
+      ausentes: get(a, ['ausentes'], 0)
     };
   }
 };
@@ -199,12 +204,18 @@ var UI = {
         .replace(/{{atualizadoPorNome}}/g,UI.escape(a.atualizadoPorNome||''))
         .replace(/{{atualizadoEm}}/g,atualizadoEmFormatado)
         .replace(/{{statusLabel}}/g,(a.status==='pendente'?'Pendente':(a.status==='concluida'?'Concluída':a.status)))
-        .replace(/{{statusClass}}/g,a.status);
+        .replace(/{{statusClass}}/g,a.status)
+        .replace(/{{total_alvos}}/g,a.total_alvos||0)
+        .replace(/{{confirmados}}/g,a.confirmados||0)
+        .replace(/{{rejeitados}}/g,a.rejeitados||0)
+        .replace(/{{participantes}}/g,a.participantes||0)
+        .replace(/{{ausentes}}/g,a.ausentes||0);
 
       html=block(html,'hasDesc',!!a.descricao);
       html=block(html,'hasCategoriaAtividade',hasCategoriaAtividade);
       html=block(html,'hasUltimaAcao',hasUltimaAcao);
       html=block(html,'isPendente',a.status==='pendente');
+      html=block(html,'isConcluida',a.status==='concluida');
       html=block(html,'data',!!a.data);
 
       var wrap=document.createElement('div'); wrap.innerHTML=html;
@@ -428,20 +439,20 @@ var Views = {
       });
     }
 
-    // Toggle calendário (código existente...)
+    // Toggle calendário (código original restaurado)
     var chipCalendar=document.getElementById('chip-calendar');
     if(chipCalendar){
       chipCalendar.addEventListener('click', function(){
         var wrap=document.getElementById('calendar-wrapper');
         if(!wrap) return;
         var isVisible = wrap.style.display !== 'none';
-        
+
         if(!isVisible) {
           // Mostrar calendário
           wrap.style.display = 'block';
           chipCalendar.classList.add('is-active');
-          
-          // MODIFICADO: Usar função responsiva
+
+          // Usar função responsiva
           var calContainer = document.querySelector('#calendar');
           if(calContainer && !window.State.calendar) {
             window.State.calendar = window.initResponsiveCalendar('#calendar', {
@@ -451,7 +462,7 @@ var Views = {
                 var act=document.querySelector('#chips .chip.is-active[data-status]');
                 var cur=(act && act.getAttribute('data-status')) || 'todas';
                 UI.renderAtividades(State.cache.atividades, cur, listEl);
-                
+
                 if (typeof window.atualizarContadoresCategorias === 'function') {
                   window.atualizarContadoresCategorias();
                 }
@@ -461,7 +472,7 @@ var Views = {
           // Atualizar atividades se o calendário já existe
           else if(window.State.calendar && window.State.calendar.setActivities) {
             window.State.calendar.setActivities(State.cache.atividades || []);
-            // NOVO: Re-aplica ajustes mobile
+            // Re-aplica ajustes mobile
             if (window.State.calendar.adjustForMobile) {
               window.State.calendar.adjustForMobile();
             }
@@ -3538,6 +3549,358 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 100);
 });
+
+/* ===========================
+   Sistema de Calendário Modal
+   =========================== */
+
+window.CalendarModal = {
+  modal: null,
+  activeFilters: ['overdue', 'today'], // Filtros padrão
+  onApply: null,
+  currentDate: new Date(),
+  selectedDates: new Set(),
+
+  init: function() {
+    console.log('🔧 Inicializando CalendarModal...');
+    this.modal = document.getElementById('calendar-modal');
+    if (!this.modal) {
+      console.error('❌ Modal de calendário não encontrado!');
+      return;
+    }
+
+    console.log('✅ Modal encontrado:', this.modal);
+    this.setupEventListeners();
+    this.initCalendar();
+    this.updateFilterDisplay();
+    console.log('✅ CalendarModal inicializado com sucesso');
+  },
+
+  setupEventListeners: function() {
+    var self = this;
+
+    // Fechar modal
+    var closeBtn = document.getElementById('calendar-modal-close');
+    var cancelBtn = document.getElementById('calendar-modal-cancel');
+    if (closeBtn) closeBtn.addEventListener('click', function() { self.close(); });
+    if (cancelBtn) cancelBtn.addEventListener('click', function() { self.close(); });
+
+    // Botões de filtro
+    var filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var filter = btn.getAttribute('data-filter');
+        self.toggleFilter(filter, btn);
+      });
+    });
+
+    // Navegação do calendário
+    var prevBtn = document.getElementById('cal-prev-month');
+    var nextBtn = document.getElementById('cal-next-month');
+    if (prevBtn) prevBtn.addEventListener('click', function() { self.previousMonth(); });
+    if (nextBtn) nextBtn.addEventListener('click', function() { self.nextMonth(); });
+
+    // Ações
+    var clearBtn = document.getElementById('cal-clear-selection');
+    var applyBtn = document.getElementById('calendar-modal-apply');
+    if (clearBtn) clearBtn.addEventListener('click', function() { self.clearAllFilters(); });
+    if (applyBtn) applyBtn.addEventListener('click', function() { self.apply(); });
+
+    // Seleção personalizada
+    var customBtn = document.getElementById('cal-select-custom');
+    if (customBtn) customBtn.addEventListener('click', function() { self.enableCustomSelection(); });
+  },
+
+  toggleFilter: function(filter, button) {
+    var index = this.activeFilters.indexOf(filter);
+
+    if (filter === 'all') {
+      // Limpar todos os outros filtros
+      this.activeFilters = ['all'];
+      this.selectedDates.clear();
+    } else {
+      // Remover 'all' se estiver ativo
+      var allIndex = this.activeFilters.indexOf('all');
+      if (allIndex > -1) this.activeFilters.splice(allIndex, 1);
+
+      if (index > -1) {
+        this.activeFilters.splice(index, 1);
+      } else {
+        this.activeFilters.push(filter);
+      }
+    }
+
+    this.updateFilterDisplay();
+    this.updateSelectionSummary();
+  },
+
+  updateFilterDisplay: function() {
+    var buttons = document.querySelectorAll('.filter-btn');
+    var self = this;
+
+    buttons.forEach(function(btn) {
+      var filter = btn.getAttribute('data-filter');
+      if (self.activeFilters.indexOf(filter) > -1) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  },
+
+  getFilterDates: function() {
+    var dates = new Set();
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var self = this;
+
+    this.activeFilters.forEach(function(filter) {
+      switch(filter) {
+        case 'overdue':
+          // Adiciona todas as datas antes de hoje
+          for (var i = 1; i <= 365; i++) {
+            var date = new Date(today);
+            date.setDate(today.getDate() - i);
+            dates.add(self.formatDate(date));
+          }
+          break;
+
+        case 'today':
+          dates.add(self.formatDate(today));
+          break;
+
+        case '10days':
+          for (var i = 1; i <= 10; i++) {
+            var date = new Date(today);
+            date.setDate(today.getDate() + i);
+            dates.add(self.formatDate(date));
+          }
+          break;
+
+        case '30days':
+          for (var i = 1; i <= 30; i++) {
+            var date = new Date(today);
+            date.setDate(today.getDate() + i);
+            dates.add(self.formatDate(date));
+          }
+          break;
+
+        case 'all':
+          return null; // Sem filtro
+      }
+    });
+
+    // Adicionar datas selecionadas manualmente
+    this.selectedDates.forEach(function(date) {
+      dates.add(date);
+    });
+
+    return dates.size > 0 ? Array.from(dates) : null;
+  },
+
+  formatDate: function(date) {
+    return date.getFullYear() + '-' +
+           String(date.getMonth() + 1).padStart(2, '0') + '-' +
+           String(date.getDate()).padStart(2, '0');
+  },
+
+  updateSelectionSummary: function() {
+    var summary = document.getElementById('cal-selection-count');
+    if (!summary) return;
+
+    var text = '';
+    if (this.activeFilters.indexOf('all') > -1) {
+      text = 'Todas as datas (sem filtro)';
+    } else if (this.activeFilters.length === 0 && this.selectedDates.size === 0) {
+      text = 'Nenhum filtro ativo';
+    } else {
+      var parts = [];
+      if (this.activeFilters.indexOf('overdue') > -1) parts.push('Atrasados');
+      if (this.activeFilters.indexOf('today') > -1) parts.push('Hoje');
+      if (this.activeFilters.indexOf('10days') > -1) parts.push('10 dias');
+      if (this.activeFilters.indexOf('30days') > -1) parts.push('30 dias');
+      if (this.selectedDates.size > 0) parts.push(this.selectedDates.size + ' datas específicas');
+
+      text = 'Filtros ativos: ' + parts.join(', ');
+    }
+
+    summary.textContent = text;
+  },
+
+  clearAllFilters: function() {
+    this.activeFilters = [];
+    this.selectedDates.clear();
+    this.updateFilterDisplay();
+    this.updateSelectionSummary();
+    this.renderCalendar();
+  },
+
+  enableCustomSelection: function() {
+    // Limpar filtros padrões para permitir seleção manual
+    this.activeFilters = [];
+    this.updateFilterDisplay();
+    this.updateSelectionSummary();
+    this.renderCalendar();
+  },
+
+  initCalendar: function() {
+    this.renderCalendar();
+  },
+
+  renderCalendar: function() {
+    var year = this.currentDate.getFullYear();
+    var month = this.currentDate.getMonth();
+
+    document.getElementById('cal-month-year').textContent =
+      this.getMonthName(month) + ' ' + year;
+
+    var grid = document.getElementById('cal-grid');
+    var existingDays = grid.querySelectorAll('.calendar-day');
+    existingDays.forEach(function(day) { day.remove(); });
+
+    var firstDay = new Date(year, month, 1);
+    var lastDay = new Date(year, month + 1, 0);
+    var daysInMonth = lastDay.getDate();
+    var startDay = firstDay.getDay();
+
+    // Dias do mês anterior
+    var prevMonth = new Date(year, month - 1, 0);
+    for (var i = startDay - 1; i >= 0; i--) {
+      var day = prevMonth.getDate() - i;
+      var date = new Date(year, month - 1, day);
+      this.createDayElement(date, true);
+    }
+
+    // Dias do mês atual
+    for (var day = 1; day <= daysInMonth; day++) {
+      var date = new Date(year, month, day);
+      this.createDayElement(date, false);
+    }
+
+    // Dias do próximo mês
+    var totalCells = grid.querySelectorAll('.calendar-day').length;
+    var nextMonthDays = 42 - totalCells;
+    for (var day = 1; day <= nextMonthDays; day++) {
+      var date = new Date(year, month + 1, day);
+      this.createDayElement(date, true);
+    }
+  },
+
+  createDayElement: function(date, otherMonth) {
+    var dayEl = document.createElement('div');
+    dayEl.className = 'calendar-day';
+    dayEl.textContent = date.getDate();
+
+    var dateStr = this.formatDate(date);
+    dayEl.setAttribute('data-date', dateStr);
+
+    if (otherMonth) dayEl.classList.add('other-month');
+
+    // Marcar hoje
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var cellDate = new Date(date);
+    cellDate.setHours(0, 0, 0, 0);
+    if (cellDate.getTime() === today.getTime()) {
+      dayEl.classList.add('today');
+    }
+
+    // Status da data (atrasado, próximo, etc.)
+    var status = this.getDateStatus(date);
+    if (status !== 'normal') {
+      dayEl.classList.add(status);
+    }
+
+    // Selecionado manualmente
+    if (this.selectedDates.has(dateStr)) {
+      dayEl.classList.add('selected');
+    }
+
+    // Event listener para seleção manual
+    var self = this;
+    dayEl.addEventListener('click', function() {
+      if (self.selectedDates.has(dateStr)) {
+        self.selectedDates.delete(dateStr);
+        dayEl.classList.remove('selected');
+      } else {
+        self.selectedDates.add(dateStr);
+        dayEl.classList.add('selected');
+      }
+      self.updateSelectionSummary();
+    });
+
+    document.getElementById('cal-grid').appendChild(dayEl);
+  },
+
+  getDateStatus: function(date) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+
+    var diffDays = Math.ceil((checkDate - today) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'overdue';
+    if (diffDays === 0) return 'today';
+    if (diffDays <= 7) return 'upcoming';
+    return 'future';
+  },
+
+  getMonthName: function(month) {
+    var names = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return names[month];
+  },
+
+  previousMonth: function() {
+    this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+    this.renderCalendar();
+  },
+
+  nextMonth: function() {
+    this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+    this.renderCalendar();
+  },
+
+  show: function(callback) {
+    console.log('📅 Mostrando modal de calendário...');
+    this.onApply = callback;
+
+    if (!this.modal) {
+      console.error('❌ Modal não encontrado!');
+      return;
+    }
+
+    this.modal.style.display = 'block';
+    console.log('✅ Modal display definido para block');
+
+    // Verificar se o conteúdo do modal foi inserido
+    var modalContent = this.modal.querySelector('.modal-content');
+    console.log('📦 Modal content encontrado:', modalContent);
+
+    if (!modalContent) {
+      console.error('❌ Modal content não encontrado! HTML atual:', this.modal.innerHTML);
+    }
+
+    // Inicializar modal na primeira exibição
+    if (!this.modal.querySelector('.calendar-day')) {
+      console.log('🔄 Inicializando calendário...');
+      this.init();
+    }
+  },
+
+  close: function() {
+    this.modal.style.display = 'none';
+  },
+
+  apply: function() {
+    var dates = this.getFilterDates();
+    if (this.onApply) {
+      this.onApply(dates);
+    }
+    this.close();
+  }
+};
 
 // Também inicializa quando o window carrega (backup)
 window.addEventListener('load', function() {

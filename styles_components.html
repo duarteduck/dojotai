@@ -185,11 +185,347 @@
   margin-bottom: 4px;
 }
 
-.activity .meta-last{ 
-  font-size:.85rem; 
-  color: var(--muted); 
-  margin-top:6px; 
+.activity .meta-last{
+  font-size:.85rem;
+  color: var(--muted);
+  margin-top:6px;
   font-style: italic;
+}
+
+/* ===== Contadores de Participação ===== */
+.participation-summary {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.participation-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.participation-label {
+  font-weight: 500;
+  color: var(--muted);
+  min-width: 70px;
+  font-size: 12px;
+}
+
+.participation-line span:not(.participation-label) {
+  padding: 1px 6px;
+  border-radius: 3px;
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Estilo para total de alvos (preto) */
+.stat-total {
+  color: #333;
+  background-color: rgba(51, 51, 51, 0.1);
+}
+
+/* Estilo para confirmados/participantes (verde) */
+.stat-confirmed,
+.stat-participants {
+  color: #16a34a;
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+/* Estilo para rejeitados/ausentes (vermelho) */
+.stat-rejected,
+.stat-absent {
+  color: #dc2626;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* ===== Modal de Calendário ===== */
+.calendar-modal-content {
+  max-width: 600px;
+  width: 90vw;
+}
+
+.calendar-filters {
+  margin-bottom: 20px;
+}
+
+.calendar-filters h4 {
+  margin: 0 0 12px 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.calendar-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--text);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  background: var(--hover);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.calendar-separator {
+  text-align: center;
+  margin: 20px 0;
+  position: relative;
+}
+
+.calendar-separator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+
+.calendar-separator span {
+  background: var(--card);
+  padding: 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.calendar-container {
+  margin-bottom: 20px;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.calendar-nav button {
+  background: var(--background);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.calendar-nav button:hover {
+  background: var(--hover);
+}
+
+.calendar-month-year {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+  min-width: 140px;
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--border);
+}
+
+.calendar-weekday {
+  background: var(--muted-bg);
+  color: var(--muted);
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  background: var(--card);
+  color: var(--text);
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.calendar-day:hover {
+  background: var(--hover);
+}
+
+.calendar-day.other-month {
+  color: var(--muted);
+  background: var(--muted-bg);
+}
+
+.calendar-day.today {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.calendar-day.selected {
+  background: var(--success);
+  color: white;
+  font-weight: 600;
+}
+
+.calendar-day.overdue {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.calendar-day.upcoming {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.calendar-day.future {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.calendar-selection-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--muted-bg);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.selection-info {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.selection-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-dot.overdue {
+  background: var(--danger);
+}
+
+.legend-dot.today {
+  background: var(--primary);
+}
+
+.legend-dot.upcoming {
+  background: var(--warning);
+}
+
+.legend-dot.future {
+  background: var(--info);
+}
+
+/* Responsividade para mobile */
+@media (max-width: 768px) {
+  .calendar-modal-content {
+    width: 95vw;
+    max-width: none;
+  }
+
+  .calendar-filter-buttons {
+    justify-content: center;
+  }
+
+  .filter-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .calendar-day {
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  .calendar-weekday {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+
+  .calendar-selection-summary {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .selection-actions {
+    justify-content: center;
+  }
+
+  .calendar-legend {
+    gap: 12px;
+  }
 }
 
 /* status chips */
@@ -850,10 +1186,18 @@
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 1000;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.modal[style*="display: none"] {
+  display: none !important;
+}
+
+.modal[style*="display: block"] {
+  display: flex !important;
 }
 
 .modal-overlay {

@@ -23,6 +23,25 @@
 
       <div class="meta-author">Responsável: {{usuarioNome}}</div>
 
+      <div class="participation-summary">
+        <div class="participation-line">
+          <span class="participation-label">Alvo:</span>
+          <span class="stat-total">{{total_alvos}}</span>
+        </div>
+
+        <div class="participation-line">
+          <span class="participation-label">Previsão:</span>
+          <span class="stat-confirmed">{{confirmados}}</span>
+          <span class="stat-rejected">{{rejeitados}}</span>
+        </div>
+
+        <div class="participation-line">
+          <span class="participation-label">Participação:</span>
+          <span class="stat-participants">{{participantes}}</span>
+          <span class="stat-absent">{{ausentes}}</span>
+        </div>
+      </div>
+
       {{#hasUltimaAcao}}
       <div class="meta-last">Última ação de {{atualizadoPorNome}} <br>em {{atualizadoEm}}</div>
       {{/hasUltimaAcao}}

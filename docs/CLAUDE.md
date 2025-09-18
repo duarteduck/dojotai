@@ -308,3 +308,82 @@ Campos: `id | id_atividade | id_membro | tipo | confirmou | confirmado_em | part
 2. **Cálculos Automáticos**: Status dinâmico baseado em regras de negócio
 3. **Otimização Global**: Auditoria de duplicidades em todo o projeto
 4. **Performance**: Sistema de cache para membros e atividades
+
+### 18/09/2025 - Contadores de Participação nos Cards das Atividades
+
+**📊 IMPLEMENTAÇÃO DOS CONTADORES DE PARTICIPAÇÃO**
+
+**Sistema de contadores visuais nos cards das atividades para mostrar estatísticas de participação**
+- Layout com 3 linhas organizadas: Alvo, Previsão e Participação
+- Integração com função existente `getParticipacaoStats()` do sistema de participações
+- Cores discretas: texto colorido com fundos sutis (preto, verde, vermelho)
+- Compatibilidade com atividades pendentes e concluídas
+
+**🔧 Implementação Técnica:**
+1. **Backend (`activities.gs`)**: Integração com `getParticipacaoStats()` na função `_listActivitiesCore()`
+2. **Frontend (`app_ui.html`)**: Mapeamento dos campos no `Normalizer.activity`
+3. **Template (`view_component_activityCard.html`)**: Estrutura HTML com 3 linhas de contadores
+4. **Estilos (`styles_components.html`)**: CSS para `.participation-summary` e classes de cores
+
+**📋 Estrutura dos Contadores:**
+```
+Alvo: [total_alvos]               // sempre exibido
+Previsão: [confirmados] [rejeitados]  // verde e vermelho
+Participação: [participantes] [ausentes]  // verde e vermelho
+```
+
+**🔄 Mapeamento de Dados (Backend → Frontend):**
+- `stats.total` → `total_alvos`
+- `stats.confirmados` → `confirmados`
+- `stats.recusados` → `rejeitados`
+- `stats.participaram` → `participantes`
+- `stats.ausentes` → `ausentes`
+
+**📂 Arquivos Modificados:**
+- `activities.gs`: Integração com `getParticipacaoStats()` e mapeamento de dados
+- `app_ui.html`: Normalização dos campos de participação
+- `view_component_activityCard.html`: Template com 3 linhas de contadores
+- `styles_components.html`: CSS para layout e cores dos contadores
+
+**✅ Benefícios Implementados:**
+1. **Reaproveitamento**: Usa função já testada do sistema de participações
+2. **Consistência**: Mesmos cálculos da tela de estatísticas
+3. **Visibilidade**: Informações de participação direto no card
+4. **Layout Organizado**: 3 linhas claras e descritivas
+5. **Design Discreto**: Cores sutis que não sobrecarregam a interface
+
+**⚠️ Status**: Implementação completa, aguardando testes funcionais na interface
+
+### 18/09/2025 - Tentativa de Calendário Modal (Revertida)
+
+**🔄 EXPERIMENTAÇÃO COM MODAL DE CALENDÁRIO**
+
+**Tentativa de implementação de calendário modal com filtros padrões**
+- Modal responsivo com filtros rápidos (Atrasados, Hoje, 10 dias, 30 dias)
+- Interface mais organizada com botões de filtro
+- Navegação mensal integrada
+- Seleção personalizada de datas
+
+**🚫 Problemas Identificados:**
+1. **Complexidade desnecessária**: Modal adicionou camadas extras sem benefício claro
+2. **UX inconsistente**: Interação via modal interrompe fluxo natural
+3. **Debugging complexo**: Estrutura HTML duplicada causou problemas de renderização
+4. **Overhead técnico**: Código adicional para funcionalidade já existente
+
+**✅ Decisão: Rollback para Sistema Original**
+- **Calendário inline mantido**: Sistema original funcionando perfeitamente
+- **Chip simplificado**: Apenas ícone 📅 sem texto adicional
+- **Funcionalidade preservada**: Toggle show/hide do calendário responsivo
+- **Código limpo**: Removidas tentativas de modal e templates relacionados
+
+**📂 Arquivos Revertidos:**
+- `view_dash.html`: Restaurado calendar-wrapper inline
+- `app_ui.html`: Funcionalidade original do chip calendário
+- `index.html`: Removido template do modal
+- `view_component_calendarModal.html`: Arquivo não será usado
+
+**📚 Lições Aprendidas:**
+1. **Não quebrar o que funciona**: Sistema original já atendia necessidades
+2. **UX primeiro**: Modal não melhorava experiência do usuário
+3. **Simplicidade**: Interface inline é mais direta e intuitiva
+4. **Rollback rápido**: Reverter rapidamente quando abordagem não funciona
