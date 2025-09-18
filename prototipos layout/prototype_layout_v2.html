@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Dojotai v2.0 - Protótipo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/lucide@latest/dist/umd/lucide.js" rel="stylesheet">
+    <style>
+        :root {
+            /* Cores Primárias */
+            --primary-50: #f0f9ff;
+            --primary-100: #e0f2fe;
+            --primary-500: #3b82f6;
+            --primary-600: #2563eb;
+            --primary-700: #1d4ed8;
+            --primary-900: #1e3a8a;
+
+            /* Cores Secundárias */
+            --success-50: #f0fdf4;
+            --success-500: #10b981;
+            --success-600: #059669;
+            --warning-50: #fefce8;
+            --warning-500: #f59e0b;
+            --warning-600: #d97706;
+            --danger-50: #fef2f2;
+            --danger-500: #ef4444;
+            --danger-600: #dc2626;
+
+            /* Neutras */
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+
+            /* Backgrounds */
+            --bg-primary: #ffffff;
+            --bg-secondary: var(--gray-50);
+            --bg-tertiary: var(--gray-100);
+
+            /* Text */
+            --text-primary: var(--gray-900);
+            --text-secondary: var(--gray-600);
+            --text-tertiary: var(--gray-500);
+
+            /* Borders */
+            --border-color: var(--gray-200);
+            --border-radius: 0.75rem;
+            --border-radius-sm: 0.5rem;
+            --border-radius-lg: 1rem;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+            /* Spacing */
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-5: 1.25rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-10: 2.5rem;
+            --space-12: 3rem;
+
+            /* Typography */
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Dark Theme */
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --border-color: #334155;
+        }
+
+        /* Reset e Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        /* Layout Principal */
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--space-3) var(--space-6);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-600);
+            text-decoration: none;
+        }
+
+        .search-global {
+            display: flex;
+            align-items: center;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            padding: var(--space-2) var(--space-3);
+            width: 300px;
+        }
+
+        .search-global input {
+            border: none;
+            background: transparent;
+            outline: none;
+            color: var(--text-primary);
+            margin-left: var(--space-2);
+            width: 100%;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .header-btn {
+            padding: var(--space-2);
+            border: none;
+            background: transparent;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .header-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* Navigation */
+        .navigation {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 var(--space-6);
+            height: 48px;
+            display: flex;
+            align-items: center;
+            gap: var(--space-6);
+        }
+
+        .nav-item {
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--border-radius-sm);
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--primary-50);
+            color: var(--primary-600);
+        }
+
+        [data-theme="dark"] .nav-item:hover,
+        [data-theme="dark"] .nav-item.active {
+            background: var(--primary-900);
+            color: var(--primary-400);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            padding: var(--space-6);
+            gap: var(--space-6);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--space-6);
+            height: fit-content;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 120px;
+        }
+
+        .sidebar-section {
+            margin-bottom: var(--space-6);
+        }
+
+        .sidebar-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .filter-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .filter-item {
+            padding: var(--space-3);
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .filter-item:hover, .filter-item.active {
+            background: var(--primary-50);
+            color: var(--primary-600);
+        }
+
+        [data-theme="dark"] .filter-item:hover,
+        [data-theme="dark"] .filter-item.active {
+            background: var(--primary-900);
+            color: var(--primary-400);
+        }
+
+        .filter-count {
+            background: var(--gray-200);
+            color: var(--text-secondary);
+            padding: var(--space-1) var(--space-2);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .filter-item.active .filter-count {
+            background: var(--primary-600);
+            color: white;
+        }
+
+        /* Calendar Widget */
+        .calendar-widget {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: var(--space-4);
+            border: 1px solid var(--border-color);
+        }
+
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-3);
+        }
+
+        .calendar-month {
+            font-weight: 600;
+        }
+
+        .calendar-nav {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: var(--space-1);
+            border-radius: var(--border-radius-sm);
+            color: var(--text-secondary);
+        }
+
+        .calendar-nav:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: var(--space-1);
+            font-size: 0.875rem;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .calendar-day:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .calendar-day.today {
+            background: var(--primary-500);
+            color: white;
+        }
+
+        .calendar-day.has-activity {
+            background: var(--warning-100);
+            color: var(--warning-700);
+            font-weight: 600;
+        }
+
+        /* Stats Widget */
+        .stats-widget {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: var(--space-4);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-2) 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--primary-600);
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+        }
+
+        .content-header {
+            margin-bottom: var(--space-6);
+        }
+
+        .content-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: var(--space-2);
+        }
+
+        .content-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: var(--space-4);
+        }
+
+        .content-actions {
+            display: flex;
+            gap: var(--space-3);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--border-radius-sm);
+            font-weight: 500;
+            text-decoration: none;
+            border: 1px solid transparent;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-500);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-600);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--gray-300);
+        }
+
+        /* Activity Grid */
+        .activity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: var(--space-6);
+        }
+
+        /* Activity Cards */
+        .activity-card {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--space-6);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .activity-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-4);
+        }
+
+        .activity-type-badge {
+            background: var(--success-100);
+            color: var(--success-700);
+            padding: var(--space-1) var(--space-3);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .activity-status {
+            padding: var(--space-1) var(--space-3);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .activity-status.pending {
+            background: var(--warning-100);
+            color: var(--warning-700);
+        }
+
+        .activity-status.completed {
+            background: var(--success-100);
+            color: var(--success-700);
+        }
+
+        .activity-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--space-2);
+            line-height: 1.4;
+        }
+
+        .activity-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--space-4);
+            line-height: 1.5;
+        }
+
+        .activity-meta {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            margin-bottom: var(--space-4);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .meta-icon {
+            width: 16px;
+            height: 16px;
+            color: var(--text-tertiary);
+        }
+
+        /* Participation Summary */
+        .participation-summary {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+        }
+
+        .participation-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-3);
+            margin-bottom: var(--space-3);
+        }
+
+        .stat-item-modern {
+            text-align: center;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-600);
+        }
+
+        .stat-label-modern {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-item-modern.success .stat-number {
+            color: var(--success-600);
+        }
+
+        .stat-item-modern.warning .stat-number {
+            color: var(--warning-600);
+        }
+
+        .stat-item-modern.muted .stat-number {
+            color: var(--text-tertiary);
+        }
+
+        .participation-bar {
+            background: var(--gray-200);
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-500), var(--primary-500));
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Card Actions */
+        .card-actions {
+            display: flex;
+            gap: var(--space-2);
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: var(--space-2) var(--space-3);
+            font-size: 0.75rem;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            bottom: var(--space-6);
+            right: var(--space-6);
+            background: var(--primary-500);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary-600);
+            transform: scale(1.1);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-content {
+                padding: var(--space-4);
+            }
+
+            .sidebar {
+                width: 240px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: var(--space-3) var(--space-4);
+            }
+
+            .search-global {
+                display: none;
+            }
+
+            .navigation {
+                overflow-x: auto;
+                padding: 0 var(--space-4);
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+
+            .navigation::-webkit-scrollbar {
+                display: none;
+            }
+
+            .main-content {
+                flex-direction: column;
+                padding: var(--space-4);
+                gap: var(--space-4);
+            }
+
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+
+            .activity-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .participation-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--primary-500);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Utility Classes */
+        .hidden { display: none !important; }
+        .visible { display: block !important; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: var(--space-2); }
+        .gap-3 { gap: var(--space-3); }
+        .gap-4 { gap: var(--space-4); }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+        .text-primary { color: var(--text-primary); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-tertiary { color: var(--text-tertiary); }
+        .bg-primary { background-color: var(--bg-primary); }
+        .bg-secondary { background-color: var(--bg-secondary); }
+        .rounded { border-radius: var(--border-radius-sm); }
+        .rounded-lg { border-radius: var(--border-radius-lg); }
+        .shadow { box-shadow: var(--shadow-md); }
+        .shadow-lg { box-shadow: var(--shadow-lg); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <a href="#" class="logo">🥋 Sistema Dojotai</a>
+                <div class="search-global">
+                    <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <input type="text" placeholder="Buscar atividades, membros...">
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="header-btn" title="Notificações">
+                    <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19c-5 0-8-3-8-8V9a4 4 0 0 1 8 0v2"></path>
+                    </svg>
+                </button>
+                <button class="header-btn" title="Perfil">
+                    <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </button>
+                <button class="header-btn" title="Configurações">
+                    <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="navigation">
+            <a href="#" class="nav-item active">
+                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                Atividades
+            </a>
+            <a href="#" class="nav-item">
+                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                </svg>
+                Membros
+            </a>
+            <a href="#" class="nav-item">
+                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Relatórios
+            </a>
+            <a href="#" class="nav-item">
+                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Configurações
+            </a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Filtros Rápidos -->
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Filtros Rápidos</h3>
+                    <div class="filter-list">
+                        <div class="filter-item active">
+                            <span>✅ Pendentes</span>
+                            <span class="filter-count">12</span>
+                        </div>
+                        <div class="filter-item">
+                            <span>🔄 Em Andamento</span>
+                            <span class="filter-count">5</span>
+                        </div>
+                        <div class="filter-item">
+                            <span>✅ Concluídas</span>
+                            <span class="filter-count">28</span>
+                        </div>
+                        <div class="filter-item">
+                            <span>👤 Minhas Tarefas</span>
+                            <span class="filter-count">8</span>
+                        </div>
+                        <div class="filter-item">
+                            <span>📅 Hoje</span>
+                            <span class="filter-count">3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendário -->
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Calendário</h3>
+                    <div class="calendar-widget">
+                        <div class="calendar-header">
+                            <button class="calendar-nav">‹</button>
+                            <span class="calendar-month">Setembro 2024</span>
+                            <button class="calendar-nav">›</button>
+                        </div>
+                        <div class="calendar-grid">
+                            <div class="calendar-day text-tertiary">D</div>
+                            <div class="calendar-day text-tertiary">S</div>
+                            <div class="calendar-day text-tertiary">T</div>
+                            <div class="calendar-day text-tertiary">Q</div>
+                            <div class="calendar-day text-tertiary">Q</div>
+                            <div class="calendar-day text-tertiary">S</div>
+                            <div class="calendar-day text-tertiary">S</div>
+                            <div class="calendar-day">1</div>
+                            <div class="calendar-day">2</div>
+                            <div class="calendar-day">3</div>
+                            <div class="calendar-day">4</div>
+                            <div class="calendar-day">5</div>
+                            <div class="calendar-day">6</div>
+                            <div class="calendar-day">7</div>
+                            <div class="calendar-day">8</div>
+                            <div class="calendar-day">9</div>
+                            <div class="calendar-day">10</div>
+                            <div class="calendar-day">11</div>
+                            <div class="calendar-day">12</div>
+                            <div class="calendar-day">13</div>
+                            <div class="calendar-day">14</div>
+                            <div class="calendar-day">15</div>
+                            <div class="calendar-day">16</div>
+                            <div class="calendar-day">17</div>
+                            <div class="calendar-day today">18</div>
+                            <div class="calendar-day has-activity">19</div>
+                            <div class="calendar-day has-activity">20</div>
+                            <div class="calendar-day">21</div>
+                            <div class="calendar-day">22</div>
+                            <div class="calendar-day">23</div>
+                            <div class="calendar-day">24</div>
+                            <div class="calendar-day">25</div>
+                            <div class="calendar-day">26</div>
+                            <div class="calendar-day">27</div>
+                            <div class="calendar-day">28</div>
+                            <div class="calendar-day">29</div>
+                            <div class="calendar-day">30</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Rápidas -->
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Estatísticas</h3>
+                    <div class="stats-widget">
+                        <div class="stat-item">
+                            <span class="stat-label">Atividades Pendentes</span>
+                            <span class="stat-value">12</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Atividades Hoje</span>
+                            <span class="stat-value">3</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Taxa de Participação</span>
+                            <span class="stat-value">85%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Membros Ativos</span>
+                            <span class="stat-value">156</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <div class="content-header">
+                    <h1 class="content-title">Atividades</h1>
+                    <p class="content-subtitle">Gerencie e acompanhe todas as atividades do dojo</p>
+                    <div class="content-actions">
+                        <button class="btn btn-outline">
+                            <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                            </svg>
+                            Filtros
+                        </button>
+                        <button class="btn btn-primary">
+                            <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Nova Atividade
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Activity Grid -->
+                <div class="activity-grid">
+                    <!-- Activity Card 1 -->
+                    <div class="activity-card">
+                        <div class="card-header">
+                            <div class="activity-type-badge">🥋 Treinamento</div>
+                            <div class="activity-status pending">Pendente</div>
+                        </div>
+
+                        <h3 class="activity-title">Reunião de Planejamento Mensal</h3>
+                        <p class="activity-description">
+                            Discussão sobre metas do próximo mês e avaliação das atividades realizadas no período atual.
+                        </p>
+
+                        <div class="activity-meta">
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span>Hoje, 14:00</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span>João Silva</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span>Dojo Principal</span>
+                            </div>
+                        </div>
+
+                        <div class="participation-summary">
+                            <div class="participation-stats">
+                                <div class="stat-item-modern">
+                                    <span class="stat-number">12</span>
+                                    <span class="stat-label-modern">Convidados</span>
+                                </div>
+                                <div class="stat-item-modern success">
+                                    <span class="stat-number">8</span>
+                                    <span class="stat-label-modern">Confirmaram</span>
+                                </div>
+                                <div class="stat-item-modern warning">
+                                    <span class="stat-number">2</span>
+                                    <span class="stat-label-modern">Rejeitaram</span>
+                                </div>
+                                <div class="stat-item-modern muted">
+                                    <span class="stat-number">2</span>
+                                    <span class="stat-label-modern">Pendentes</span>
+                                </div>
+                            </div>
+                            <div class="participation-bar">
+                                <div class="bar-fill" style="width: 67%"></div>
+                            </div>
+                        </div>
+
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm">👥 Participantes</button>
+                            <button class="btn btn-outline btn-sm">✏️ Editar</button>
+                            <button class="btn btn-primary btn-sm">✅ Concluir</button>
+                        </div>
+                    </div>
+
+                    <!-- Activity Card 2 -->
+                    <div class="activity-card">
+                        <div class="card-header">
+                            <div class="activity-type-badge">🎯 Avaliação</div>
+                            <div class="activity-status pending">Pendente</div>
+                        </div>
+
+                        <h3 class="activity-title">Exame de Graduação - Faixa Amarela</h3>
+                        <p class="activity-description">
+                            Avaliação prática e teórica para candidatos à faixa amarela. Inclui kata, kumite e conhecimento teórico.
+                        </p>
+
+                        <div class="activity-meta">
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span>Amanhã, 19:00</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span>Maria Santos</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span>Dojo Principal</span>
+                            </div>
+                        </div>
+
+                        <div class="participation-summary">
+                            <div class="participation-stats">
+                                <div class="stat-item-modern">
+                                    <span class="stat-number">15</span>
+                                    <span class="stat-label-modern">Convidados</span>
+                                </div>
+                                <div class="stat-item-modern success">
+                                    <span class="stat-number">12</span>
+                                    <span class="stat-label-modern">Confirmaram</span>
+                                </div>
+                                <div class="stat-item-modern warning">
+                                    <span class="stat-number">1</span>
+                                    <span class="stat-label-modern">Rejeitaram</span>
+                                </div>
+                                <div class="stat-item-modern muted">
+                                    <span class="stat-number">2</span>
+                                    <span class="stat-label-modern">Pendentes</span>
+                                </div>
+                            </div>
+                            <div class="participation-bar">
+                                <div class="bar-fill" style="width: 80%"></div>
+                            </div>
+                        </div>
+
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm">👥 Participantes</button>
+                            <button class="btn btn-outline btn-sm">✏️ Editar</button>
+                            <button class="btn btn-primary btn-sm">✅ Concluir</button>
+                        </div>
+                    </div>
+
+                    <!-- Activity Card 3 -->
+                    <div class="activity-card">
+                        <div class="card-header">
+                            <div class="activity-type-badge">🏆 Competição</div>
+                            <div class="activity-status completed">Concluída</div>
+                        </div>
+
+                        <h3 class="activity-title">Campeonato Regional de Kata</h3>
+                        <p class="activity-description">
+                            Participação no campeonato regional com representantes do dojo nas categorias juvenil e adulto.
+                        </p>
+
+                        <div class="activity-meta">
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span>Ontem, 08:00</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span>Carlos Mendoza</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span>Centro de Convenções</span>
+                            </div>
+                        </div>
+
+                        <div class="participation-summary">
+                            <div class="participation-stats">
+                                <div class="stat-item-modern">
+                                    <span class="stat-number">8</span>
+                                    <span class="stat-label-modern">Convidados</span>
+                                </div>
+                                <div class="stat-item-modern success">
+                                    <span class="stat-number">8</span>
+                                    <span class="stat-label-modern">Confirmaram</span>
+                                </div>
+                                <div class="stat-item-modern success">
+                                    <span class="stat-number">7</span>
+                                    <span class="stat-label-modern">Presentes</span>
+                                </div>
+                                <div class="stat-item-modern warning">
+                                    <span class="stat-number">1</span>
+                                    <span class="stat-label-modern">Ausentes</span>
+                                </div>
+                            </div>
+                            <div class="participation-bar">
+                                <div class="bar-fill" style="width: 87%"></div>
+                            </div>
+                        </div>
+
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm">👥 Participantes</button>
+                            <button class="btn btn-outline btn-sm">📊 Relatório</button>
+                        </div>
+                    </div>
+
+                    <!-- Activity Card 4 -->
+                    <div class="activity-card">
+                        <div class="card-header">
+                            <div class="activity-type-badge">🥋 Treinamento</div>
+                            <div class="activity-status pending">Pendente</div>
+                        </div>
+
+                        <h3 class="activity-title">Treino de Kata Avançado</h3>
+                        <p class="activity-description">
+                            Sessão focada no aperfeiçoamento de katas avançados para faixas pretas e candidatos.
+                        </p>
+
+                        <div class="activity-meta">
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span>Sexta, 20:00</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span>Ana Rodrigues</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span>Dojo Avançado</span>
+                            </div>
+                        </div>
+
+                        <div class="participation-summary">
+                            <div class="participation-stats">
+                                <div class="stat-item-modern">
+                                    <span class="stat-number">6</span>
+                                    <span class="stat-label-modern">Convidados</span>
+                                </div>
+                                <div class="stat-item-modern success">
+                                    <span class="stat-number">4</span>
+                                    <span class="stat-label-modern">Confirmaram</span>
+                                </div>
+                                <div class="stat-item-modern muted">
+                                    <span class="stat-number">0</span>
+                                    <span class="stat-label-modern">Rejeitaram</span>
+                                </div>
+                                <div class="stat-item-modern muted">
+                                    <span class="stat-number">2</span>
+                                    <span class="stat-label-modern">Pendentes</span>
+                                </div>
+                            </div>
+                            <div class="participation-bar">
+                                <div class="bar-fill" style="width: 67%"></div>
+                            </div>
+                        </div>
+
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm">👥 Participantes</button>
+                            <button class="btn btn-outline btn-sm">✏️ Editar</button>
+                            <button class="btn btn-primary btn-sm">✅ Concluir</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+        <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+    </button>
+
+    <script>
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+
+            // Store theme preference
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        });
+
+        // Filter interactions
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.filter-item')) {
+                const filterItems = document.querySelectorAll('.filter-item');
+                filterItems.forEach(item => item.classList.remove('active'));
+                e.target.closest('.filter-item').classList.add('active');
+            }
+        });
+
+        // Card hover effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.activity-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-4px)';
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+
+        // Simulated loading for buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.btn-primary')) {
+                const btn = e.target.closest('.btn-primary');
+                const originalText = btn.textContent;
+                btn.textContent = 'Carregando...';
+                btn.style.opacity = '0.7';
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.opacity = '1';
+                    btn.disabled = false;
+                }, 1500);
+            }
+        });
+
+        // Calendar day selection
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.calendar-day') && !e.target.classList.contains('text-tertiary')) {
+                const days = document.querySelectorAll('.calendar-day:not(.text-tertiary)');
+                days.forEach(day => day.classList.remove('today'));
+                e.target.classList.add('today');
+            }
+        });
+    </script>
+</body>
+</html>
