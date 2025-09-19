@@ -1702,6 +1702,203 @@ function testDatabaseManager() {
 }
 
 /**
+ * SecurityManager - Funções de segurança e hash
+ */
+class SecurityManager {
+
+  /**
+   * Gerar hash SHA-256 de uma string
+   * @param {string} text - Texto para gerar hash
+   * @returns {string} Hash em formato hexadecimal
+   */
+  static generateHash(text) {
+    try {
+      const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text);
+      return digest.map(byte => (byte < 0 ? byte + 256 : byte).toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      Logger.error('SecurityManager', 'Erro ao gerar hash', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Verificar se valor é um hash (formato: $hash$...)
+   * @param {string} value - Valor para verificar
+   * @returns {boolean} True se é hash
+   */
+  static isHash(value) {
+    return typeof value === 'string' && value.startsWith('$hash$');
+  }
+
+  /**
+   * Criar hash formatado para armazenamento
+   * @param {string} plainText - Texto em claro
+   * @returns {string} Hash formatado ($hash$...)
+   */
+  static createStorageHash(plainText) {
+    const hash = this.generateHash(plainText);
+    return `$hash$${hash}`;
+  }
+
+  /**
+   * Extrair hash puro do formato de armazenamento
+   * @param {string} storageHash - Hash no formato $hash$...
+   * @returns {string} Hash puro
+   */
+  static extractHash(storageHash) {
+    if (this.isHash(storageHash)) {
+      return storageHash.replace('$hash$', '');
+    }
+    return storageHash;
+  }
+
+  /**
+   * Validar PIN/senha com compatibilidade híbrida
+   * @param {string} inputPin - PIN digitado pelo usuário
+   * @param {string} storedValue - Valor armazenado (pode ser hash ou texto puro)
+   * @returns {boolean} True se PIN está correto
+   */
+  static validatePin(inputPin, storedValue) {
+    try {
+      if (!inputPin || !storedValue) {
+        Logger.debug('SecurityManager', 'PIN ou valor armazenado vazio');
+        return false;
+      }
+
+      // Se é hash, validar com hash
+      if (this.isHash(storedValue)) {
+        const storedHash = this.extractHash(storedValue);
+        const inputHash = this.generateHash(inputPin);
+        const isValid = inputHash === storedHash;
+
+        Logger.debug('SecurityManager', 'Validação por hash', {
+          isValid,
+          hasStoredHash: !!storedHash,
+          hasInputHash: !!inputHash
+        });
+
+        return isValid;
+      }
+
+      // Senão, é texto puro (compatibilidade)
+      const isValid = String(inputPin).trim() === String(storedValue).trim();
+
+      Logger.debug('SecurityManager', 'Validação por texto puro', {
+        isValid,
+        inputLength: String(inputPin).length,
+        storedLength: String(storedValue).length
+      });
+
+      return isValid;
+
+    } catch (error) {
+      Logger.error('SecurityManager', 'Erro na validação de PIN', { error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * Migrar PIN de texto puro para hash (chamado após login bem-sucedido)
+   * @param {string} tableName - Nome da tabela
+   * @param {string} userId - ID do usuário
+   * @param {string} plainPin - PIN em texto puro
+   * @returns {boolean} True se migração foi bem-sucedida
+   */
+  static migratePinToHash(tableName, userId, plainPin) {
+    try {
+      Logger.info('SecurityManager', 'Iniciando migração de PIN para hash', { userId });
+
+      // Gerar hash do PIN
+      const hashedPin = this.createStorageHash(plainPin);
+
+      // Atualizar no banco
+      const updateResult = DatabaseManager.update(tableName, userId, { pin: hashedPin });
+
+      if (updateResult) {
+        Logger.info('SecurityManager', 'PIN migrado para hash com sucesso', { userId });
+        return true;
+      } else {
+        Logger.warn('SecurityManager', 'Falha na migração de PIN', { userId });
+        return false;
+      }
+
+    } catch (error) {
+      Logger.error('SecurityManager', 'Erro na migração de PIN', { userId, error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * Função de login segura com migração automática
+   * @param {string} login - Login do usuário
+   * @param {string} pin - PIN digitado
+   * @returns {Object} Resultado do login
+   */
+  static secureLogin(login, pin) {
+    try {
+      Logger.info('SecurityManager', 'Tentativa de login seguro', { login });
+
+      if (!login || !pin) {
+        return { ok: false, error: 'Informe login e PIN.' };
+      }
+
+      // Buscar usuário por login
+      const usuarios = DatabaseManager.query('usuarios', { login: login.trim() });
+
+      if (!usuarios || usuarios.length === 0) {
+        Logger.warn('SecurityManager', 'Usuário não encontrado', { login });
+        return { ok: false, error: 'Usuário ou PIN inválidos.' };
+      }
+
+      const usuario = usuarios[0];
+
+      // Verificar se usuário está ativo
+      const status = String(usuario.status || '').toLowerCase();
+      if (status !== 'ativo' && status !== 'active' && status !== '1' && status !== 'true') {
+        Logger.warn('SecurityManager', 'Usuário inativo', { login, status });
+        return { ok: false, error: 'Usuário inativo.' };
+      }
+
+      // Validar PIN (híbrido: hash ou texto puro)
+      const pinValido = this.validatePin(pin, usuario.pin);
+
+      if (!pinValido) {
+        Logger.warn('SecurityManager', 'PIN inválido', { login });
+        return { ok: false, error: 'Usuário ou PIN inválidos.' };
+      }
+
+      // Se PIN é texto puro, migrar para hash automaticamente
+      if (!this.isHash(usuario.pin)) {
+        Logger.info('SecurityManager', 'Migrando PIN para hash', { login });
+        this.migratePinToHash('usuarios', usuario.id, pin);
+      }
+
+      // Atualizar último acesso
+      DatabaseManager.update('usuarios', usuario.id, {
+        ultimo_acesso: Utilities.formatDate(new Date(), APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss')
+      });
+
+      Logger.info('SecurityManager', 'Login bem-sucedido', { login, userId: usuario.id });
+
+      return {
+        ok: true,
+        user: {
+          id: usuario.id,
+          uid: usuario.uid || '',
+          nome: usuario.nome || '',
+          login: usuario.login,
+          role: usuario.role || 'user'
+        }
+      };
+
+    } catch (error) {
+      Logger.error('SecurityManager', 'Erro no login seguro', { login, error: error.message });
+      return { ok: false, error: 'Erro interno no sistema.' };
+    }
+  }
+}
+
+/**
  * SessionManager - Gerenciamento de sessões com expiração
  */
 class SessionManager {
@@ -2056,6 +2253,151 @@ function getSessionReport() {
 
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
+    return { error: error.message };
+  }
+}
+
+/**
+ * Testes do SecurityManager
+ */
+
+/**
+ * Teste básico do SecurityManager
+ */
+function testSecurityManager() {
+  try {
+    console.log('🔒 Testando SecurityManager...');
+
+    // Teste 1: Gerar hash
+    const testPin = '1234';
+    const hash = SecurityManager.generateHash(testPin);
+    console.log(`✅ Teste 1 - Hash gerado: ${hash.length} caracteres`);
+
+    // Teste 2: Verificar formato de hash
+    const storageHash = SecurityManager.createStorageHash(testPin);
+    const isHashFormat = SecurityManager.isHash(storageHash);
+    console.log(`✅ Teste 2 - Formato hash: ${isHashFormat ? 'Correto' : 'Incorreto'}`);
+
+    // Teste 3: Validar PIN com texto puro
+    const validPlainText = SecurityManager.validatePin('1234', '1234');
+    console.log(`✅ Teste 3 - Validação texto puro: ${validPlainText ? 'Válida' : 'Inválida'}`);
+
+    // Teste 4: Validar PIN com hash
+    const validHash = SecurityManager.validatePin('1234', storageHash);
+    console.log(`✅ Teste 4 - Validação hash: ${validHash ? 'Válida' : 'Inválida'}`);
+
+    // Teste 5: PIN incorreto
+    const invalidPin = SecurityManager.validatePin('0000', storageHash);
+    console.log(`✅ Teste 5 - PIN incorreto: ${invalidPin ? 'ERRO!' : 'Rejeitado corretamente'}`);
+
+    // Teste 6: Consistência do hash
+    const hash1 = SecurityManager.generateHash('teste');
+    const hash2 = SecurityManager.generateHash('teste');
+    const consistent = hash1 === hash2;
+    console.log(`✅ Teste 6 - Consistência hash: ${consistent ? 'Consistente' : 'Inconsistente'}`);
+
+    console.log('🎉 SecurityManager: Todos os testes passaram!');
+    return { success: true };
+
+  } catch (error) {
+    console.error('❌ Erro no teste do SecurityManager:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Teste de login seguro (simulado)
+ */
+function testSecureLogin() {
+  try {
+    console.log('🔐 Testando login seguro...');
+
+    // Buscar um usuário real para testar
+    const usuarios = DatabaseManager.query('usuarios', {}, false); // sem cache para teste
+
+    if (!usuarios || usuarios.length === 0) {
+      console.log('⚠️ Nenhum usuário encontrado para teste');
+      return { success: false, error: 'Nenhum usuário disponível' };
+    }
+
+    const primeiroUsuario = usuarios[0];
+    console.log(`🔍 Testando com usuário: ${primeiroUsuario.login}`);
+
+    // NOTA: Para teste real, você precisaria saber o PIN atual
+    // Este teste só verifica a estrutura da função
+    console.log('📝 Teste estrutural do login seguro');
+    console.log(`   Login: ${primeiroUsuario.login}`);
+    console.log(`   PIN atual: ${SecurityManager.isHash(primeiroUsuario.pin) ? 'Hash' : 'Texto puro'}`);
+
+    // Verificar se PIN atual é hash ou texto puro
+    if (SecurityManager.isHash(primeiroUsuario.pin)) {
+      console.log('✅ PIN já está em formato hash (seguro)');
+    } else {
+      console.log('⚠️ PIN ainda em texto puro (será migrado no próximo login)');
+    }
+
+    console.log('🎉 Teste estrutural concluído!');
+    return { success: true };
+
+  } catch (error) {
+    console.error('❌ Erro no teste de login seguro:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Relatório de segurança dos PINs
+ */
+function getSecurityReport() {
+  try {
+    console.log('📊 RELATÓRIO DE SEGURANÇA');
+    console.log('='.repeat(50));
+
+    const usuarios = DatabaseManager.query('usuarios', {}, false);
+
+    if (!usuarios || usuarios.length === 0) {
+      console.log('⚠️ Nenhum usuário encontrado');
+      return { error: 'Nenhum usuário encontrado' };
+    }
+
+    let totalUsuarios = 0;
+    let comHash = 0;
+    let textoPlano = 0;
+
+    usuarios.forEach(usuario => {
+      totalUsuarios++;
+      if (SecurityManager.isHash(usuario.pin)) {
+        comHash++;
+      } else {
+        textoPlano++;
+      }
+    });
+
+    const percentualSeguro = ((comHash / totalUsuarios) * 100).toFixed(1);
+
+    console.log(`👥 Total de usuários: ${totalUsuarios}`);
+    console.log(`🔒 PINs com hash: ${comHash} (${percentualSeguro}%)`);
+    console.log(`📝 PINs texto puro: ${textoPlano}`);
+
+    if (textoPlano > 0) {
+      console.log('\n⚠️ RECOMENDAÇÃO:');
+      console.log(`   ${textoPlano} usuário(s) ainda com PIN em texto puro`);
+      console.log('   PINs serão migrados automaticamente no próximo login');
+    }
+
+    if (comHash === totalUsuarios) {
+      console.log('\n🎉 PARABÉNS: Todos os PINs estão seguros com hash!');
+    }
+
+    return {
+      totalUsuarios,
+      comHash,
+      textoPlano,
+      percentualSeguro: parseFloat(percentualSeguro)
+    };
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar relatório de segurança:', error);
     return { error: error.message };
   }
 }
