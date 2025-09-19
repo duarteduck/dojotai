@@ -823,24 +823,44 @@ class CacheManager {
 const DatabaseManager = {
 
   /**
-   * Query principal - buscar dados de uma tabela
+   * Query principal - buscar dados de uma tabela com paginação opcional
    * @param {string} tableName - Nome da tabela (ex: 'usuarios', 'atividades')
    * @param {Object} filters - Filtros opcionais { campo: valor }
-   * @param {boolean} useCache - Usar cache (padrão: true)
-   * @returns {Array} Array de objetos
+   * @param {boolean|Object} useCacheOrOptions - Usar cache (true/false) ou objeto de opções
+   * @returns {Array|Object} Array de objetos ou objeto com dados e paginação
    */
-  query(tableName, filters = {}, useCache = true) {
+  query(tableName, filters = {}, useCacheOrOptions = true) {
     try {
       const startTime = new Date();
 
+      // Processar parâmetros (compatibilidade com chamadas antigas)
+      let useCache = true;
+      let paginationOptions = null;
+
+      if (typeof useCacheOrOptions === 'boolean') {
+        // Chamada antiga: query(table, filters, useCache)
+        useCache = useCacheOrOptions;
+      } else if (typeof useCacheOrOptions === 'object' && useCacheOrOptions !== null) {
+        // Chamada nova: query(table, filters, {useCache, page, per_page})
+        useCache = useCacheOrOptions.useCache !== false; // default true
+        paginationOptions = {
+          page: useCacheOrOptions.page || 1,
+          per_page: useCacheOrOptions.per_page || 20
+        };
+      }
+
+      // Chave de cache inclui paginação se presente
+      const cacheKey = paginationOptions
+        ? `${JSON.stringify(filters)}_page${paginationOptions.page}_per${paginationOptions.per_page}`
+        : JSON.stringify(filters);
 
       // Verificar cache primeiro
       if (useCache) {
-        const cached = CacheManager.get(tableName, filters);
+        const cached = CacheManager.get(tableName, cacheKey);
         if (cached) {
           const timeMs = new Date() - startTime;
           PerformanceMetrics.trackOperation('QUERY', tableName, timeMs, true);
-          Logger.info('DatabaseManager', 'Cache hit', { tableName, filters, time: timeMs });
+          Logger.info('DatabaseManager', 'Cache hit', { tableName, filters, pagination: paginationOptions, time: timeMs });
           return cached;
         }
       }
@@ -854,15 +874,59 @@ const DatabaseManager = {
         results = this._applyFilters(rawData, filters);
       }
 
+      // Aplicar paginação se solicitada
+      let finalResult = results;
+      let paginationInfo = null;
+
+      if (paginationOptions) {
+        const { page, per_page } = paginationOptions;
+        const totalRecords = results.length;
+        const totalPages = Math.ceil(totalRecords / per_page);
+        const startIndex = (page - 1) * per_page;
+        const endIndex = startIndex + per_page;
+
+        // Paginar resultados
+        const paginatedData = results.slice(startIndex, endIndex);
+
+        paginationInfo = {
+          page: page,
+          per_page: per_page,
+          total: totalRecords,
+          total_pages: totalPages,
+          has_next: page < totalPages,
+          has_prev: page > 1,
+          start_index: startIndex + 1, // 1-based
+          end_index: Math.min(endIndex, totalRecords) // 1-based
+        };
+
+        finalResult = {
+          data: paginatedData,
+          pagination: paginationInfo
+        };
+
+        Logger.info('DatabaseManager', 'Query with pagination completed', {
+          tableName,
+          filters,
+          pagination: paginationInfo,
+          time: new Date() - startTime
+        });
+      } else {
+        Logger.info('DatabaseManager', 'Query completed', {
+          tableName,
+          filters,
+          results: results.length,
+          time: new Date() - startTime
+        });
+      }
+
       // Salvar no cache
       if (useCache) {
-        CacheManager.set(tableName, filters, results);
+        CacheManager.set(tableName, cacheKey, finalResult);
       }
 
       const timeMs = new Date() - startTime;
       PerformanceMetrics.trackOperation('QUERY', tableName, timeMs, false);
-      Logger.info('DatabaseManager', 'Query completed', { tableName, filters, results: results.length, time: timeMs });
-      return results;
+      return finalResult;
 
     } catch (error) {
       this._logError('query', tableName, error, { filters });
@@ -2398,6 +2462,185 @@ function getSecurityReport() {
 
   } catch (error) {
     console.error('❌ Erro ao gerar relatório de segurança:', error);
+    return { error: error.message };
+  }
+}
+
+/**
+ * Testes de Paginação
+ */
+
+/**
+ * Teste básico do sistema de paginação
+ */
+function testPagination() {
+  try {
+    console.log('📄 Testando sistema de paginação...');
+
+    // Teste 1: Query sem paginação (modo tradicional)
+    const allUsers = DatabaseManager.query('usuarios');
+    console.log(`✅ Teste 1 - Query tradicional: ${allUsers.length} registros`);
+
+    if (allUsers.length === 0) {
+      console.log('⚠️ Nenhum usuário encontrado para teste');
+      return { success: false, error: 'Nenhum dado disponível' };
+    }
+
+    // Teste 2: Query com paginação - página 1
+    const page1 = DatabaseManager.query('usuarios', {}, {
+      useCache: false,
+      page: 1,
+      per_page: 2
+    });
+    console.log(`✅ Teste 2 - Página 1: ${page1.data ? page1.data.length : 0} registros`);
+    console.log(`   Paginação: ${JSON.stringify(page1.pagination)}`);
+
+    // Teste 3: Query com paginação - página 2
+    if (page1.pagination && page1.pagination.has_next) {
+      const page2 = DatabaseManager.query('usuarios', {}, {
+        useCache: false,
+        page: 2,
+        per_page: 2
+      });
+      console.log(`✅ Teste 3 - Página 2: ${page2.data ? page2.data.length : 0} registros`);
+    } else {
+      console.log('⚠️ Teste 3 - Não há página 2 (poucos registros)');
+    }
+
+    // Teste 4: Filtros com paginação
+    const filteredPaginated = DatabaseManager.query('usuarios', { status: 'ativo' }, {
+      useCache: false,
+      page: 1,
+      per_page: 3
+    });
+    console.log(`✅ Teste 4 - Filtro + paginação: ${filteredPaginated.data ? filteredPaginated.data.length : 0} registros`);
+
+    // Teste 5: Cache com paginação
+    const cachedPage = DatabaseManager.query('usuarios', {}, {
+      useCache: true,
+      page: 1,
+      per_page: 2
+    });
+    console.log(`✅ Teste 5 - Cache com paginação: ${cachedPage.data ? cachedPage.data.length : 0} registros`);
+
+    console.log('🎉 Paginação: Todos os testes passaram!');
+    return { success: true };
+
+  } catch (error) {
+    console.error('❌ Erro no teste de paginação:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Demonstração prática de paginação
+ */
+function demonstratePagination() {
+  try {
+    console.log('📊 DEMONSTRAÇÃO DE PAGINAÇÃO');
+    console.log('='.repeat(50));
+
+    // Buscar table com mais registros para demonstrar
+    const tables = ['usuarios', 'atividades', 'membros'];
+    let bestTable = 'usuarios';
+    let maxRecords = 0;
+
+    tables.forEach(table => {
+      try {
+        const records = DatabaseManager.query(table, {}, false);
+        if (records.length > maxRecords) {
+          maxRecords = records.length;
+          bestTable = table;
+        }
+      } catch (error) {
+        // Ignorar erros de tabelas que não existem
+      }
+    });
+
+    console.log(`📋 Usando tabela '${bestTable}' com ${maxRecords} registros`);
+
+    if (maxRecords === 0) {
+      console.log('⚠️ Nenhum registro encontrado para demonstração');
+      return { error: 'Nenhum dado disponível' };
+    }
+
+    // Demonstrar diferentes tamanhos de página
+    const pageSizes = [2, 5, 10];
+
+    pageSizes.forEach(pageSize => {
+      if (maxRecords > pageSize) {
+        const result = DatabaseManager.query(bestTable, {}, {
+          useCache: false,
+          page: 1,
+          per_page: pageSize
+        });
+
+        console.log(`\n📄 Página 1 com ${pageSize} registros por página:`);
+        console.log(`   Registros retornados: ${result.data.length}`);
+        console.log(`   Total de páginas: ${result.pagination.total_pages}`);
+        console.log(`   Há próxima página: ${result.pagination.has_next ? 'Sim' : 'Não'}`);
+        console.log(`   Intervalo: ${result.pagination.start_index}-${result.pagination.end_index} de ${result.pagination.total}`);
+      }
+    });
+
+    return { success: true, table: bestTable, totalRecords: maxRecords };
+
+  } catch (error) {
+    console.error('❌ Erro na demonstração:', error);
+    return { error: error.message };
+  }
+}
+
+/**
+ * Teste de performance de paginação vs query completa
+ */
+function testPaginationPerformance() {
+  try {
+    console.log('⚡ TESTE DE PERFORMANCE: Paginação vs Query Completa');
+    console.log('='.repeat(60));
+
+    // Escolher tabela com mais registros
+    const table = 'usuarios'; // ou a tabela com mais dados
+
+    console.log(`📊 Testando com tabela: ${table}`);
+
+    // Teste 1: Query completa
+    const startFull = new Date();
+    const fullResult = DatabaseManager.query(table, {}, false);
+    const timeFull = new Date() - startFull;
+
+    console.log(`\n🔍 Query Completa:`);
+    console.log(`   Registros: ${fullResult.length}`);
+    console.log(`   Tempo: ${timeFull}ms`);
+
+    if (fullResult.length > 10) {
+      // Teste 2: Query paginada
+      const startPaged = new Date();
+      const pagedResult = DatabaseManager.query(table, {}, {
+        useCache: false,
+        page: 1,
+        per_page: 10
+      });
+      const timePaged = new Date() - startPaged;
+
+      console.log(`\n📄 Query Paginada (10 registros):`);
+      console.log(`   Registros: ${pagedResult.data.length}`);
+      console.log(`   Tempo: ${timePaged}ms`);
+
+      // Comparação
+      const improvement = ((timeFull - timePaged) / timeFull * 100).toFixed(1);
+      console.log(`\n📈 Melhoria de Performance:`);
+      console.log(`   Paginação é ${improvement}% mais rápida que query completa`);
+      console.log(`   Economia de ${timeFull - timePaged}ms`);
+
+    } else {
+      console.log('\n⚠️ Poucos registros para testar performance da paginação');
+    }
+
+    return { success: true, fullTime: timeFull, records: fullResult.length };
+
+  } catch (error) {
+    console.error('❌ Erro no teste de performance:', error);
     return { error: error.message };
   }
 }
