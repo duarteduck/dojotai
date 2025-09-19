@@ -13,8 +13,20 @@
  * 🎯 COMO USAR:
  * - Para adicionar campo: Copie um campo similar e modifique
  * - Para nova tabela: Copie uma tabela similar como template
- * - Sempre execute `clasp push` após mudanças
- * - Teste com `testCRUDOperations()` após alterações
+ *
+ * ⚠️ REGRA CRÍTICA: SINCRONIZAÇÃO DICIONÁRIO ↔ PLANILHAS
+ *
+ * 🔄 SEMPRE que alterar este dicionário, DEVE atualizar:
+ *
+ * 1. PLANILHA DE CONFIGURAÇÃO: Arquivo "Configurações" > Aba "Planilhas"
+ * 2. PLANILHA DE DADOS: O arquivo específico > Aba da tabela sendo editada
+ * 3. NOVOS CAMPOS: Adicionar coluna na planilha com nome exato
+ * 4. CAMPOS RENOMEADOS: Renomear cabeçalho na planilha
+ * 5. CAMPOS REMOVIDOS: Mover para final com prefixo "_DEPRECATED_"
+ * 6. TESTAR: Sempre executar testes após alterações
+ *
+ * ✅ Teste obrigatório: readTableByNome_('nome_da_tabela')
+ * ❌ Nunca: alterar dicionário sem atualizar planilhas correspondentes
  *
  * 📝 ÍNDICE DAS TABELAS:
  * ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -426,13 +438,17 @@ const DATA_DICTIONARY = {
         example: 'U001'
       },
 
-      // ID da categoria da atividade
-      categoria_atividade_id: {
+      // IDs das categorias da atividade (múltiplas categorias possíveis)
+      categorias_ids: {
         type: 'TEXT',
         required: false,
-        foreignKey: 'categorias_atividades.id',
-        description: 'ID da categoria da atividade',
-        example: 'CAT-001'
+        description: 'IDs das categorias da atividade separados por vírgula',
+        example: 'CAT-001,CAT-003,CAT-005',
+        validation: {
+          pattern: '^(CAT-\\d+)(,CAT-\\d+)*$',
+          maxLength: 200
+        },
+        customValidation: 'validateMultipleCategorias'
       },
 
       // Tags/etiquetas da atividade para filtros e categorização flexível

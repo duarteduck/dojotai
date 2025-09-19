@@ -59,15 +59,17 @@ function createActivity(payload, uidCriador) {
     const descricao = (payload && payload.descricao || '').toString().trim();
     const data = (payload && payload.data || '').toString().trim();
     const atribuido_uid = (payload && payload.atribuido_uid || '').toString().trim();
-    const categoria_atividade_id = (payload && payload.categoria_atividade_id || '').toString().trim(); // NOVO
+    // Compatibilidade: aceita tanto campo novo quanto antigo
+    const categorias_ids = (payload && (payload.categorias_ids || payload.categoria_atividade_id) || '').toString().trim();
+    const tags = (payload && payload.tags || '').toString().trim(); // Tags livres
 
     if (!titulo) return { ok:false, error:'Informe um título.' };
 
-    // Validar categoria se informada
-    if (categoria_atividade_id) {
-      const catValida = validateCategoriaAtividade_(categoria_atividade_id);
-      if (!catValida) {
-        return { ok:false, error:'Categoria de atividade inválida: ' + categoria_atividade_id };
+    // Validar múltiplas categorias se informadas
+    if (categorias_ids) {
+      const validationResult = CategoriaManager.validateMultipleCategorias(categorias_ids);
+      if (!validationResult.isValid) {
+        return { ok:false, error: validationResult.error };
       }
     }
 
@@ -87,10 +89,11 @@ function createActivity(payload, uidCriador) {
     const idxCri  = header.indexOf('criado_em');
     const idxAtuE = header.indexOf('atualizado_em');
     const idxAtrU = header.indexOf('atribuido_uid');
-    const idxCatAtiv = header.indexOf('categoria_atividade_id'); // NOVO
+    const idxCategorias = header.indexOf('categorias_ids'); // NOVO: múltiplas categorias
+    const idxTags = header.indexOf('tags'); // NOVO: tags livres
 
     if ([idxId,idxTit,idxDesc,idxData,idxStat,idxAtuU,idxCri,idxAtuE,idxAtrU].some(i => i < 0)) {
-      return { ok:false, error:'Cabeçalho da aba Atividades está diferente do esperado. Certifique-se de que há as colunas: id, titulo, descricao, data, status, atualizado_uid, criado_em, atualizado_em, atribuido_uid, categoria_atividade_id' };
+      return { ok:false, error:'Cabeçalho da aba Atividades está diferente do esperado. Certifique-se de que há as colunas: id, titulo, descricao, data, status, atualizado_uid, criado_em, atualizado_em, atribuido_uid, categorias_ids, tags' };
     }
 
     const ids = all.slice(1).map(r => (r[idxId]||'').toString());
@@ -107,7 +110,8 @@ function createActivity(payload, uidCriador) {
     rowArray[idxCri]  = nowStr;
     rowArray[idxAtuE] = ''; // VAZIO na criação
     rowArray[idxAtrU] = atribuido_uid || (uidCriador || '');
-    if (idxCatAtiv >= 0) rowArray[idxCatAtiv] = categoria_atividade_id || ''; // NOVO
+    if (idxCategorias >= 0) rowArray[idxCategorias] = categorias_ids || ''; // NOVO: múltiplas categorias
+    if (idxTags >= 0) rowArray[idxTags] = tags || ''; // NOVO: tags livres
 
     // Próxima linha após a última linha usada na aba
     const targetRow = ctx.sheet.getLastRow() + 1;

@@ -13,7 +13,7 @@ var Normalizer = {
       id: get(a, ['id']),
       titulo: get(a, ['titulo','Titulo','Título'], ''),
       descricao: get(a, ['descricao','Descrição','desc']),
-      categoriaAtividadeId:   get(a, ['categoriaAtividadeId','categoria_atividade_id']),
+      categoriaAtividadeId:   get(a, ['categoriaAtividadeId','categoria_atividade_id','categorias_ids']) || (get(a, ['categorias_ids']) || '').split(',')[0],
       categoriaAtividadeNome: get(a, ['categoriaAtividadeNome','categoria_atividade_nome']),
       categoriaAtividadeIcone:get(a, ['categoriaAtividadeIcone','categoria_atividade_icone']),
       categoriaAtividadeCor:  get(a, ['categoriaAtividadeCor','categoria_atividade_cor']),
@@ -818,7 +818,9 @@ var Views = {
         atribuido_uid:(sel && sel.value) || (window.State && State.uid),
         // Categoria nos dois formatos (ajuste conforme sua API)
         categoriaAtividadeId:(selCatAtiv && selCatAtiv.value) || '',
-        categoria_atividade_id:(selCatAtiv && selCatAtiv.value) || ''
+        categoria_atividade_id:(selCatAtiv && selCatAtiv.value) || '',
+        categorias_ids:(selCatAtiv && selCatAtiv.value) || '',  // Compatibilidade novo sistema
+        tags:''  // Tags vazias por enquanto
       };
       if(!payload.titulo){ if(msg) msg.textContent='Informe um título.'; return; }
 

@@ -387,6 +387,29 @@ class ValidationEngine {
             errors.push(`${fieldName}: Formato de data inválido`);
           }
         }
+
+        // 6. Custom validation functions
+        if (fieldConfig.customValidation) {
+          try {
+            let customResult = null;
+
+            // Mapear funções de validação customizada
+            if (fieldConfig.customValidation === 'validateMultipleCategorias') {
+              customResult = CategoriaManager.validateMultipleCategorias(fieldValue.toString());
+            }
+
+            if (customResult && !customResult.isValid) {
+              errors.push(`${fieldName}: ${customResult.error}`);
+            }
+          } catch (e) {
+            Logger.warn('ValidationEngine', 'Erro na validação customizada', {
+              field: fieldName,
+              customValidation: fieldConfig.customValidation,
+              error: e.message
+            });
+            errors.push(`${fieldName}: Erro na validação customizada`);
+          }
+        }
       });
 
       const timeMs = new Date() - startTime;
@@ -2960,5 +2983,96 @@ function demonstrateTagsWithRealData() {
   } catch (error) {
     console.error('❌ Erro na demonstração:', error);
     return { error: error.message };
+  }
+}
+
+/**
+ * CategoriaManager - Gerenciador para múltiplas categorias
+ */
+class CategoriaManager {
+
+  /**
+   * Converte string de categorias para array
+   * @param {string} categoriasString - String com IDs separados por vírgula
+   * @returns {Array} Array de IDs das categorias
+   */
+  static parseCategoriasString(categoriasString) {
+    if (!categoriasString) return [];
+    return categoriasString
+      .split(',')
+      .map(cat => cat.trim())
+      .filter(cat => cat.length > 0);
+  }
+
+  /**
+   * Converte array de categorias para string
+   * @param {Array} categoriasArray - Array de IDs das categorias
+   * @returns {string} String com IDs separados por vírgula
+   */
+  static formatCategoriasArray(categoriasArray) {
+    if (!Array.isArray(categoriasArray)) return '';
+    return categoriasArray
+      .filter(cat => cat && cat.trim().length > 0)
+      .map(cat => cat.trim())
+      .join(',');
+  }
+
+  /**
+   * Valida se todas as categorias existem
+   * @param {string} categoriasString - String com IDs separados por vírgula
+   * @returns {Object} Resultado da validação
+   */
+  static validateMultipleCategorias(categoriasString) {
+    try {
+      if (!categoriasString) return { isValid: true };
+
+      const categoriaIds = this.parseCategoriasString(categoriasString);
+      const invalidIds = [];
+
+      for (const catId of categoriaIds) {
+        const categoria = DatabaseManager.findById('categorias_atividades', catId);
+        if (!categoria) {
+          invalidIds.push(catId);
+        }
+      }
+
+      if (invalidIds.length > 0) {
+        return {
+          isValid: false,
+          error: `Categorias não encontradas: ${invalidIds.join(', ')}`
+        };
+      }
+
+      return { isValid: true };
+    } catch (error) {
+      return {
+        isValid: false,
+        error: `Erro ao validar categorias: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Obtém detalhes das categorias de uma atividade
+   * @param {string} categoriasString - String com IDs separados por vírgula
+   * @returns {Array} Array com detalhes das categorias
+   */
+  static getCategoriasDetails(categoriasString) {
+    try {
+      const categoriaIds = this.parseCategoriasString(categoriasString);
+      const categorias = [];
+
+      for (const catId of categoriaIds) {
+        const categoria = DatabaseManager.findById('categorias_atividades', catId);
+        if (categoria) {
+          categorias.push(categoria);
+        }
+      }
+
+      return categorias;
+    } catch (error) {
+      Logger.error('CategoriaManager', 'Erro ao obter detalhes das categorias', { categoriasString, error: error.message });
+      return [];
+    }
   }
 }
