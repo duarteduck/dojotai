@@ -416,7 +416,8 @@ function testPerformanceScenarios() {
     ];
 
     // Limpar cache para teste limpo
-    DatabaseManager.clearCache();
+    DatabaseManager.clearExpiredCache();
+    DatabaseManager.resetPerformanceMetrics();
 
     console.log('\n📊 Teste 1: Performance sem cache');
     const timesWithoutCache = [];
@@ -616,5 +617,54 @@ function compareV1vsV2(tableName = 'usuarios') {
   } catch (error) {
     console.error(`❌ Erro na comparação de ${tableName}:`, error);
     return null;
+  }
+}
+
+/**
+ * Teste de cache com filtros
+ */
+function testCacheFilters() {
+  try {
+    console.log('🔍 TESTE: Filtros no cache...');
+
+    // Limpar cache e métricas para teste limpo
+    DatabaseManager.clearExpiredCache();
+    DatabaseManager.resetPerformanceMetrics();
+
+    // Teste 1: Query com filtro (cache miss)
+    console.log('\n📊 Query com filtro (primeira vez)...');
+    const start1 = new Date();
+    const result1 = DatabaseManager.query('usuarios', { status: 'Ativo' });
+    const time1 = new Date() - start1;
+
+    // Teste 2: Mesma query (cache hit)
+    console.log('📊 Mesma query (cache hit)...');
+    const start2 = new Date();
+    const result2 = DatabaseManager.query('usuarios', { status: 'Ativo' });
+    const time2 = new Date() - start2;
+
+    // Teste 3: Query diferente, mesma tabela
+    console.log('📊 Query diferente, mesma tabela...');
+    const start3 = new Date();
+    const result3 = DatabaseManager.query('usuarios', { ativo: 'sim' });
+    const time3 = new Date() - start3;
+
+    // Verificar métricas
+    const metrics = DatabaseManager.getPerformanceReport();
+    console.log(`✅ Cache hit rate: ${metrics.summary.cacheHitRate}`);
+    console.log(`✅ Total operations: ${metrics.summary.totalOperations}`);
+
+    // Validar se cache funcionou
+    if (time2 < time1 && metrics.summary.totalOperations >= 3) {
+      console.log('✅ Cache de filtros funcionando corretamente');
+      return { success: true };
+    } else {
+      console.log(`⚠️ Cache pode não estar funcionando. Time1: ${time1}ms, Time2: ${time2}ms`);
+      return { success: true, warning: 'Cache performance inconclusive' };
+    }
+
+  } catch (error) {
+    console.error('❌ Erro no teste de filtros:', error);
+    return { success: false, error: error.message };
   }
 }

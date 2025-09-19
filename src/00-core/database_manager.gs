@@ -2,18 +2,343 @@
  * Sistema Dojotai V2.0 - Database Manager
  * Criado: 18/09/2025
  * Semana 1: Versão básica compatível com sistema atual
+ * Dia 2: Sistema de logs, cache persistente e métricas
  */
+
+/**
+ * Logger - Sistema de logs estruturado com níveis
+ */
+class Logger {
+  static _getLevelValue(level) {
+    const levels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+    return levels[level] || 1;
+  }
+
+  static _shouldLog(level) {
+    const currentLevel = APP_CONFIG.LOG_LEVEL || 'INFO';
+    const currentLevelValue = this._getLevelValue(currentLevel);
+    const logLevelValue = this._getLevelValue(level);
+    return logLevelValue >= currentLevelValue;
+  }
+
+  static _formatMessage(level, context, message, data) {
+    const timestamp = Utilities.formatDate(new Date(), APP_CONFIG.TZ, 'HH:mm:ss.SSS');
+    const dataStr = data ? ` | ${JSON.stringify(data)}` : '';
+    return `${timestamp} [${level}] ${context}: ${message}${dataStr}`;
+  }
+
+  static debug(context, message, data = null) {
+    // DEBUG só aparece se currentLevel for DEBUG
+    const currentLevel = APP_CONFIG.LOG_LEVEL || 'INFO';
+    if (currentLevel === 'DEBUG') {
+      console.log(this._formatMessage('DEBUG', context, message, data));
+    }
+  }
+
+  static info(context, message, data = null) {
+    // INFO aparece se currentLevel for DEBUG ou INFO
+    const currentLevel = APP_CONFIG.LOG_LEVEL || 'INFO';
+    if (currentLevel === 'DEBUG' || currentLevel === 'INFO') {
+      console.log(this._formatMessage('INFO', context, message, data));
+    }
+  }
+
+  static warn(context, message, data = null) {
+    // WARN aparece se currentLevel for DEBUG, INFO ou WARN
+    const currentLevel = APP_CONFIG.LOG_LEVEL || 'INFO';
+    if (currentLevel === 'DEBUG' || currentLevel === 'INFO' || currentLevel === 'WARN') {
+      console.warn(this._formatMessage('WARN', context, message, data));
+    }
+  }
+
+  static error(context, message, data = null) {
+    // ERROR sempre aparece
+    console.error(this._formatMessage('ERROR', context, message, data));
+  }
+}
+
+/**
+ * PerformanceMetrics - Sistema de métricas de performance
+ */
+class PerformanceMetrics {
+  static _getMetrics() {
+    if (!this._metrics) {
+      this._metrics = {
+        operations: {},
+        cacheStats: { hits: 0, misses: 0 },
+        totalOperations: 0,
+        startTime: new Date()
+      };
+    }
+    return this._metrics;
+  }
+
+  static trackOperation(operation, tableName, timeMs, cacheHit = false) {
+    const metrics = this._getMetrics();
+
+    // Incrementar contadores gerais
+    metrics.totalOperations++;
+
+    // Track cache stats
+    if (cacheHit) {
+      metrics.cacheStats.hits++;
+    } else {
+      metrics.cacheStats.misses++;
+    }
+
+    // Track por operação
+    const opKey = `${operation}_${tableName}`;
+    if (!metrics.operations[opKey]) {
+      metrics.operations[opKey] = {
+        count: 0,
+        totalTime: 0,
+        avgTime: 0,
+        minTime: timeMs,
+        maxTime: timeMs
+      };
+    }
+
+    const op = metrics.operations[opKey];
+    op.count++;
+    op.totalTime += timeMs;
+    op.avgTime = op.totalTime / op.count;
+    op.minTime = Math.min(op.minTime, timeMs);
+    op.maxTime = Math.max(op.maxTime, timeMs);
+
+    Logger.debug('PerformanceMetrics', 'Operation tracked', {
+      operation, tableName, timeMs, cacheHit, totalOps: metrics.totalOperations
+    });
+  }
+
+  static getCacheHitRate() {
+    const metrics = this._getMetrics();
+    const total = metrics.cacheStats.hits + metrics.cacheStats.misses;
+    return total > 0 ? ((metrics.cacheStats.hits / total) * 100).toFixed(1) : '0.0';
+  }
+
+  static getReport() {
+    const metrics = this._getMetrics();
+    const uptime = new Date() - metrics.startTime;
+    const uptimeMinutes = (uptime / 60000).toFixed(2);
+
+    const report = {
+      summary: {
+        totalOperations: metrics.totalOperations,
+        cacheHitRate: this.getCacheHitRate() + '%',
+        uptimeMinutes: parseFloat(uptimeMinutes),
+        operationsPerMinute: (metrics.totalOperations / parseFloat(uptimeMinutes)).toFixed(2)
+      },
+      cacheStats: metrics.cacheStats,
+      operations: metrics.operations
+    };
+
+    Logger.info('PerformanceMetrics', 'Performance report', report.summary);
+    return report;
+  }
+
+  static logReport() {
+    const report = this.getReport();
+
+    console.log('\n' + '='.repeat(50));
+    console.log('📊 RELATÓRIO DE PERFORMANCE');
+    console.log('='.repeat(50));
+
+    console.log(`🎯 Operações totais: ${report.summary.totalOperations}`);
+    console.log(`💾 Cache hit rate: ${report.summary.cacheHitRate}`);
+    console.log(`⏱️ Uptime: ${report.summary.uptimeMinutes} min`);
+    console.log(`📈 Ops/min: ${report.summary.operationsPerMinute}`);
+
+    console.log('\n📋 Operações detalhadas:');
+    Object.entries(report.operations).forEach(([opKey, stats]) => {
+      console.log(`  ${opKey}: ${stats.count}x | avg: ${stats.avgTime.toFixed(0)}ms | min: ${stats.minTime}ms | max: ${stats.maxTime}ms`);
+    });
+
+    console.log('='.repeat(50));
+    return report;
+  }
+
+  static reset() {
+    this._metrics = {
+      operations: {},
+      cacheStats: { hits: 0, misses: 0 },
+      totalOperations: 0,
+      startTime: new Date()
+    };
+    Logger.info('PerformanceMetrics', 'Metrics reset');
+  }
+}
+
+/**
+ * CacheManager - Gerenciador de cache multi-camada
+ */
+class CacheManager {
+  static _getCache() {
+    if (!this._cache) {
+      this._cache = new Map();
+    }
+    return this._cache;
+  }
+
+  static _getTTL() {
+    return APP_CONFIG.CACHE_TTL_MINUTES;
+  }
+
+  // Gerar chave de cache
+  static _generateKey(tableName, filters = {}) {
+    const filterStr = Object.keys(filters).length > 0 ? JSON.stringify(filters) : 'all';
+    return `${tableName}:${filterStr}`;
+  }
+
+  // Cache em memória (session-only)
+  static _getFromMemory(key) {
+    const cache = this._getCache();
+    const cached = cache.get(key);
+    if (!cached) return null;
+
+    const now = new Date().getTime();
+    if (now > cached.expires) {
+      cache.delete(key);
+      return null;
+    }
+
+    Logger.debug('CacheManager', 'Memory cache hit', { key });
+    return cached.data;
+  }
+
+  static _setToMemory(key, data) {
+    const cache = this._getCache();
+    const ttl = this._getTTL();
+    const expires = new Date().getTime() + (ttl * 60 * 1000);
+    cache.set(key, { data, expires });
+    Logger.debug('CacheManager', 'Memory cache set', { key, ttl });
+  }
+
+  // Cache persistente (cross-session)
+  static _getFromPersistent(key) {
+    try {
+      const stored = PropertiesService.getScriptProperties().getProperty(`cache_${key}`);
+      if (!stored) return null;
+
+      const cached = JSON.parse(stored);
+      const now = new Date().getTime();
+
+      if (now > cached.expires) {
+        PropertiesService.getScriptProperties().deleteProperty(`cache_${key}`);
+        Logger.debug('CacheManager', 'Persistent cache expired', { key });
+        return null;
+      }
+
+      Logger.debug('CacheManager', 'Persistent cache hit', { key });
+      return cached.data;
+    } catch (error) {
+      Logger.warn('CacheManager', 'Error reading persistent cache', { key, error: error.message });
+      return null;
+    }
+  }
+
+  static _setToPersistent(key, data) {
+    try {
+      const ttl = this._getTTL();
+      const expires = new Date().getTime() + (ttl * 60 * 1000);
+      const cacheData = { data, expires };
+      PropertiesService.getScriptProperties().setProperty(`cache_${key}`, JSON.stringify(cacheData));
+      Logger.debug('CacheManager', 'Persistent cache set', { key, ttl });
+    } catch (error) {
+      Logger.warn('CacheManager', 'Error writing persistent cache', { key, error: error.message });
+    }
+  }
+
+  // API pública do cache
+  static get(tableName, filters = {}) {
+    const key = this._generateKey(tableName, filters);
+
+    // Tentar memória primeiro
+    let cached = this._getFromMemory(key);
+    if (cached) return cached;
+
+    // Tentar cache persistente
+    cached = this._getFromPersistent(key);
+    if (cached) {
+      // Promover para memória
+      this._setToMemory(key, cached);
+      return cached;
+    }
+
+    return null;
+  }
+
+  static set(tableName, filters, data) {
+    const key = this._generateKey(tableName, filters);
+    this._setToMemory(key, data);
+    this._setToPersistent(key, data);
+  }
+
+  static invalidate(tableName) {
+    const pattern = `${tableName}:`;
+    const cache = this._getCache();
+
+    // Limpar memória
+    for (const key of cache.keys()) {
+      if (key.startsWith(pattern)) {
+        cache.delete(key);
+      }
+    }
+
+    // Limpar persistente
+    try {
+      const properties = PropertiesService.getScriptProperties().getProperties();
+      Object.keys(properties).forEach(prop => {
+        if (prop.startsWith(`cache_${pattern}`)) {
+          PropertiesService.getScriptProperties().deleteProperty(prop);
+        }
+      });
+    } catch (error) {
+      Logger.warn('CacheManager', 'Error clearing persistent cache', { tableName, error: error.message });
+    }
+
+    Logger.info('CacheManager', 'Cache invalidated', { tableName });
+  }
+
+  static clearExpired() {
+    const now = new Date().getTime();
+    const cache = this._getCache();
+
+    // Limpar memória expirada
+    for (const [key, cached] of cache.entries()) {
+      if (now > cached.expires) {
+        cache.delete(key);
+      }
+    }
+
+    // Limpar persistente expirado
+    try {
+      const properties = PropertiesService.getScriptProperties().getProperties();
+      Object.keys(properties).forEach(prop => {
+        if (prop.startsWith('cache_')) {
+          try {
+            const cached = JSON.parse(properties[prop]);
+            if (now > cached.expires) {
+              PropertiesService.getScriptProperties().deleteProperty(prop);
+            }
+          } catch (e) {
+            // Remover entradas corrompidas
+            PropertiesService.getScriptProperties().deleteProperty(prop);
+          }
+        }
+      });
+    } catch (error) {
+      Logger.warn('CacheManager', 'Error cleaning expired cache', { error: error.message });
+    }
+
+    Logger.info('CacheManager', 'Expired cache entries cleared');
+  }
+}
 
 /**
  * DatabaseManager - Camada unificada de acesso a dados
  * Compatible com sistema atual (utils.gs) mas modernizado
  */
 const DatabaseManager = {
-  // Cache interno (limpa a cada execução do Apps Script)
-  _cache: new Map(),
-
-  // TTL do cache em minutos
-  _cacheTTL: APP_CONFIG.CACHE_TTL_MINUTES,
 
   /**
    * Query principal - buscar dados de uma tabela
@@ -26,14 +351,14 @@ const DatabaseManager = {
     try {
       const startTime = new Date();
 
-      // Gerar chave de cache
-      const cacheKey = this._generateCacheKey(tableName, filters);
 
       // Verificar cache primeiro
       if (useCache) {
-        const cached = this._getFromCache(cacheKey);
+        const cached = CacheManager.get(tableName, filters);
         if (cached) {
-          this._logOperation('CACHE_HIT', tableName, filters, startTime);
+          const timeMs = new Date() - startTime;
+          PerformanceMetrics.trackOperation('QUERY', tableName, timeMs, true);
+          Logger.info('DatabaseManager', 'Cache hit', { tableName, filters, time: timeMs });
           return cached;
         }
       }
@@ -49,10 +374,12 @@ const DatabaseManager = {
 
       // Salvar no cache
       if (useCache) {
-        this._setCache(cacheKey, results);
+        CacheManager.set(tableName, filters, results);
       }
 
-      this._logOperation('QUERY', tableName, filters, startTime, results.length);
+      const timeMs = new Date() - startTime;
+      PerformanceMetrics.trackOperation('QUERY', tableName, timeMs, false);
+      Logger.info('DatabaseManager', 'Query completed', { tableName, filters, results: results.length, time: timeMs });
       return results;
 
     } catch (error) {
@@ -184,10 +511,12 @@ const DatabaseManager = {
         context.sheet.appendRow(rowData);
       }
 
-      this._logOperation('INSERT', tableName, { [primaryKey]: generatedId }, startTime);
+      const timeMs = new Date() - startTime;
+      PerformanceMetrics.trackOperation('INSERT', tableName, timeMs, false);
+      Logger.info('DatabaseManager', 'Insert completed', { tableName, id: generatedId, time: timeMs });
 
       // Invalidar cache para forçar reload na próxima query
-      this._invalidateTableCache(tableName);
+      CacheManager.invalidate(tableName);
 
       return { success: true, id: generatedId };
 
@@ -257,9 +586,11 @@ const DatabaseManager = {
       sheet.getRange(rowIndex + 1, 1, 1, rowData.length).setValues([rowData]);
 
       // Invalidar cache
-      this._invalidateTableCache(tableName);
+      CacheManager.invalidate(tableName);
 
-      this._logOperation('UPDATE', tableName, { id }, startTime);
+      const timeMs = new Date() - startTime;
+      PerformanceMetrics.trackOperation('UPDATE', tableName, timeMs, false);
+      Logger.info('DatabaseManager', 'Update completed', { tableName, id, time: timeMs });
       return { success: true };
 
     } catch (error) {
@@ -288,7 +619,9 @@ const DatabaseManager = {
       const result = this.update(tableName, id, deleteData);
 
       if (result.success) {
-        this._logOperation('SOFT_DELETE', tableName, { id }, startTime);
+        const timeMs = new Date() - startTime;
+        PerformanceMetrics.trackOperation('DELETE', tableName, timeMs, false);
+        Logger.info('DatabaseManager', 'Delete completed', { tableName, id, time: timeMs });
       }
 
       return result;
@@ -304,7 +637,36 @@ const DatabaseManager = {
    * @param {string} tableName - Nome da tabela
    */
   invalidateCache(tableName) {
-    this._invalidateTableCache(tableName);
+    CacheManager.invalidate(tableName);
+  },
+
+  /**
+   * Obter relatório de performance
+   * @returns {Object} Relatório detalhado
+   */
+  getPerformanceReport() {
+    return PerformanceMetrics.getReport();
+  },
+
+  /**
+   * Exibir relatório de performance no console
+   */
+  logPerformanceReport() {
+    return PerformanceMetrics.logReport();
+  },
+
+  /**
+   * Resetar métricas de performance
+   */
+  resetPerformanceMetrics() {
+    PerformanceMetrics.reset();
+  },
+
+  /**
+   * Limpar cache expirado
+   */
+  clearExpiredCache() {
+    CacheManager.clearExpired();
   },
 
   /**
