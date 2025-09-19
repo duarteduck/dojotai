@@ -4,72 +4,33 @@
  *  Usa também, se existirem: uid, nome, role, ultimo_acesso
  * ========================================================= */
 
-function loginUser(login, pin) {
+async function loginUser(login, pin) {
   try {
-    if (!login || !pin) return { ok: false, error: 'Informe login e pin.' };
-
-    const { values, headerIndex, ctx } = readTableByNome_('usuarios');
-
-    const cLogin = headerIndex['login'];
-    const cPin   = headerIndex['pin'];
-    const cStat  = headerIndex['status'];
-
-    if (cLogin == null || cPin == null || cStat == null) {
-      return { ok:false, error:'A tabela de usuários precisa de: login, pin, status.' };
+    // Usar SecurityManager sempre
+    if (typeof SecurityManager === 'undefined') {
+      throw new Error('SecurityManager não disponível');
     }
 
-    const cUid   = headerIndex['uid'];
-    const cNome  = headerIndex['nome'];
-    const cRole  = headerIndex['role'];
-    const cLast  = headerIndex['ultimo_acesso'];
-
-    let foundRow = -1;
-    let user = null;
-
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r];
-      const st  = String(row[cStat] || '').toLowerCase();
-      if (st !== 'ativo' && st !== 'active' && st !== '1' && st !== 'true') continue;
-
-      if (String(row[cLogin]).trim() === String(login).trim()
-       && String(row[cPin]).trim()   === String(pin).trim()) {
-        foundRow = r + 1; // 1-based
-        user = {
-          uid:  cUid  != null ? String(row[cUid]  || '') : '',
-          nome: cNome != null ? String(row[cNome] || '') : '',
-          role: cRole != null ? String(row[cRole] || '') : 'user',
-          login: String(row[cLogin] || '')
-        };
-        break;
-      }
+    const secureResult = await SecurityManager.secureLogin(login, pin);
+    if (secureResult.ok) {
+      // Converter formato para compatibilidade
+      return {
+        ok: true,
+        user: {
+          uid: secureResult.user.id,  // ID é usado como uid para compatibilidade
+          nome: secureResult.user.nome,
+          role: secureResult.user.role,
+          login: secureResult.user.login
+        }
+      };
     }
 
-    if (!user) return { ok:false, error:'Usuário ou PIN inválidos (ou inativos).' };
-
-    // Atualiza "ultimo_acesso" se existir
-    if (cLast != null && foundRow > 0) {
-      const ref = getPlanRef_('usuarios');
-      const ctx2 = getContextFromRef_(ref);
-      const sheet = ctx2.sheet || ctx.ctx.sheet;
-      sheet.getRange(foundRow, cLast + 1).setValue(nowString_());
-    }
-
-    // Gera UID se vazio (opcional)
-    if (!user.uid && cUid != null && foundRow > 0) {
-      const allIds = values.slice(1).map(r => r[cUid]).filter(Boolean);
-      const newId = generateSequentialId_('U', allIds, 3);
-      const ref = getPlanRef_('usuarios');
-      const ctx2 = getContextFromRef_(ref);
-      const sheet = ctx2.sheet || ctx.ctx.sheet;
-      sheet.getRange(foundRow, cUid + 1).setValue(newId);
-      user.uid = newId;
-    }
-
-    return { ok:true, user };
+    return secureResult; // Retorna erro do SecurityManager
   } catch (err) {
-    return { ok:false, error:'loginUser: ' + (err && err.message || err) };
+    return { ok: false, error: 'loginUser: ' + (err && err.message || err) };
   }
 }
+
 
 /** Lista usuários ATIVOS para atribuição de atividades.
  *  (Agora lê via Tabela Planilhas: entrada 'usuarios')

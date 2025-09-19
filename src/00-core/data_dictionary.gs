@@ -54,7 +54,7 @@ const DATA_DICTIONARY = {
       uid: {
         type: 'TEXT',
         required: true,
-        pattern: 'U{counter}',           
+        pattern: '^U\\d+$',
         description: 'UID único do usuário (chave primária)',
         generated: true,
         example: 'U001'
@@ -433,6 +433,18 @@ const DATA_DICTIONARY = {
         foreignKey: 'categorias_atividades.id',
         description: 'ID da categoria da atividade',
         example: 'CAT-001'
+      },
+
+      // Tags/etiquetas da atividade para filtros e categorização flexível
+      tags: {
+        type: 'TEXT',
+        required: false,
+        description: 'Tags/etiquetas da atividade separadas por vírgula',
+        example: 'kata,avaliacao,iniciante',
+        validation: {
+          pattern: '^[a-zA-Z0-9_,\\s]*$',
+          maxLength: 200
+        }
       },
 
       // Soft delete - marca registro como deletado sem apagar fisicamente

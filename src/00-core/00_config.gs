@@ -21,6 +21,40 @@ const APP_CONFIG = {
     MAX_SESSIONS_PER_USER: 3 // Máximo 3 sessões simultâneas por usuário
   },
 
+  // Configuração de validações
+  VALIDATION: {
+    ENABLE_FK_VALIDATION: true,     // Validar foreign keys
+    ENABLE_BUSINESS_RULES: true,    // Validar regras de negócio
+    ENABLE_ADVANCED_VALIDATION: true, // Validar pattern, enum, etc
+    ENABLE_UNIQUE_CONSTRAINTS: true,  // Validar campos únicos
+    FAIL_ON_VALIDATION_ERROR: true   // Falhar operação se validação falhar
+  },
+
+  // Configuração de tags
+  TAGS: {
+    MAX_LENGTH: 200,              // Tamanho máximo do campo tags
+    SEPARATOR: ',',               // Separador entre tags
+    NORMALIZE_CASE: true,         // Converter para lowercase
+    TRIM_WHITESPACE: true,        // Remover espaços em branco
+    ALLOWED_PATTERN: '^[a-zA-Z0-9_,\\s]*$' // Padrão permitido
+  },
+
+  // Configuração de auditoria/histórico
+  AUDIT: {
+    ENABLE_AUDIT_LOG: false,      // Ativar log de auditoria
+    LOG_OPERATIONS: ['INSERT', 'UPDATE', 'DELETE'], // Operações para logar
+    RETENTION_DAYS: 365,          // Dias para manter logs
+    INCLUDE_DATA_CHANGES: true    // Incluir dados alterados nos logs
+  },
+
+  // Configuração de notificações (futuro)
+  NOTIFICATIONS: {
+    ENABLE_NOTIFICATIONS: false,  // Ativar sistema de notificações
+    DEFAULT_TTL_DAYS: 30,        // Dias para expirar notificações
+    MAX_NOTIFICATIONS_PER_USER: 50, // Máximo de notificações por usuário
+    AUTO_CLEANUP: true           // Limpeza automática de notificações expiradas
+  },
+
   // Configuração principal de planilhas
   PLANILHAS: {
     // ID da planilha principal de configuração
@@ -72,6 +106,16 @@ const APP_CONFIG = {
       prefix: 'SES',
       format: 'SES-{timestamp}{random}', // Ex: SES-202509191234567
       description: 'ID de sessão - SES- + timestamp + random'
+    },
+    notificacoes: {
+      prefix: 'NOT',
+      format: 'NOT-{counter}', // Ex: NOT-001, NOT-002
+      description: 'ID de notificação - NOT- + contador sequencial'
+    },
+    historico: {
+      prefix: 'HIS',
+      format: 'HIS-{counter}', // Ex: HIS-001, HIS-002
+      description: 'ID de histórico - HIS- + contador sequencial'
     }
   }
 };

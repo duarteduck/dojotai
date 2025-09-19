@@ -1111,7 +1111,7 @@ const DatabaseManager = {
       };
 
       // Validar Foreign Keys do registro atualizado
-      const fkValidation = await ValidationEngine.validateRecord(tableName, updatedRecord);
+      const fkValidation = await ValidationEngine.validateRecord(tableName, updatedRecord, id);
       if (!fkValidation.isValid) {
         Logger.warn('DatabaseManager', 'FK validation failed on UPDATE', {
           tableName,
@@ -1868,7 +1868,7 @@ class SecurityManager {
    * @param {string} plainPin - PIN em texto puro
    * @returns {boolean} True se migração foi bem-sucedida
    */
-  static migratePinToHash(tableName, userId, plainPin) {
+  static async migratePinToHash(tableName, userId, plainPin) {
     try {
       Logger.info('SecurityManager', 'Iniciando migração de PIN para hash', { userId });
 
@@ -1876,13 +1876,13 @@ class SecurityManager {
       const hashedPin = this.createStorageHash(plainPin);
 
       // Atualizar no banco
-      const updateResult = DatabaseManager.update(tableName, userId, { pin: hashedPin });
+      const updateResult = await DatabaseManager.update(tableName, userId, { pin: hashedPin });
 
-      if (updateResult) {
+      if (updateResult && updateResult.success) {
         Logger.info('SecurityManager', 'PIN migrado para hash com sucesso', { userId });
         return true;
       } else {
-        Logger.warn('SecurityManager', 'Falha na migração de PIN', { userId });
+        Logger.warn('SecurityManager', 'Falha na migração de PIN', { userId, updateResult });
         return false;
       }
 
@@ -1898,7 +1898,7 @@ class SecurityManager {
    * @param {string} pin - PIN digitado
    * @returns {Object} Resultado do login
    */
-  static secureLogin(login, pin) {
+  static async secureLogin(login, pin) {
     try {
       Logger.info('SecurityManager', 'Tentativa de login seguro', { login });
 
@@ -1931,24 +1931,27 @@ class SecurityManager {
         return { ok: false, error: 'Usuário ou PIN inválidos.' };
       }
 
+      // Usar uid como chave primária para tabela usuarios
+      const userId = usuario.uid || usuario.id;
+
       // Se PIN é texto puro, migrar para hash automaticamente
       if (!this.isHash(usuario.pin)) {
         Logger.info('SecurityManager', 'Migrando PIN para hash', { login });
-        this.migratePinToHash('usuarios', usuario.id, pin);
+        await this.migratePinToHash('usuarios', userId, pin);
       }
 
       // Atualizar último acesso
-      DatabaseManager.update('usuarios', usuario.id, {
+      await DatabaseManager.update('usuarios', userId, {
         ultimo_acesso: Utilities.formatDate(new Date(), APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss')
       });
 
-      Logger.info('SecurityManager', 'Login bem-sucedido', { login, userId: usuario.id });
+      Logger.info('SecurityManager', 'Login bem-sucedido', { login, userId });
 
       return {
         ok: true,
         user: {
-          id: usuario.id,
-          uid: usuario.uid || '',
+          id: userId,
+          uid: userId,
           nome: usuario.nome || '',
           login: usuario.login,
           role: usuario.role || 'user'
@@ -2641,6 +2644,321 @@ function testPaginationPerformance() {
 
   } catch (error) {
     console.error('❌ Erro no teste de performance:', error);
+    return { error: error.message };
+  }
+}
+
+/**
+ * TagManager - Gerenciamento de tags/etiquetas
+ */
+class TagManager {
+
+  /**
+   * Converter string de tags em array
+   * @param {string} tagsString - String com tags separadas por vírgula
+   * @returns {Array} Array de tags limpas
+   */
+  static parseTagsString(tagsString) {
+    if (!tagsString || typeof tagsString !== 'string') {
+      return [];
+    }
+
+    return tagsString
+      .split(',')
+      .map(tag => tag.trim().toLowerCase())
+      .filter(tag => tag.length > 0);
+  }
+
+  /**
+   * Converter array de tags em string
+   * @param {Array} tagsArray - Array de tags
+   * @returns {string} String com tags separadas por vírgula
+   */
+  static tagsArrayToString(tagsArray) {
+    if (!Array.isArray(tagsArray)) {
+      return '';
+    }
+
+    return tagsArray
+      .map(tag => String(tag).trim().toLowerCase())
+      .filter(tag => tag.length > 0)
+      .join(',');
+  }
+
+  /**
+   * Filtrar registros por tags
+   * @param {Array} records - Registros para filtrar
+   * @param {Array|string} searchTags - Tags para buscar
+   * @param {boolean} matchAll - Se true, deve ter todas as tags. Se false, qualquer uma
+   * @returns {Array} Registros filtrados
+   */
+  static filterByTags(records, searchTags, matchAll = false) {
+    try {
+      if (!Array.isArray(records) || records.length === 0) {
+        return [];
+      }
+
+      // Converter searchTags para array se for string
+      const searchTagsArray = Array.isArray(searchTags)
+        ? searchTags.map(tag => String(tag).trim().toLowerCase())
+        : this.parseTagsString(searchTags);
+
+      if (searchTagsArray.length === 0) {
+        return records; // Sem filtro de tags
+      }
+
+      return records.filter(record => {
+        const recordTags = this.parseTagsString(record.tags);
+
+        if (recordTags.length === 0) {
+          return false; // Registro sem tags não bate com filtro
+        }
+
+        if (matchAll) {
+          // Deve ter TODAS as tags pesquisadas
+          return searchTagsArray.every(searchTag =>
+            recordTags.some(recordTag => recordTag.includes(searchTag))
+          );
+        } else {
+          // Deve ter PELO MENOS UMA das tags pesquisadas
+          return searchTagsArray.some(searchTag =>
+            recordTags.some(recordTag => recordTag.includes(searchTag))
+          );
+        }
+      });
+
+    } catch (error) {
+      Logger.error('TagManager', 'Erro ao filtrar por tags', {
+        searchTags,
+        matchAll,
+        error: error.message
+      });
+      return records; // Retorna sem filtro em caso de erro
+    }
+  }
+
+  /**
+   * Obter todas as tags únicas de uma lista de registros
+   * @param {Array} records - Lista de registros
+   * @param {string} tagField - Campo que contém as tags (default: 'tags')
+   * @returns {Array} Array de tags únicas ordenadas
+   */
+  static getAllUniqueTags(records, tagField = 'tags') {
+    try {
+      if (!Array.isArray(records)) {
+        return [];
+      }
+
+      const allTags = new Set();
+
+      records.forEach(record => {
+        const tags = this.parseTagsString(record[tagField]);
+        tags.forEach(tag => allTags.add(tag));
+      });
+
+      return Array.from(allTags).sort();
+
+    } catch (error) {
+      Logger.error('TagManager', 'Erro ao obter tags únicas', {
+        tagField,
+        error: error.message
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Contar ocorrências de cada tag
+   * @param {Array} records - Lista de registros
+   * @param {string} tagField - Campo que contém as tags (default: 'tags')
+   * @returns {Object} Objeto com contagem de cada tag
+   */
+  static getTagCounts(records, tagField = 'tags') {
+    try {
+      if (!Array.isArray(records)) {
+        return {};
+      }
+
+      const tagCounts = {};
+
+      records.forEach(record => {
+        const tags = this.parseTagsString(record[tagField]);
+        tags.forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      });
+
+      return tagCounts;
+
+    } catch (error) {
+      Logger.error('TagManager', 'Erro ao contar tags', {
+        tagField,
+        error: error.message
+      });
+      return {};
+    }
+  }
+
+  /**
+   * Validar formato de tags
+   * @param {string} tagsString - String de tags para validar
+   * @returns {Object} {isValid, errors, cleanedTags}
+   */
+  static validateTags(tagsString) {
+    try {
+      const errors = [];
+      let isValid = true;
+
+      if (!tagsString || typeof tagsString !== 'string') {
+        return { isValid: true, errors: [], cleanedTags: '' };
+      }
+
+      // Verificar padrão (só letras, números, underscore, vírgula, espaços)
+      const pattern = /^[a-zA-Z0-9_,\s]*$/;
+      if (!pattern.test(tagsString)) {
+        isValid = false;
+        errors.push('Tags devem conter apenas letras, números, underscore e vírgulas');
+      }
+
+      // Verificar comprimento
+      if (tagsString.length > 200) {
+        isValid = false;
+        errors.push('Tags não podem exceder 200 caracteres');
+      }
+
+      // Limpar e formatar tags
+      const cleanedTags = this.parseTagsString(tagsString);
+      const cleanedString = this.tagsArrayToString(cleanedTags);
+
+      return {
+        isValid,
+        errors,
+        cleanedTags: cleanedString
+      };
+
+    } catch (error) {
+      Logger.error('TagManager', 'Erro na validação de tags', {
+        tagsString,
+        error: error.message
+      });
+      return {
+        isValid: false,
+        errors: ['Erro interno na validação'],
+        cleanedTags: ''
+      };
+    }
+  }
+}
+
+/**
+ * Testes do TagManager
+ */
+
+/**
+ * Teste básico do TagManager
+ */
+function testTagManager() {
+  try {
+    console.log('🏷️ Testando TagManager...');
+
+    // Teste 1: Parse de tags
+    const tags1 = TagManager.parseTagsString('kata, avaliacao, INICIANTE ');
+    console.log(`✅ Teste 1 - Parse tags: [${tags1.join(', ')}]`);
+
+    // Teste 2: Array para string
+    const tagsString = TagManager.tagsArrayToString(['Kata', ' Avaliacao', 'iniciante']);
+    console.log(`✅ Teste 2 - Array para string: "${tagsString}"`);
+
+    // Teste 3: Validação
+    const validation = TagManager.validateTags('kata,avaliação,teste123_ok');
+    console.log(`✅ Teste 3 - Validação: ${validation.isValid ? 'Válida' : 'Inválida'}`);
+    if (!validation.isValid) {
+      console.log(`   Erros: ${validation.errors.join(', ')}`);
+    }
+
+    // Teste 4: Filtro de registros simulados
+    const mockRecords = [
+      { id: '1', titulo: 'Atividade 1', tags: 'kata,iniciante' },
+      { id: '2', titulo: 'Atividade 2', tags: 'kumite,avancado' },
+      { id: '3', titulo: 'Atividade 3', tags: 'kata,avancado' },
+      { id: '4', titulo: 'Atividade 4', tags: '' }
+    ];
+
+    const filteredKata = TagManager.filterByTags(mockRecords, ['kata']);
+    console.log(`✅ Teste 4 - Filtro 'kata': ${filteredKata.length} registros`);
+
+    const filteredAvancado = TagManager.filterByTags(mockRecords, 'avancado');
+    console.log(`✅ Teste 5 - Filtro 'avancado': ${filteredAvancado.length} registros`);
+
+    // Teste 6: Tags únicas
+    const uniqueTags = TagManager.getAllUniqueTags(mockRecords);
+    console.log(`✅ Teste 6 - Tags únicas: [${uniqueTags.join(', ')}]`);
+
+    // Teste 7: Contagem de tags
+    const tagCounts = TagManager.getTagCounts(mockRecords);
+    console.log(`✅ Teste 7 - Contagem: ${JSON.stringify(tagCounts)}`);
+
+    console.log('🎉 TagManager: Todos os testes passaram!');
+    return { success: true };
+
+  } catch (error) {
+    console.error('❌ Erro no teste do TagManager:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Demonstração de tags com dados reais
+ */
+function demonstrateTagsWithRealData() {
+  try {
+    console.log('🏷️ DEMONSTRAÇÃO DE TAGS COM DADOS REAIS');
+    console.log('='.repeat(50));
+
+    // Buscar atividades reais
+    const atividades = DatabaseManager.query('atividades', {}, false);
+
+    if (!atividades || atividades.length === 0) {
+      console.log('⚠️ Nenhuma atividade encontrada para demonstração');
+      return { error: 'Nenhum dado disponível' };
+    }
+
+    console.log(`📊 Total de atividades: ${atividades.length}`);
+
+    // Verificar quantas já têm tags
+    const comTags = atividades.filter(atividade => atividade.tags && atividade.tags.trim());
+    const semTags = atividades.length - comTags.length;
+
+    console.log(`🏷️ Com tags: ${comTags.length}`);
+    console.log(`📝 Sem tags: ${semTags}`);
+
+    if (comTags.length > 0) {
+      // Mostrar tags existentes
+      const uniqueTags = TagManager.getAllUniqueTags(comTags);
+      console.log(`\n🔖 Tags existentes: [${uniqueTags.join(', ')}]`);
+
+      // Mostrar contagem
+      const tagCounts = TagManager.getTagCounts(comTags);
+      console.log('\n📊 Contagem de tags:');
+      Object.entries(tagCounts).forEach(([tag, count]) => {
+        console.log(`   ${tag}: ${count}x`);
+      });
+
+      // Demonstrar filtro
+      if (uniqueTags.length > 0) {
+        const firstTag = uniqueTags[0];
+        const filtered = TagManager.filterByTags(comTags, [firstTag]);
+        console.log(`\n🔍 Filtro por '${firstTag}': ${filtered.length} atividades`);
+      }
+    } else {
+      console.log('\n💡 Dica: Adicione tags às atividades para aproveitar o sistema de filtros!');
+      console.log('   Exemplo: "kata,iniciante" ou "kumite,avancado,competicao"');
+    }
+
+    return { success: true, totalActivities: atividades.length, withTags: comTags.length };
+
+  } catch (error) {
+    console.error('❌ Erro na demonstração:', error);
     return { error: error.message };
   }
 }
