@@ -26,42 +26,8 @@ const APP_CONFIG = {
     A1: 'Planilhas!A1:H'
   },
 
-  // Mapeamento de tabelas existentes (Semana 1)
-  EXISTING_TABLES: {
-    // Tabelas que já existem e vamos usar imediatamente
-    usuarios: {
-      name: 'usuarios',
-      description: 'Usuários do sistema'
-    },
-    atividades: {
-      name: 'atividades',
-      description: 'Atividades do dojo'
-    },
-    membros: {
-      name: 'membros',
-      description: 'Membros do dojo'
-    },
-    participacoes: {
-      name: 'participacoes',
-      description: 'Participações em atividades'
-    },
-    categoria_atividades: {
-      name: 'categoria_atividades',
-      description: 'Categorias de atividades'
-    },
-    menu: {
-      name: 'menu',
-      description: 'Menu dinâmico do sistema'
-    },
-    planilhas: {
-      name: 'planilhas',
-      description: 'Configuração de planilhas'
-    },
-    dicionario: {
-      name: 'dicionario',
-      description: 'Dicionário de dados das tabelas (NOVO V2)'
-    }
-  },
+  // Tabelas serão carregadas dinamicamente do dicionário
+  // Usar getExistingTables() para obter lista atual
 
   // Padrões de ID baseados no sistema real
   ID_PATTERNS: {
@@ -85,7 +51,7 @@ const APP_CONFIG = {
       format: 'P{timestamp}{random}', // Ex: P437880409341
       description: 'ID de participação - P + timestamp + random'
     },
-    categoria_atividades: {
+    categorias_atividades: {
       prefix: 'CAT',
       format: 'CAT-{counter}', // Ex: CAT-001, CAT-002
       description: 'ID de categoria - CAT- + contador sequencial'
@@ -107,12 +73,43 @@ function getAppConfig() {
 }
 
 /**
+ * Função para obter todas as tabelas do dicionário
+ * @returns {Object} Tabelas disponíveis
+ */
+function getExistingTables() {
+  if (typeof DATA_DICTIONARY === 'undefined') {
+    console.warn('⚠️ DATA_DICTIONARY não encontrado, usando configuração básica');
+    return {
+      usuarios: { name: 'usuarios', description: 'Usuários do sistema' },
+      atividades: { name: 'atividades', description: 'Atividades do dojo' },
+      membros: { name: 'membros', description: 'Membros do dojo' },
+      participacoes: { name: 'participacoes', description: 'Participações em atividades' },
+      categorias_atividades: { name: 'categorias_atividades', description: 'Categorias de atividades' },
+      menu: { name: 'menu', description: 'Menu dinâmico do sistema' },
+      planilhas: { name: 'planilhas', description: 'Configuração de planilhas' }
+    };
+  }
+
+  const tables = {};
+  Object.keys(DATA_DICTIONARY).forEach(key => {
+    const tableConfig = DATA_DICTIONARY[key];
+    tables[key] = {
+      name: tableConfig.tableName || key,
+      description: tableConfig.description || 'Tabela do sistema'
+    };
+  });
+
+  return tables;
+}
+
+/**
  * Função para obter configuração de uma tabela específica
  * @param {string} tableName - Nome da tabela
  * @returns {Object|null} Configuração da tabela
  */
 function getTableConfig(tableName) {
-  return APP_CONFIG.EXISTING_TABLES[tableName] || null;
+  const existingTables = getExistingTables();
+  return existingTables[tableName] || null;
 }
 
 /**
@@ -132,8 +129,9 @@ function getIdPattern(tableName) {
  * Log de inicialização
  */
 function logConfigInit() {
+  const existingTables = getExistingTables();
   console.log(`🚀 Sistema Dojotai V${APP_CONFIG.VERSION} inicializado`);
-  console.log(`📊 Tabelas configuradas: ${Object.keys(APP_CONFIG.EXISTING_TABLES).length}`);
+  console.log(`📊 Tabelas configuradas: ${Object.keys(existingTables).length}`);
   console.log(`🕒 Timezone: ${APP_CONFIG.TZ}`);
   console.log(`📝 Log Level: ${APP_CONFIG.LOG_LEVEL}`);
 }

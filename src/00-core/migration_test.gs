@@ -164,16 +164,22 @@ function testConfiguration() {
       throw new Error('APP_CONFIG não definido');
     }
 
-    // Verificar propriedades essenciais
-    const requiredProps = ['VERSION', 'TZ', 'PLANILHAS', 'EXISTING_TABLES'];
+    // Verificar propriedades essenciais (removido EXISTING_TABLES)
+    const requiredProps = ['VERSION', 'TZ', 'PLANILHAS'];
     for (const prop of requiredProps) {
       if (!APP_CONFIG[prop]) {
         throw new Error(`APP_CONFIG.${prop} não definido`);
       }
     }
 
+    // Verificar se getExistingTables() funciona
+    const existingTables = getExistingTables();
+    if (typeof existingTables !== 'object' || existingTables === null) {
+      throw new Error('getExistingTables() não retorna objeto válido');
+    }
+
     // Verificar se tem tabelas configuradas
-    const tableCount = Object.keys(APP_CONFIG.EXISTING_TABLES).length;
+    const tableCount = Object.keys(existingTables).length;
     if (tableCount === 0) {
       throw new Error('Nenhuma tabela configurada');
     }
@@ -310,49 +316,60 @@ function testCRUDOperations() {
     const testData = {
       nome: 'Teste Migração V2',
       login: 'teste_v2',
-      pin: '1234',
-      papel: 'Usuário'
+      pin: '1234'
+      // status será gerado automaticamente com default 'Ativo'
+      // uid e criado_em são gerados automaticamente
     };
 
     const insertResult = DatabaseManager.insert('usuarios', testData);
-    console.log('Insert resultado:', insertResult.success ? `✅ ID: ${insertResult.id}` : `❌ ${insertResult.error}`);
+    console.log('Insert resultado:', insertResult.success ? `✅ UID: ${insertResult.id}` : `❌ ${insertResult.error}`);
 
     if (!insertResult.success) {
       throw new Error('Insert falhou: ' + insertResult.error);
     }
 
-    const newId = insertResult.id;
+    const newUid = insertResult.id; // Na verdade é o UID
 
-    // Teste 2: FIND BY ID e verificar campos
-    console.log('\n🔍 Teste FIND BY ID:');
-    const foundUser = DatabaseManager.findById('usuarios', newId);
+    // Teste 2: FIND BY UID (chave primária da tabela usuarios)
+    console.log('\n🔍 Teste FIND BY UID:');
+    const foundUser = DatabaseManager.findById('usuarios', newUid);
     console.log('FindById resultado:', foundUser ? `✅ Encontrado: ${foundUser.nome}` : '❌ Não encontrado');
 
-    // Teste 2.1: Verificar campos obrigatórios
+    // Teste 2.1: Verificar campos obrigatórios gerados automaticamente
     if (foundUser) {
-      console.log('\n🔍 Verificando campos obrigatórios:');
-      console.log(`   ID: ${foundUser.id ? '✅' : '❌'} ${foundUser.id}`);
-      console.log(`   UID: ${foundUser.uid ? '✅' : '❌'} ${foundUser.uid}`);
-      console.log(`   created_at: ${foundUser.created_at ? '✅' : '❌'} ${foundUser.created_at}`);
+      console.log('\n🔍 Verificando campos gerados automaticamente:');
+      console.log(`   UID (padrão U{counter}): ${foundUser.uid ? '✅' : '❌'} ${foundUser.uid}`);
       console.log(`   criado_em: ${foundUser.criado_em ? '✅' : '❌'} ${foundUser.criado_em}`);
-      console.log(`   status: ${foundUser.status ? '✅' : '❌'} ${foundUser.status}`);
+      console.log(`   status (default): ${foundUser.status ? '✅' : '❌'} ${foundUser.status}`);
+      console.log(`   nome: ${foundUser.nome ? '✅' : '❌'} ${foundUser.nome}`);
+      console.log(`   login: ${foundUser.login ? '✅' : '❌'} ${foundUser.login}`);
 
       // Verificar se algum campo obrigatório está faltando
       const missingFields = [];
       if (!foundUser.uid) missingFields.push('uid');
       if (!foundUser.criado_em) missingFields.push('criado_em');
       if (!foundUser.status) missingFields.push('status');
+      if (!foundUser.nome) missingFields.push('nome');
+      if (!foundUser.login) missingFields.push('login');
+      if (!foundUser.pin) missingFields.push('pin');
 
       if (missingFields.length > 0) {
         console.log(`⚠️ Campos faltantes: ${missingFields.join(', ')}`);
       } else {
         console.log('✅ Todos os campos obrigatórios presentes');
       }
+
+      // Verificar padrão do UID
+      if (foundUser.uid && foundUser.uid.startsWith('U')) {
+        console.log(`✅ Padrão de UID correto: ${foundUser.uid}`);
+      } else {
+        console.log(`❌ Padrão de UID incorreto: ${foundUser.uid}`);
+      }
     }
 
     // Teste 3: UPDATE
     console.log('\n✏️ Teste UPDATE:');
-    const updateResult = DatabaseManager.update('usuarios', newId, {
+    const updateResult = DatabaseManager.update('usuarios', newUid, {
       nome: 'Teste Migração V2 - ATUALIZADO',
       status: 'Inativo'
     });
@@ -360,21 +377,21 @@ function testCRUDOperations() {
 
     // Teste 4: VERIFICAR UPDATE
     console.log('\n🔍 Verificar UPDATE:');
-    const updatedUser = DatabaseManager.findById('usuarios', newId);
+    const updatedUser = DatabaseManager.findById('usuarios', newUid);
     console.log('Usuário atualizado:', updatedUser ? `✅ Nome: ${updatedUser.nome}, Status: ${updatedUser.status}` : '❌ Não encontrado');
 
     // Teste 5: DELETE (Soft Delete)
     console.log('\n🗑️ Teste DELETE:');
-    const deleteResult = DatabaseManager.update('usuarios', newId, { deleted: true });
+    const deleteResult = DatabaseManager.delete('usuarios', newUid);
     console.log('Delete resultado:', deleteResult.success ? '✅ Deletado (soft)' : `❌ ${deleteResult.error}`);
 
     // Teste 6: VERIFICAR DELETE
     console.log('\n🔍 Verificar DELETE:');
-    const deletedUser = DatabaseManager.findById('usuarios', newId);
+    const deletedUser = DatabaseManager.findById('usuarios', newUid);
     console.log('Usuário deletado ainda aparece?', deletedUser ? '❌ Ainda aparece (problema!)' : '✅ Filtrado corretamente');
 
     console.log('\n✅ CRUD completo testado!');
-    return { success: true, testId: newId };
+    return { success: true, testId: newUid };
 
   } catch (error) {
     console.error('❌ Erro no teste CRUD:', error);
@@ -443,7 +460,8 @@ function testAllTables() {
   try {
     console.log('📋 TESTE TABELAS: Verificando todas as tabelas...');
 
-    const tables = Object.keys(APP_CONFIG.EXISTING_TABLES);
+    const existingTables = getExistingTables();
+    const tables = Object.keys(existingTables);
     const results = [];
 
     tables.forEach(tableName => {

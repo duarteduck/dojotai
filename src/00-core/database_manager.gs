@@ -69,7 +69,15 @@ const DatabaseManager = {
    */
   findById(tableName, id) {
     try {
-      const results = this.query(tableName, { id }, true);
+      // Obter chave primária do dicionário
+      const table = getTableDictionary(tableName);
+      const primaryKey = table?.primaryKey || 'id';
+
+      // Criar filtro usando a chave primária correta
+      const filter = {};
+      filter[primaryKey] = id;
+
+      const results = this.query(tableName, filter, true);
       return results.length > 0 ? results[0] : null;
     } catch (error) {
       this._logError('findById', tableName, error, { id });
@@ -106,8 +114,30 @@ const DatabaseManager = {
     try {
       const startTime = new Date();
 
-      // Validar dados primeiro
-      const validation = this._validateData(tableName, data);
+      // Obter chave primária do dicionário
+      const table = getTableDictionary(tableName);
+      const primaryKey = table?.primaryKey || 'id';
+
+      // Gerar ID único
+      const generatedId = this._generateId(tableName);
+
+      // Preparar dados base com ID já definido
+      const baseData = {
+        [primaryKey]: generatedId, // Usar chave primária correta
+        ...data
+      };
+
+      // Adicionar campos específicos da tabela (sem sobrescrever a chave primária)
+      const tableFields = this._getTableSpecificFields(tableName, baseData);
+
+      // Montar record final
+      const record = {
+        ...baseData,
+        ...tableFields
+      };
+
+      // Validar dados APÓS aplicar campos gerados e padrões
+      const validation = this._validateData(tableName, record);
       if (!validation.valid) {
         return {
           success: false,
@@ -116,16 +146,6 @@ const DatabaseManager = {
         };
       }
 
-      // Gerar ID único
-      const id = this._generateId(tableName);
-
-      // Preparar dados com metadados específicos por tabela
-      const record = {
-        id,
-        ...data,
-        ...this._getTableSpecificFields(tableName, data)
-      };
-
       // Obter configuração da tabela usando sistema atual
       const tableRef = this._getTableReference(tableName);
       const context = this._getContext(tableRef);
@@ -133,8 +153,25 @@ const DatabaseManager = {
       // Obter headers existentes
       const headers = this._getHeaders(context);
 
-      // Converter objeto para array na ordem dos headers
-      const rowData = headers.map(header => record[header] || '');
+      // Converter objeto para array na ordem dos headers - evitando booleans
+      const rowData = headers.map(header => {
+        let value = record[header];
+
+        // Converter undefined/null para string vazia
+        if (value === undefined || value === null) {
+          value = '';
+        }
+        // Converter boolean para string
+        else if (typeof value === 'boolean') {
+          value = value ? 'true' : 'false';
+        }
+        // Garantir que outros tipos sejam string
+        else if (typeof value !== 'string') {
+          value = String(value);
+        }
+
+        return value;
+      });
 
       // Inserir na planilha
       if (context.namedRange) {
@@ -147,11 +184,12 @@ const DatabaseManager = {
         context.sheet.appendRow(rowData);
       }
 
-      // Invalidar cache
+      this._logOperation('INSERT', tableName, { [primaryKey]: generatedId }, startTime);
+
+      // Invalidar cache para forçar reload na próxima query
       this._invalidateTableCache(tableName);
 
-      this._logOperation('INSERT', tableName, { id }, startTime);
-      return { success: true, id };
+      return { success: true, id: generatedId };
 
     } catch (error) {
       this._logError('insert', tableName, error, { data });
@@ -183,6 +221,7 @@ const DatabaseManager = {
         updated_at: new Date().toISOString()
       };
 
+
       // Encontrar linha na planilha e atualizar
       const rowIndex = this._findRowIndex(tableName, id);
       if (rowIndex === -1) {
@@ -193,8 +232,25 @@ const DatabaseManager = {
       const context = this._getContext(tableRef);
       const headers = this._getHeaders(context);
 
-      // Converter para array
-      const rowData = headers.map(header => updatedRecord[header] || '');
+      // Converter para array - garantindo que booleans virem strings
+      const rowData = headers.map(header => {
+        let value = updatedRecord[header];
+
+        // Converter undefined/null para string vazia
+        if (value === undefined || value === null) {
+          value = '';
+        }
+        // Converter boolean para string
+        else if (typeof value === 'boolean') {
+          value = value ? 'true' : 'false';
+        }
+        // Garantir que outros tipos sejam string
+        else if (typeof value !== 'string') {
+          value = String(value);
+        }
+
+        return value;
+      });
 
       // Atualizar linha (rowIndex + 1 porque planilha é 1-indexed)
       const sheet = context.sheet;
@@ -208,6 +264,37 @@ const DatabaseManager = {
 
     } catch (error) {
       this._logError('update', tableName, error, { id, data });
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Deletar registro (soft delete - marca como deletado)
+   * @param {string} tableName - Nome da tabela
+   * @param {string} id - ID do registro a ser deletado
+   * @returns {Object} Resultado da operação
+   */
+  delete(tableName, id) {
+    try {
+      const startTime = new Date();
+
+      // Usar soft delete - marca como deletado
+      // Usar 'x' para marcar como deletado (simples e eficaz)
+      const deleteData = {
+        deleted: 'x',
+        atualizado_em: this._formatTimestamp(new Date())
+      };
+
+      const result = this.update(tableName, id, deleteData);
+
+      if (result.success) {
+        this._logOperation('SOFT_DELETE', tableName, { id }, startTime);
+      }
+
+      return result;
+
+    } catch (error) {
+      this._logError('delete', tableName, error, { id });
       return { success: false, error: error.message };
     }
   },
@@ -248,7 +335,7 @@ const DatabaseManager = {
       const headers = values[0];
       const dataRows = values.slice(1);
 
-      return dataRows
+      const mappedData = dataRows
         .filter(row => row.some(cell => cell !== null && cell !== '')) // Remove linhas vazias
         .map(row => {
           const obj = {};
@@ -256,8 +343,10 @@ const DatabaseManager = {
             obj[header] = row[index] || '';
           });
           return obj;
-        })
-        .filter(obj => !obj.deleted); // Exclui registros soft deleted
+        });
+
+      const filteredData = mappedData.filter(obj => obj.deleted !== 'x');
+      return filteredData;
 
     } catch (error) {
       console.error(`❌ Erro ao buscar dados de ${tableName}:`, error);
@@ -299,12 +388,6 @@ const DatabaseManager = {
   _generateId(tableName) {
     const pattern = APP_CONFIG.ID_PATTERNS[tableName];
 
-    if (!pattern) {
-      // Fallback para padrão genérico
-      console.warn(`⚠️ Padrão de ID não definido para ${tableName}, usando genérico`);
-      return `GEN-${Date.now()}`;
-    }
-
     switch (tableName) {
       case 'usuarios':
       case 'membros':
@@ -319,7 +402,7 @@ const DatabaseManager = {
         const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
         return `${pattern.prefix}-${timestamp}${random}`;
 
-      case 'categoria_atividades':
+      case 'categorias_atividades':
       case 'menu':
         // Padrão: CAT-{counter} - precisa buscar último número
         const lastCounter = this._getLastCounter(tableName, pattern.prefix);
@@ -441,11 +524,31 @@ const DatabaseManager = {
    */
   _findRowIndex(tableName, id) {
     try {
-      const { values } = readTableByNome_(tableName);
+      const result = readTableByNome_(tableName);
+      const { values } = result;
+
+      if (!values || values.length <= 1) {
+        console.error(`❌ Tabela ${tableName} vazia ou sem dados`);
+        return -1;
+      }
+
+      // Headers está na primeira linha de values
+      const headers = values[0];
+
+      // Obter chave primária do dicionário
+      const table = getTableDictionary(tableName);
+      const primaryKey = table?.primaryKey || 'id';
+
+      // Encontrar índice da coluna da chave primária
+      const primaryKeyIndex = headers.indexOf(primaryKey);
+      if (primaryKeyIndex === -1) {
+        console.error(`❌ Chave primária '${primaryKey}' não encontrada nos headers:`, headers);
+        return -1;
+      }
 
       for (let i = 1; i < values.length; i++) { // i=1 para pular header
         const row = values[i];
-        if (row[0] === id) { // Assume que ID está na primeira coluna
+        if (row[primaryKeyIndex] === id) {
           return i;
         }
       }
@@ -487,7 +590,10 @@ const DatabaseManager = {
 
     // Obter valores padrão do dicionário
     const defaultValues = getDefaultValues(tableName);
+
+    // Aplicar valores padrão diretamente
     Object.assign(fields, defaultValues);
+
 
     // Obter campos gerados automaticamente
     const generatedFields = getGeneratedFields(tableName);
@@ -495,10 +601,11 @@ const DatabaseManager = {
     generatedFields.forEach(fieldName => {
       const fieldDef = getFieldDefinition(tableName, fieldName);
 
-      if (!data[fieldName]) { // Só gerar se não foi fornecido
+      // Só gerar se não foi fornecido E não está no record já montado
+      if (!data[fieldName] && fields[fieldName] === undefined) {
         switch (fieldName) {
           case 'uid':
-            fields.uid = this._generateUID();
+            fields.uid = this._generateId('usuarios'); // Usar função unificada
             break;
 
           case 'criado_em':
@@ -535,14 +642,6 @@ const DatabaseManager = {
     }
   },
 
-  /**
-   * Gerar UID único para usuários
-   */
-  _generateUID() {
-    const timestamp = Date.now().toString();
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `U${timestamp.slice(-8)}${random}`;
-  },
 
   /**
    * Formatar timestamp no formato do sistema
