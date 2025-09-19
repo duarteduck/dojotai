@@ -58,6 +58,488 @@ class Logger {
 }
 
 /**
+ * ValidationEngine - Sistema de validações avançadas
+ */
+class ValidationEngine {
+
+  /**
+   * Extrair Foreign Keys do dicionário
+   * @param {string} tableName - Nome da tabela
+   * @returns {Array} Array de objetos {field, targetTable, targetField}
+   */
+  static getForeignKeys(tableName) {
+    try {
+      if (typeof DATA_DICTIONARY === 'undefined' || !DATA_DICTIONARY[tableName]) {
+        Logger.warn('ValidationEngine', 'Tabela não encontrada no dicionário', { tableName });
+        return [];
+      }
+
+      const tableConfig = DATA_DICTIONARY[tableName];
+      const foreignKeys = [];
+
+      Object.entries(tableConfig.fields || {}).forEach(([fieldName, fieldConfig]) => {
+        if (fieldConfig.foreignKey) {
+          const [targetTable, targetField] = fieldConfig.foreignKey.split('.');
+          foreignKeys.push({
+            field: fieldName,
+            targetTable,
+            targetField,
+            required: fieldConfig.required || false
+          });
+        }
+      });
+
+      Logger.debug('ValidationEngine', 'Foreign keys encontradas', { tableName, count: foreignKeys.length, keys: foreignKeys });
+      return foreignKeys;
+
+    } catch (error) {
+      Logger.error('ValidationEngine', 'Erro ao extrair foreign keys', { tableName, error: error.message });
+      return [];
+    }
+  }
+
+  /**
+   * Validar Foreign Keys de um registro
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados do registro
+   * @returns {Object} {isValid, errors}
+   */
+  static async validateForeignKeys(tableName, data) {
+    const startTime = new Date();
+    const foreignKeys = this.getForeignKeys(tableName);
+    const errors = [];
+
+    if (foreignKeys.length === 0) {
+      Logger.debug('ValidationEngine', 'Nenhuma FK para validar', { tableName });
+      return { isValid: true, errors: [] };
+    }
+
+    Logger.info('ValidationEngine', 'Validando foreign keys', { tableName, fkCount: foreignKeys.length });
+
+    for (const fk of foreignKeys) {
+      const fieldValue = data[fk.field];
+
+      // Se campo é obrigatório e está vazio
+      if (fk.required && (!fieldValue || fieldValue.trim() === '')) {
+        errors.push(`Campo ${fk.field} é obrigatório`);
+        continue;
+      }
+
+      // Se campo está vazio mas não é obrigatório, pular validação
+      if (!fieldValue || fieldValue.trim() === '') {
+        continue;
+      }
+
+      // Validar se valor existe na tabela de referência
+      try {
+        const targetRecords = DatabaseManager.query(fk.targetTable, { [fk.targetField]: fieldValue }, true);
+
+        if (targetRecords.length === 0) {
+          errors.push(`${fk.field}: Valor '${fieldValue}' não existe em ${fk.targetTable}.${fk.targetField}`);
+          Logger.warn('ValidationEngine', 'FK validation failed', {
+            field: fk.field,
+            value: fieldValue,
+            target: `${fk.targetTable}.${fk.targetField}`
+          });
+        } else {
+          Logger.debug('ValidationEngine', 'FK validation passed', {
+            field: fk.field,
+            value: fieldValue,
+            target: `${fk.targetTable}.${fk.targetField}`
+          });
+        }
+
+      } catch (error) {
+        errors.push(`${fk.field}: Erro ao validar referência - ${error.message}`);
+        Logger.error('ValidationEngine', 'Erro na validação de FK', {
+          field: fk.field,
+          value: fieldValue,
+          error: error.message
+        });
+      }
+    }
+
+    const timeMs = new Date() - startTime;
+    const isValid = errors.length === 0;
+
+    PerformanceMetrics.trackOperation('FK_VALIDATION', tableName, timeMs, false);
+
+    Logger.info('ValidationEngine', 'FK validation completed', {
+      tableName,
+      isValid,
+      errorCount: errors.length,
+      time: timeMs
+    });
+
+    return { isValid, errors };
+  }
+
+  /**
+   * Validar Business Rules de um registro
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados do registro
+   * @returns {Object} {isValid, errors}
+   */
+  static validateBusinessRules(tableName, data) {
+    const startTime = new Date();
+    const errors = [];
+
+    Logger.info('ValidationEngine', 'Validando business rules', { tableName });
+
+    try {
+      // Regras específicas por tabela
+      switch (tableName) {
+        case 'atividades':
+          errors.push(...this._validateAtividadesRules(data));
+          break;
+        case 'participacoes':
+          errors.push(...this._validateParticipacoesRules(data));
+          break;
+        case 'membros':
+          errors.push(...this._validateMembrosRules(data));
+          break;
+        default:
+          Logger.debug('ValidationEngine', 'Nenhuma business rule definida', { tableName });
+      }
+
+      const timeMs = new Date() - startTime;
+      const isValid = errors.length === 0;
+
+      PerformanceMetrics.trackOperation('BUSINESS_RULES', tableName, timeMs, false);
+
+      Logger.info('ValidationEngine', 'Business rules validation completed', {
+        tableName,
+        isValid,
+        errorCount: errors.length,
+        time: timeMs
+      });
+
+      return { isValid, errors };
+
+    } catch (error) {
+      Logger.error('ValidationEngine', 'Erro na validação de business rules', {
+        tableName,
+        error: error.message
+      });
+      return { isValid: false, errors: [`Erro interno: ${error.message}`] };
+    }
+  }
+
+  /**
+   * Regras de negócio para atividades
+   */
+  static _validateAtividadesRules(data) {
+    const errors = [];
+
+    // Regra 1: Se status é "Concluída", data_fim deve estar preenchida
+    if (data.status === 'Concluída' && (!data.data_fim || data.data_fim.trim() === '')) {
+      errors.push('Atividades concluídas devem ter data_fim preenchida');
+    }
+
+    // Regra 2: Se status é "Planejada", data_inicio deve ser futura
+    if (data.status === 'Planejada' && data.data_inicio) {
+      const dataInicio = new Date(data.data_inicio);
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      if (dataInicio < hoje) {
+        errors.push('Atividades planejadas devem ter data_inicio futura');
+      }
+    }
+
+    // Regra 3: data_fim deve ser >= data_inicio
+    if (data.data_inicio && data.data_fim) {
+      const dataInicio = new Date(data.data_inicio);
+      const dataFim = new Date(data.data_fim);
+
+      if (dataFim < dataInicio) {
+        errors.push('data_fim deve ser maior ou igual a data_inicio');
+      }
+    }
+
+    return errors;
+  }
+
+  /**
+   * Regras de negócio para participações
+   */
+  static _validateParticipacoesRules(data) {
+    const errors = [];
+
+    // Regra 1: Se participou = 'sim', status_participacao deve ser válido
+    if (data.participou === 'sim' && (!data.status_participacao || data.status_participacao.trim() === '')) {
+      errors.push('Participações confirmadas devem ter status_participacao preenchido');
+    }
+
+    // Regra 2: Se chegou_tarde = 'sim', participou deve ser 'sim'
+    if (data.chegou_tarde === 'sim' && data.participou !== 'sim') {
+      errors.push('Não é possível chegar tarde sem participar');
+    }
+
+    // Regra 3: Se saiu_cedo = 'sim', participou deve ser 'sim'
+    if (data.saiu_cedo === 'sim' && data.participou !== 'sim') {
+      errors.push('Não é possível sair cedo sem participar');
+    }
+
+    return errors;
+  }
+
+  /**
+   * Regras de negócio para membros
+   */
+  static _validateMembrosRules(data) {
+    const errors = [];
+
+    // Regra 1: Se ativo = 'sim', data_admissao deve estar preenchida
+    if (data.ativo === 'sim' && (!data.data_admissao || data.data_admissao.trim() === '')) {
+      errors.push('Membros ativos devem ter data_admissao preenchida');
+    }
+
+    // Regra 2: data_desligamento só pode estar preenchida se ativo = 'não'
+    if (data.data_desligamento && data.data_desligamento.trim() !== '' && data.ativo === 'sim') {
+      errors.push('Membros ativos não podem ter data_desligamento');
+    }
+
+    // Regra 3: Se data_desligamento existe, deve ser >= data_admissao
+    if (data.data_admissao && data.data_desligamento && data.data_desligamento.trim() !== '') {
+      const dataAdmissao = new Date(data.data_admissao);
+      const dataDesligamento = new Date(data.data_desligamento);
+
+      if (dataDesligamento < dataAdmissao) {
+        errors.push('data_desligamento deve ser maior ou igual a data_admissao');
+      }
+    }
+
+    return errors;
+  }
+
+  /**
+   * Validar formato e padrões baseados no dicionário
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados do registro
+   * @returns {Object} {isValid, errors}
+   */
+  static validateAdvanced(tableName, data) {
+    const startTime = new Date();
+    const errors = [];
+
+    Logger.info('ValidationEngine', 'Validando formatos avançados', { tableName });
+
+    try {
+      if (typeof DATA_DICTIONARY === 'undefined' || !DATA_DICTIONARY[tableName]) {
+        Logger.debug('ValidationEngine', 'Tabela não encontrada para validação avançada', { tableName });
+        return { isValid: true, errors: [] };
+      }
+
+      const tableConfig = DATA_DICTIONARY[tableName];
+      const fields = tableConfig.fields || {};
+
+      Object.entries(data).forEach(([fieldName, fieldValue]) => {
+        const fieldConfig = fields[fieldName];
+        if (!fieldConfig || !fieldValue || fieldValue.toString().trim() === '') {
+          return; // Pular campos não configurados ou vazios
+        }
+
+        // 1. Pattern validation
+        if (fieldConfig.pattern && fieldValue.toString().trim() !== '') {
+          try {
+            const regex = new RegExp(fieldConfig.pattern);
+            if (!regex.test(fieldValue.toString())) {
+              errors.push(`${fieldName}: Formato inválido. ${fieldConfig.description || 'Verifique o padrão esperado'}`);
+            }
+          } catch (e) {
+            Logger.warn('ValidationEngine', 'Pattern inválido no dicionário', {
+              field: fieldName,
+              pattern: fieldConfig.pattern
+            });
+          }
+        }
+
+        // 2. MaxLength validation
+        if (fieldConfig.maxLength && fieldValue.toString().length > fieldConfig.maxLength) {
+          errors.push(`${fieldName}: Máximo ${fieldConfig.maxLength} caracteres (atual: ${fieldValue.toString().length})`);
+        }
+
+        // 3. Enum validation
+        if (fieldConfig.enum && !fieldConfig.enum.includes(fieldValue.toString())) {
+          errors.push(`${fieldName}: Valor deve ser um de: ${fieldConfig.enum.join(', ')}`);
+        }
+
+        // 4. Number range validation
+        if (fieldConfig.type === 'NUMBER' && !isNaN(fieldValue)) {
+          const numValue = parseFloat(fieldValue);
+          if (fieldConfig.min !== undefined && numValue < fieldConfig.min) {
+            errors.push(`${fieldName}: Valor mínimo é ${fieldConfig.min}`);
+          }
+          if (fieldConfig.max !== undefined && numValue > fieldConfig.max) {
+            errors.push(`${fieldName}: Valor máximo é ${fieldConfig.max}`);
+          }
+        }
+
+        // 5. Date format validation
+        if (fieldConfig.type === 'DATE' || fieldConfig.type === 'DATETIME') {
+          try {
+            const date = new Date(fieldValue);
+            if (isNaN(date.getTime())) {
+              errors.push(`${fieldName}: Data inválida`);
+            }
+          } catch (e) {
+            errors.push(`${fieldName}: Formato de data inválido`);
+          }
+        }
+      });
+
+      const timeMs = new Date() - startTime;
+      const isValid = errors.length === 0;
+
+      PerformanceMetrics.trackOperation('ADVANCED_VALIDATION', tableName, timeMs, false);
+
+      Logger.info('ValidationEngine', 'Advanced validation completed', {
+        tableName,
+        isValid,
+        errorCount: errors.length,
+        time: timeMs
+      });
+
+      return { isValid, errors };
+
+    } catch (error) {
+      Logger.error('ValidationEngine', 'Erro na validação avançada', {
+        tableName,
+        error: error.message
+      });
+      return { isValid: false, errors: [`Erro interno: ${error.message}`] };
+    }
+  }
+
+  /**
+   * Validar unique constraints
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados do registro
+   * @param {string} excludeId - ID para excluir da verificação (para updates)
+   * @returns {Object} {isValid, errors}
+   */
+  static async validateUnique(tableName, data, excludeId = null) {
+    const startTime = new Date();
+    const errors = [];
+
+    Logger.info('ValidationEngine', 'Validando unique constraints', { tableName });
+
+    try {
+      if (typeof DATA_DICTIONARY === 'undefined' || !DATA_DICTIONARY[tableName]) {
+        return { isValid: true, errors: [] };
+      }
+
+      const tableConfig = DATA_DICTIONARY[tableName];
+      const fields = tableConfig.fields || {};
+
+      // Procurar campos com unique: true
+      const uniqueFields = Object.entries(fields)
+        .filter(([_, fieldConfig]) => fieldConfig.unique === true)
+        .map(([fieldName, _]) => fieldName);
+
+      if (uniqueFields.length === 0) {
+        Logger.debug('ValidationEngine', 'Nenhum campo unique definido', { tableName });
+        return { isValid: true, errors: [] };
+      }
+
+      for (const fieldName of uniqueFields) {
+        const fieldValue = data[fieldName];
+        if (!fieldValue || fieldValue.toString().trim() === '') {
+          continue; // Pular campos vazios
+        }
+
+        // Buscar registros existentes com o mesmo valor
+        const existingRecords = DatabaseManager.query(tableName, { [fieldName]: fieldValue }, true);
+
+        // Filtrar o próprio registro se for update
+        const conflictingRecords = excludeId
+          ? existingRecords.filter(record => record[tableConfig.primaryKey || 'id'] !== excludeId)
+          : existingRecords;
+
+        if (conflictingRecords.length > 0) {
+          errors.push(`${fieldName}: Valor '${fieldValue}' já existe. Deve ser único.`);
+          Logger.warn('ValidationEngine', 'Unique constraint violation', {
+            field: fieldName,
+            value: fieldValue,
+            conflicts: conflictingRecords.length
+          });
+        }
+      }
+
+      const timeMs = new Date() - startTime;
+      const isValid = errors.length === 0;
+
+      PerformanceMetrics.trackOperation('UNIQUE_VALIDATION', tableName, timeMs, false);
+
+      Logger.info('ValidationEngine', 'Unique validation completed', {
+        tableName,
+        isValid,
+        errorCount: errors.length,
+        time: timeMs
+      });
+
+      return { isValid, errors };
+
+    } catch (error) {
+      Logger.error('ValidationEngine', 'Erro na validação de unique', {
+        tableName,
+        error: error.message
+      });
+      return { isValid: false, errors: [`Erro interno: ${error.message}`] };
+    }
+  }
+
+  /**
+   * Validar um registro completo
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados do registro
+   * @param {string} excludeId - ID para excluir da verificação unique (para updates)
+   * @returns {Object} {isValid, errors}
+   */
+  static async validateRecord(tableName, data, excludeId = null) {
+    const startTime = new Date();
+    Logger.info('ValidationEngine', 'Iniciando validação completa', { tableName });
+
+    const allErrors = [];
+
+    // 1. Validar Foreign Keys
+    const fkValidation = await this.validateForeignKeys(tableName, data);
+    allErrors.push(...fkValidation.errors);
+
+    // 2. Validar Business Rules
+    const businessValidation = this.validateBusinessRules(tableName, data);
+    allErrors.push(...businessValidation.errors);
+
+    // 3. Validar Formatos Avançados
+    const advancedValidation = this.validateAdvanced(tableName, data);
+    allErrors.push(...advancedValidation.errors);
+
+    // 4. Validar Unique Constraints
+    const uniqueValidation = await this.validateUnique(tableName, data, excludeId);
+    allErrors.push(...uniqueValidation.errors);
+
+    const timeMs = new Date() - startTime;
+    const isValid = allErrors.length === 0;
+
+    PerformanceMetrics.trackOperation('FULL_VALIDATION', tableName, timeMs, false);
+
+    Logger.info('ValidationEngine', 'Validação completa finalizada', {
+      tableName,
+      isValid,
+      totalErrors: allErrors.length,
+      fkErrors: fkValidation.errors.length,
+      businessErrors: businessValidation.errors.length,
+      advancedErrors: advancedValidation.errors.length,
+      uniqueErrors: uniqueValidation.errors.length,
+      time: timeMs
+    });
+
+    return { isValid, errors: allErrors };
+  }
+}
+
+/**
  * PerformanceMetrics - Sistema de métricas de performance
  */
 class PerformanceMetrics {
@@ -437,7 +919,7 @@ const DatabaseManager = {
    * @param {Object} data - Dados a inserir
    * @returns {Object} { success: boolean, id?: string, error?: string }
    */
-  insert(tableName, data) {
+  async insert(tableName, data) {
     try {
       const startTime = new Date();
 
@@ -470,6 +952,20 @@ const DatabaseManager = {
           success: false,
           error: `Dados inválidos: ${validation.errors.join(', ')}`,
           validation: validation.errors
+        };
+      }
+
+      // Validar Foreign Keys
+      const fkValidation = await ValidationEngine.validateRecord(tableName, record);
+      if (!fkValidation.isValid) {
+        Logger.warn('DatabaseManager', 'FK validation failed on INSERT', {
+          tableName,
+          errors: fkValidation.errors
+        });
+        return {
+          success: false,
+          error: `Erro de integridade referencial: ${fkValidation.errors.join(', ')}`,
+          validation: fkValidation.errors
         };
       }
 
@@ -533,7 +1029,7 @@ const DatabaseManager = {
    * @param {Object} data - Dados para atualizar
    * @returns {Object} { success: boolean, error?: string }
    */
-  update(tableName, id, data) {
+  async update(tableName, id, data) {
     try {
       const startTime = new Date();
 
@@ -549,6 +1045,21 @@ const DatabaseManager = {
         ...data,
         updated_at: new Date().toISOString()
       };
+
+      // Validar Foreign Keys do registro atualizado
+      const fkValidation = await ValidationEngine.validateRecord(tableName, updatedRecord);
+      if (!fkValidation.isValid) {
+        Logger.warn('DatabaseManager', 'FK validation failed on UPDATE', {
+          tableName,
+          id,
+          errors: fkValidation.errors
+        });
+        return {
+          success: false,
+          error: `Erro de integridade referencial: ${fkValidation.errors.join(', ')}`,
+          validation: fkValidation.errors
+        };
+      }
 
 
       // Encontrar linha na planilha e atualizar
@@ -667,6 +1178,65 @@ const DatabaseManager = {
    */
   clearExpiredCache() {
     CacheManager.clearExpired();
+  },
+
+  /**
+   * Testar validação de Foreign Keys
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados para validar
+   * @returns {Object} Resultado da validação
+   */
+  async testForeignKeyValidation(tableName, data) {
+    return await ValidationEngine.validateForeignKeys(tableName, data);
+  },
+
+  /**
+   * Obter Foreign Keys de uma tabela
+   * @param {string} tableName - Nome da tabela
+   * @returns {Array} Array de FKs
+   */
+  getForeignKeys(tableName) {
+    return ValidationEngine.getForeignKeys(tableName);
+  },
+
+  /**
+   * Testar Business Rules
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados para validar
+   * @returns {Object} Resultado da validação
+   */
+  testBusinessRules(tableName, data) {
+    return ValidationEngine.validateBusinessRules(tableName, data);
+  },
+
+  /**
+   * Testar Validações Avançadas (pattern, maxLength, enum, etc.)
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados para validar
+   * @returns {Object} Resultado da validação
+   */
+  testAdvancedValidation(tableName, data) {
+    return ValidationEngine.validateAdvanced(tableName, data);
+  },
+
+  /**
+   * Testar Unique Constraints
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados para validar
+   * @returns {Object} Resultado da validação
+   */
+  async testUniqueValidation(tableName, data) {
+    return await ValidationEngine.validateUnique(tableName, data);
+  },
+
+  /**
+   * Testar Validação Completa (FK + Business + Advanced + Unique)
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados para validar
+   * @returns {Object} Resultado da validação
+   */
+  async testCompleteValidation(tableName, data) {
+    return await ValidationEngine.validateRecord(tableName, data);
   },
 
   /**
@@ -1128,5 +1698,364 @@ function testDatabaseManager() {
   } catch (error) {
     console.error('❌ Erro no teste do DatabaseManager:', error);
     return { success: false, error: error.message };
+  }
+}
+
+/**
+ * SessionManager - Gerenciamento de sessões com expiração
+ */
+class SessionManager {
+
+  /**
+   * Criar nova sessão para usuário
+   * @param {string} userId - ID do usuário
+   * @param {Object} metadata - Metadados da sessão (IP, user agent, etc)
+   * @returns {Object} Dados da sessão criada
+   */
+  static createSession(userId, metadata = {}) {
+    try {
+      Logger.info('SessionManager', 'Criando nova sessão', { userId });
+
+      // Limpar sessões expiradas antes de criar nova
+      this.cleanupExpiredSessions();
+
+      // Verificar limite de sessões por usuário
+      const userSessions = this.getUserSessions(userId);
+      const maxSessions = APP_CONFIG.SESSION.MAX_SESSIONS_PER_USER || 3;
+
+      if (userSessions.length >= maxSessions) {
+        // Remover sessão mais antiga
+        const oldestSession = userSessions.sort((a, b) =>
+          new Date(a.criado_em) - new Date(b.criado_em)
+        )[0];
+        this.destroySession(oldestSession.id);
+        Logger.info('SessionManager', 'Sessão mais antiga removida por limite', { oldestSessionId: oldestSession.id });
+      }
+
+      // Criar nova sessão
+      const sessionId = DatabaseManager._generateId('sessions');
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + (APP_CONFIG.SESSION.TTL_HOURS * 60 * 60 * 1000));
+
+      const sessionData = {
+        id: sessionId,
+        id_usuario: userId,
+        criado_em: Utilities.formatDate(now, APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss'),
+        expira_em: Utilities.formatDate(expiresAt, APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss'),
+        ativo: 'sim',
+        ip_address: metadata.ip || '',
+        user_agent: metadata.userAgent || '',
+        ultimo_acesso: Utilities.formatDate(now, APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss')
+      };
+
+      // Salvar sessão em memória (PropertiesService para persistir entre execuções)
+      const sessionKey = `session_${sessionId}`;
+      PropertiesService.getScriptProperties().setProperty(sessionKey, JSON.stringify(sessionData));
+
+      Logger.info('SessionManager', 'Sessão criada com sucesso', { sessionId, userId, expiresAt });
+
+      return {
+        sessionId,
+        userId,
+        expiresAt: sessionData.expira_em,
+        metadata: sessionData
+      };
+
+    } catch (error) {
+      Logger.error('SessionManager', 'Erro ao criar sessão', { userId, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Validar se sessão é válida e ativa
+   * @param {string} sessionId - ID da sessão
+   * @returns {Object|null} Dados da sessão se válida, null se inválida
+   */
+  static validateSession(sessionId) {
+    try {
+      if (!sessionId) {
+        Logger.debug('SessionManager', 'SessionId não fornecido');
+        return null;
+      }
+
+      const sessionKey = `session_${sessionId}`;
+      const sessionData = PropertiesService.getScriptProperties().getProperty(sessionKey);
+
+      if (!sessionData) {
+        Logger.debug('SessionManager', 'Sessão não encontrada', { sessionId });
+        return null;
+      }
+
+      const session = JSON.parse(sessionData);
+      const now = new Date();
+      const expiresAt = new Date(session.expira_em);
+
+      // Verificar se sessão expirou
+      if (now > expiresAt) {
+        Logger.info('SessionManager', 'Sessão expirada', { sessionId, expiresAt });
+        this.destroySession(sessionId);
+        return null;
+      }
+
+      // Verificar se sessão está ativa
+      if (session.ativo !== 'sim') {
+        Logger.debug('SessionManager', 'Sessão inativa', { sessionId });
+        return null;
+      }
+
+      // Atualizar último acesso
+      session.ultimo_acesso = Utilities.formatDate(now, APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss');
+      PropertiesService.getScriptProperties().setProperty(sessionKey, JSON.stringify(session));
+
+      Logger.debug('SessionManager', 'Sessão validada', { sessionId, userId: session.id_usuario });
+
+      return {
+        sessionId: session.id,
+        userId: session.id_usuario,
+        createdAt: session.criado_em,
+        expiresAt: session.expira_em,
+        lastAccess: session.ultimo_acesso
+      };
+
+    } catch (error) {
+      Logger.error('SessionManager', 'Erro ao validar sessão', { sessionId, error: error.message });
+      return null;
+    }
+  }
+
+  /**
+   * Destruir sessão específica
+   * @param {string} sessionId - ID da sessão
+   * @returns {boolean} True se sessão foi destruída
+   */
+  static destroySession(sessionId) {
+    try {
+      if (!sessionId) return false;
+
+      const sessionKey = `session_${sessionId}`;
+      PropertiesService.getScriptProperties().deleteProperty(sessionKey);
+
+      Logger.info('SessionManager', 'Sessão destruída', { sessionId });
+      return true;
+
+    } catch (error) {
+      Logger.error('SessionManager', 'Erro ao destruir sessão', { sessionId, error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * Obter todas as sessões de um usuário
+   * @param {string} userId - ID do usuário
+   * @returns {Array} Lista de sessões do usuário
+   */
+  static getUserSessions(userId) {
+    try {
+      const allProperties = PropertiesService.getScriptProperties().getProperties();
+      const userSessions = [];
+
+      Object.keys(allProperties).forEach(key => {
+        if (key.startsWith('session_')) {
+          try {
+            const session = JSON.parse(allProperties[key]);
+            if (session.id_usuario === userId && session.ativo === 'sim') {
+              userSessions.push(session);
+            }
+          } catch (parseError) {
+            Logger.warn('SessionManager', 'Erro ao parsear sessão', { key, error: parseError.message });
+          }
+        }
+      });
+
+      return userSessions;
+
+    } catch (error) {
+      Logger.error('SessionManager', 'Erro ao obter sessões do usuário', { userId, error: error.message });
+      return [];
+    }
+  }
+
+  /**
+   * Limpar sessões expiradas
+   * @returns {number} Número de sessões removidas
+   */
+  static cleanupExpiredSessions() {
+    try {
+      const allProperties = PropertiesService.getScriptProperties().getProperties();
+      const now = new Date();
+      let removedCount = 0;
+
+      Object.keys(allProperties).forEach(key => {
+        if (key.startsWith('session_')) {
+          try {
+            const session = JSON.parse(allProperties[key]);
+            const expiresAt = new Date(session.expira_em);
+
+            if (now > expiresAt) {
+              PropertiesService.getScriptProperties().deleteProperty(key);
+              removedCount++;
+              Logger.debug('SessionManager', 'Sessão expirada removida', { sessionId: session.id });
+            }
+          } catch (parseError) {
+            // Remove propriedades corrompidas
+            PropertiesService.getScriptProperties().deleteProperty(key);
+            removedCount++;
+            Logger.warn('SessionManager', 'Propriedade corrompida removida', { key });
+          }
+        }
+      });
+
+      if (removedCount > 0) {
+        Logger.info('SessionManager', 'Limpeza de sessões concluída', { removedCount });
+      }
+
+      return removedCount;
+
+    } catch (error) {
+      Logger.error('SessionManager', 'Erro na limpeza de sessões', { error: error.message });
+      return 0;
+    }
+  }
+
+  /**
+   * Obter estatísticas das sessões
+   * @returns {Object} Estatísticas das sessões ativas
+   */
+  static getSessionStats() {
+    try {
+      const allProperties = PropertiesService.getScriptProperties().getProperties();
+      const stats = {
+        totalSessions: 0,
+        activeSessions: 0,
+        userCounts: {},
+        oldestSession: null,
+        newestSession: null
+      };
+
+      const now = new Date();
+
+      Object.keys(allProperties).forEach(key => {
+        if (key.startsWith('session_')) {
+          try {
+            const session = JSON.parse(allProperties[key]);
+            stats.totalSessions++;
+
+            const expiresAt = new Date(session.expira_em);
+            const createdAt = new Date(session.criado_em);
+
+            if (now <= expiresAt && session.ativo === 'sim') {
+              stats.activeSessions++;
+
+              // Contar por usuário
+              if (!stats.userCounts[session.id_usuario]) {
+                stats.userCounts[session.id_usuario] = 0;
+              }
+              stats.userCounts[session.id_usuario]++;
+
+              // Tracking da sessão mais antiga e mais nova
+              if (!stats.oldestSession || createdAt < new Date(stats.oldestSession)) {
+                stats.oldestSession = session.criado_em;
+              }
+              if (!stats.newestSession || createdAt > new Date(stats.newestSession)) {
+                stats.newestSession = session.criado_em;
+              }
+            }
+          } catch (parseError) {
+            Logger.warn('SessionManager', 'Erro ao parsear sessão para stats', { key });
+          }
+        }
+      });
+
+      return stats;
+
+    } catch (error) {
+      Logger.error('SessionManager', 'Erro ao obter estatísticas', { error: error.message });
+      return { error: error.message };
+    }
+  }
+}
+
+/**
+ * Testes do SessionManager
+ */
+
+/**
+ * Teste básico do SessionManager
+ */
+function testSessionManager() {
+  try {
+    console.log('🔐 Testando SessionManager...');
+
+    // Limpar sessões expiradas primeiro
+    const cleanedCount = SessionManager.cleanupExpiredSessions();
+    console.log(`🧹 Sessões expiradas removidas: ${cleanedCount}`);
+
+    // Teste 1: Criar sessão
+    const testUserId = 'U1726692234567';
+    const session = SessionManager.createSession(testUserId, {
+      ip: '192.168.1.100',
+      userAgent: 'Test Browser'
+    });
+    console.log(`✅ Teste 1 - Sessão criada: ${session.sessionId}`);
+
+    // Teste 2: Validar sessão
+    const validatedSession = SessionManager.validateSession(session.sessionId);
+    console.log(`✅ Teste 2 - Sessão validada: ${validatedSession ? 'Válida' : 'Inválida'}`);
+
+    // Teste 3: Sessões do usuário
+    const userSessions = SessionManager.getUserSessions(testUserId);
+    console.log(`✅ Teste 3 - Sessões do usuário: ${userSessions.length}`);
+
+    // Teste 4: Estatísticas
+    const stats = SessionManager.getSessionStats();
+    console.log(`✅ Teste 4 - Sessões ativas: ${stats.activeSessions}`);
+
+    // Teste 5: Destruir sessão
+    const destroyed = SessionManager.destroySession(session.sessionId);
+    console.log(`✅ Teste 5 - Sessão destruída: ${destroyed ? 'Sim' : 'Não'}`);
+
+    console.log('🎉 SessionManager: Todos os testes passaram!');
+    return { success: true };
+
+  } catch (error) {
+    console.error('❌ Erro no teste do SessionManager:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Função para obter relatório de sessões
+ */
+function getSessionReport() {
+  try {
+    const stats = SessionManager.getSessionStats();
+
+    console.log('📊 RELATÓRIO DE SESSÕES');
+    console.log('='.repeat(50));
+    console.log(`🔢 Total de sessões: ${stats.totalSessions}`);
+    console.log(`✅ Sessões ativas: ${stats.activeSessions}`);
+    console.log(`👥 Usuários com sessões: ${Object.keys(stats.userCounts).length}`);
+
+    if (stats.oldestSession) {
+      console.log(`⏰ Sessão mais antiga: ${stats.oldestSession}`);
+    }
+    if (stats.newestSession) {
+      console.log(`🆕 Sessão mais recente: ${stats.newestSession}`);
+    }
+
+    // Detalhes por usuário
+    if (Object.keys(stats.userCounts).length > 0) {
+      console.log('\n👤 Sessões por usuário:');
+      Object.entries(stats.userCounts).forEach(([userId, count]) => {
+        console.log(`   ${userId}: ${count} sessão(s)`);
+      });
+    }
+
+    return stats;
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar relatório:', error);
+    return { error: error.message };
   }
 }

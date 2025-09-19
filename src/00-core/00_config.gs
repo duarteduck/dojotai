@@ -14,6 +14,13 @@ const APP_CONFIG = {
   // Configuração de logs
   LOG_LEVEL: 'INFO', // DEBUG, INFO, WARN, ERROR
 
+  // Configuração de sessões
+  SESSION: {
+    TTL_HOURS: 8,        // 8 horas de duração da sessão
+    CLEANUP_INTERVAL: 60, // Limpar sessões expiradas a cada 60 min
+    MAX_SESSIONS_PER_USER: 3 // Máximo 3 sessões simultâneas por usuário
+  },
+
   // Configuração principal de planilhas
   PLANILHAS: {
     // ID da planilha principal de configuração
@@ -60,6 +67,11 @@ const APP_CONFIG = {
       prefix: 'MNU',
       format: 'MNU-{counter}', // Ex: MNU-001, MNU-002
       description: 'ID de menu - MNU- + contador sequencial'
+    },
+    sessions: {
+      prefix: 'SES',
+      format: 'SES-{timestamp}{random}', // Ex: SES-202509191234567
+      description: 'ID de sessão - SES- + timestamp + random'
     }
   }
 };
