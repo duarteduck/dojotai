@@ -15,7 +15,7 @@ id | id_usuario | tipo | titulo | mensagem | lida | criado_em | expires_at
 ### **Campos Detalhados**
 - **id**: TEXT - ID único (ex: `NOT-001`, `NOT-002`)
 - **id_usuario**: TEXT - FK para usuarios.id
-- **tipo**: TEXT - Tipo da notificação (`info`, `warning`, `success`, `error`)
+- **tipo**: TEXT - Tipo da notificação (`info`,`warning`, `success`, `error`,`atividade`,`confirmação`)
 - **titulo**: TEXT - Título curto da notificação
 - **mensagem**: TEXT - Mensagem completa
 - **lida**: TEXT - Status (`sim`/vazio) - seguindo padrão do sistema
@@ -75,6 +75,7 @@ id | id_usuario | acao | tabela_alvo | id_alvo | detalhes | ip_address | criado_
 - **acao**: TEXT - Tipo de ação (`CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `LOGOUT`)
 - **tabela_alvo**: TEXT - Tabela afetada (`atividades`, `membros`, etc.)
 - **id_alvo**: TEXT - ID do registro afetado
+- **tipo_alvo**: TEXT - Tipo do registro afetado (`atividade`,`usuario`,`membro`)
 - **detalhes**: TEXT - JSON com detalhes da operação
 - **ip_address**: TEXT - IP do usuário (se disponível)
 - **criado_em**: DATETIME - Timestamp da ação

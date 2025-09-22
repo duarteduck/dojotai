@@ -102,7 +102,7 @@ const APP_CONFIG = {
       format: 'MNU-{counter}', // Ex: MNU-001, MNU-002
       description: 'ID de menu - MNU- + contador sequencial'
     },
-    sessions: {
+    sessoes: {
       prefix: 'SES',
       format: 'SES-{timestamp}{random}', // Ex: SES-202509191234567
       description: 'ID de sessão - SES- + timestamp + random'

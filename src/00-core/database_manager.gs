@@ -1014,12 +1014,21 @@ const DatabaseManager = {
       const table = getTableDictionary(tableName);
       const primaryKey = table?.primaryKey || 'id';
 
-      // Gerar ID único
-      const generatedId = this._generateId(tableName);
+      // Gerar ID único apenas se não foi fornecido
+      let finalId;
+      if (data[primaryKey]) {
+        // Usar ID fornecido
+        finalId = data[primaryKey];
+        Logger.debug('DatabaseManager', 'Using provided ID', { tableName, primaryKey, providedId: finalId });
+      } else {
+        // Gerar novo ID
+        finalId = this._generateId(tableName);
+        Logger.debug('DatabaseManager', 'Generated new ID', { tableName, primaryKey, generatedId: finalId });
+      }
 
       // Preparar dados base com ID já definido
       const baseData = {
-        [primaryKey]: generatedId, // Usar chave primária correta
+        [primaryKey]: finalId, // Usar ID correto (fornecido ou gerado)
         ...data
       };
 
@@ -1096,12 +1105,12 @@ const DatabaseManager = {
 
       const timeMs = new Date() - startTime;
       PerformanceMetrics.trackOperation('INSERT', tableName, timeMs, false);
-      Logger.info('DatabaseManager', 'Insert completed', { tableName, id: generatedId, time: timeMs });
+      Logger.info('DatabaseManager', 'Insert completed', { tableName, id: finalId, time: timeMs });
 
       // Invalidar cache para forçar reload na próxima query
       CacheManager.invalidate(tableName);
 
-      return { success: true, id: generatedId };
+      return { success: true, id: finalId };
 
     } catch (error) {
       this._logError('insert', tableName, error, { data });
@@ -1407,6 +1416,15 @@ const DatabaseManager = {
   _generateId(tableName) {
     const pattern = APP_CONFIG.ID_PATTERNS[tableName];
 
+    if (!pattern) {
+      Logger.error('DatabaseManager', 'Pattern não encontrado para tabela', {
+        tableName,
+        availablePatterns: Object.keys(APP_CONFIG.ID_PATTERNS)
+      });
+      // Fallback seguro
+      return tableName.toUpperCase() + '-' + Date.now();
+    }
+
     switch (tableName) {
       case 'usuarios':
       case 'membros':
@@ -1427,6 +1445,11 @@ const DatabaseManager = {
         const lastCounter = this._getLastCounter(tableName, pattern.prefix);
         const nextCounter = (lastCounter + 1).toString().padStart(3, '0');
         return `${pattern.prefix}-${nextCounter}`;
+
+      case 'sessoes':
+        // Padrão: SES-{timestamp}
+        const sessionTimestamp = Date.now().toString();
+        return `${pattern.prefix}-${sessionTimestamp}`;
 
       default:
         // Fallback
@@ -2020,7 +2043,7 @@ class SessionManager {
       }
 
       // Criar nova sessão
-      const sessionId = DatabaseManager._generateId('sessions');
+      const sessionId = DatabaseManager._generateId('sessoes');
       const now = new Date();
       const expiresAt = new Date(now.getTime() + (APP_CONFIG.SESSION.TTL_HOURS * 60 * 60 * 1000));
 
@@ -3074,5 +3097,41 @@ class CategoriaManager {
       Logger.error('CategoriaManager', 'Erro ao obter detalhes das categorias', { categoriasString, error: error.message });
       return [];
     }
+  }
+}
+
+/**
+ * Função global generateUniqueId para compatibilidade
+ * @param {string} prefix - Prefixo do ID (ex: 'SES', 'CAT')
+ * @returns {string} ID único gerado
+ */
+function generateUniqueId(prefix) {
+  try {
+    // Mapear prefixo para nome da tabela
+    const prefixToTable = {
+      'SES': 'sessoes',
+      'CAT': 'categorias_atividades',
+      'ACT': 'atividades',
+      'U': 'usuarios',
+      'M': 'membros',
+      'P': 'participacoes',
+      'MNU': 'menu',
+      'NOT': 'notificacoes',
+      'HIS': 'historico'
+    };
+
+    const tableName = prefixToTable[prefix];
+    if (tableName) {
+      return DatabaseManager._generateId(tableName);
+    }
+
+    // Fallback para prefixo desconhecido
+    const timestamp = new Date().getTime();
+    return prefix + '-' + timestamp;
+
+  } catch (error) {
+    Logger.error('generateUniqueId', 'Erro ao gerar ID', { prefix, error: error.message });
+    // Fallback absoluto
+    return prefix + '-' + new Date().getTime();
   }
 }

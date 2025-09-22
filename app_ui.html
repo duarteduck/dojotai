@@ -367,7 +367,26 @@ var Views = {
     // Botões principais
     var btnLogout=document.getElementById('btn-logout');
     var btnNew   =document.getElementById('btn-new');
-    if(btnLogout) btnLogout.addEventListener('click', function(){ State.clear(); Router.go('#/login'); });
+    if(btnLogout) btnLogout.addEventListener('click', async function(){
+      // Destruir sessão no backend se existir
+      if(State.user && State.session && State.session.id) {
+        try {
+          console.log('🚪 Fazendo logout com destruição de sessão:', State.session.id);
+          const logoutResult = await API.logout(State.session.id);
+          if(logoutResult.ok) {
+            console.log('✅ Sessão destruída com sucesso');
+          } else {
+            console.warn('⚠️ Erro ao destruir sessão:', logoutResult.error);
+          }
+        } catch(error) {
+          console.warn('⚠️ Erro no logout:', error);
+        }
+      }
+
+      // Limpar estado local e redirecionar
+      State.clear();
+      Router.go('#/login');
+    });
     if(btnNew)    btnNew.addEventListener('click', function(){ Router.go('#/new'); });
 
     // Menu overlay

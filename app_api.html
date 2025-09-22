@@ -18,6 +18,12 @@ var API = {
           console.log('[API.login] success', res);
           if(res && res.ok && res.user && res.user.uid){
             State.uid = res.user.uid;
+            State.user = res.user;
+            // Salvar dados da sessão se existir
+            if(res.session) {
+              State.session = res.session;
+              console.log('💾 Login completo - User + Session salvos no State');
+            }
             resolve(res);
           } else {
             if (res && res.error) console.warn('[API.login] server error:', res.error);
@@ -29,6 +35,28 @@ var API = {
           resolve({ ok:false });
         })
         .loginUser(login, pin);
+    });
+  },
+
+  /* logoutUser(sessionId) -> { ok, message } */
+  logout: function(sessionId) {
+    console.log('📡 API.logout chamada:', sessionId);
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          console.log('✅ API.logout sucesso:', res);
+          if (res && res.ok) {
+            resolve(res);
+          } else {
+            console.warn('⚠️ API.logout erro do servidor:', res?.error);
+            resolve({ ok: false, error: res?.error || 'Erro no logout' });
+          }
+        })
+        .withFailureHandler(function(err) {
+          console.error('❌ API.logout falha de conexão:', err);
+          resolve({ ok: false, error: 'Erro de conexão: ' + err.toString() });
+        })
+        .logoutUser(sessionId);
     });
   },
 

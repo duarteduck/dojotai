@@ -962,6 +962,108 @@ const DATA_DICTIONARY = {
         default: ''
       }
     }
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                                    8. TABELA: SESSOES                                          │
+  // │ 🔐 Gerenciamento robusto de sessões de usuários                                               │
+  // │ 📂 Arquivo: Sistema - Sessões | Planilha: sessoes | Referência: sessoes                      │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  sessoes: {
+    tableName: 'sessoes',
+    description: 'Gerenciamento robusto de sessões de usuários',
+    primaryKey: 'session_id',
+    file: 'Sistema - Sessões',
+    sheet: 'sessoes',
+
+    // 🔍 CAMPOS DA TABELA SESSOES
+    fields: {
+
+      // ID único da sessão
+      session_id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^SES-[A-Z0-9\\-]+$',
+        description: 'ID único da sessão',
+        generated: true,
+        example: 'SES-001'
+      },
+
+      // ID do usuário (FK)
+      user_id: {
+        type: 'TEXT',
+        required: true,
+        foreignKey: 'usuarios.uid',
+        description: 'ID do usuário proprietário da sessão',
+        example: 'U001'
+      },
+
+      // Data e hora de criação
+      created_at: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        description: 'Data e hora de criação da sessão',
+        example: '2025-09-19 14:30:00'
+      },
+
+      // Data e hora de expiração
+      expires_at: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        description: 'Data e hora de expiração da sessão',
+        example: '2025-09-19 22:30:00'
+      },
+
+      // Endereço IP do usuário
+      ip_address: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 45, // IPv6 support
+        description: 'Endereço IP do usuário',
+        example: '192.168.1.100'
+      },
+
+      // Informações do dispositivo (JSON)
+      device_info: {
+        type: 'TEXT',
+        required: false,
+        description: 'Informações do dispositivo em formato JSON',
+        example: '{"userAgent":"Mozilla/5.0...","platform":"web"}'
+      },
+
+      // Status da sessão
+      active: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', ''],
+        description: 'Status da sessão (sim=ativa, vazio=inativa)',
+        example: 'sim'
+      },
+
+      // Última atividade
+      last_activity: {
+        type: 'DATETIME',
+        required: false,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        description: 'Timestamp da última atividade na sessão',
+        example: '2025-09-19 15:45:30'
+      },
+
+      // Data de destruição da sessão
+      destroyed_at: {
+        type: 'DATETIME',
+        required: false,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        description: 'Data e hora de destruição da sessão (logout)',
+        example: '2025-09-19 18:00:00'
+      }
+    }
   }
 };
 
