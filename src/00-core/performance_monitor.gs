@@ -419,6 +419,38 @@ class PerformanceMonitor {
   }
 
   /**
+   * Obter relatório simples para testes e debugging
+   * @returns {Object} Relatório simplificado
+   */
+  static getSimpleReport() {
+    this.init();
+
+    // Obter relatório base do PerformanceMetrics
+    const baseReport = (typeof PerformanceMetrics !== 'undefined' && PerformanceMetrics.getReport)
+      ? PerformanceMetrics.getReport()
+      : {
+          summary: { totalOperations: 0, totalTimeMs: 0, cacheHitRate: 0, avgTimeMs: 0 },
+          operations: {}
+        };
+
+    // Resumo simplificado
+    const simple = {
+      totalOperations: baseReport.summary.totalOperations,
+      totalTimeMs: baseReport.summary.totalTimeMs,
+      avgTimeMs: baseReport.summary.avgTimeMs,
+      cacheHitRate: baseReport.summary.cacheHitRate,
+      slowOperations: this._slowOperations.length,
+      alerts: this._alerts.length,
+      healthScore: this._calculateHealthScore(baseReport,
+        this._analyzeSlowOperations(),
+        this._analyzeAlerts())
+    };
+
+    Logger.debug('PerformanceMonitor', 'Relatório simples gerado', simple);
+    return simple;
+  }
+
+  /**
    * Exibir relatório formatado no console
    */
   static logAdvancedReport() {
@@ -477,6 +509,13 @@ class PerformanceMonitor {
     PerformanceMetrics.reset();
 
     Logger.info('PerformanceMonitor', 'Sistema resetado completamente');
+  }
+
+  /**
+   * Limpar cache (alias para reset)
+   */
+  static clearCache() {
+    this.reset();
   }
 }
 
@@ -593,6 +632,67 @@ PerformanceMonitor._trackOperationDirect = function(operation, tableName, timeMs
     operation, tableName, timeMs, level: classification.label
   });
 };
+
+/**
+ * Testar integração com operações reais do sistema
+ */
+async function testRealSystemIntegration() {
+  console.log('🔗 TESTANDO INTEGRAÇÃO COM SISTEMA REAL');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  try {
+    // Reset para teste limpo
+    PerformanceMonitor.reset();
+    console.log('✅ Sistema de monitoramento resetado');
+
+    // 1. Testar operações QUERY reais
+    console.log('\n🔍 1. Testando QUERY operations...');
+    const users = DatabaseManager.query('usuarios', {});
+    const atividades = DatabaseManager.query('atividades', {});
+    const membros = DatabaseManager.query('membros', {});
+
+    console.log(`   ✅ Query usuarios: ${users.length} registros`);
+    console.log(`   ✅ Query atividades: ${atividades.length} registros`);
+    console.log(`   ✅ Query membros: ${membros.length} registros`);
+
+    // 2. Testar validação complexa
+    console.log('\n✅ 2. Testando VALIDATION...');
+    const validationResult = await ValidationEngine.validateRecord('atividades', {
+      id: 'TEST-PERF-001',
+      titulo: 'Teste Performance',
+      data: '2025-09-22',
+      categoria_atividade_id: 'CAT-001'
+    });
+    console.log(`   ✅ Validação: ${validationResult.isValid ? 'Válida' : 'Inválida'}`);
+
+    // 3. Aguardar um momento para operações processarem
+    console.log('\n⏳ 3. Processando métricas...');
+    Utilities.sleep(1000); // Google Apps Script usa Utilities.sleep() ao invés de setTimeout
+
+    // 4. Gerar relatório com dados reais
+    console.log('\n📊 4. Gerando relatório de performance...');
+    const report = PerformanceMonitor.logAdvancedReport();
+
+    console.log('\n🎉 TESTE DE INTEGRAÇÃO CONCLUÍDO!');
+    console.log(`📊 Operações monitoradas: ${report.advanced.slowOperations.count + (report.summary.totalOperations || 0)}`);
+    console.log(`🏥 Score de saúde: ${report.advanced.healthScore}/100`);
+
+    return {
+      success: true,
+      report,
+      operations: {
+        users: users.length,
+        atividades: atividades.length,
+        membros: membros.length,
+        validation: validationResult.isValid
+      }
+    };
+
+  } catch (error) {
+    console.error('❌ Erro no teste de integração:', error.message);
+    return { success: false, error: error.message };
+  }
+}
 
 /**
  * Função para benchmark do sistema atual

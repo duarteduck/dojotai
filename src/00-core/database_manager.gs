@@ -162,7 +162,7 @@ class ValidationEngine {
     const timeMs = new Date() - startTime;
     const isValid = errors.length === 0;
 
-    PerformanceMetrics.trackOperation('FK_VALIDATION', tableName, timeMs, false);
+    PerformanceMonitor.integrateWithExisting('FK_VALIDATION', tableName, timeMs, false);
 
     Logger.info('ValidationEngine', 'FK validation completed', {
       tableName,
@@ -205,7 +205,7 @@ class ValidationEngine {
       const timeMs = new Date() - startTime;
       const isValid = errors.length === 0;
 
-      PerformanceMetrics.trackOperation('BUSINESS_RULES', tableName, timeMs, false);
+      PerformanceMonitor.integrateWithExisting('BUSINESS_RULES', tableName, timeMs, false);
 
       Logger.info('ValidationEngine', 'Business rules validation completed', {
         tableName,
@@ -415,7 +415,7 @@ class ValidationEngine {
       const timeMs = new Date() - startTime;
       const isValid = errors.length === 0;
 
-      PerformanceMetrics.trackOperation('ADVANCED_VALIDATION', tableName, timeMs, false);
+      PerformanceMonitor.integrateWithExisting('ADVANCED_VALIDATION', tableName, timeMs, false);
 
       Logger.info('ValidationEngine', 'Advanced validation completed', {
         tableName,
@@ -493,7 +493,7 @@ class ValidationEngine {
       const timeMs = new Date() - startTime;
       const isValid = errors.length === 0;
 
-      PerformanceMetrics.trackOperation('UNIQUE_VALIDATION', tableName, timeMs, false);
+      PerformanceMonitor.integrateWithExisting('UNIQUE_VALIDATION', tableName, timeMs, false);
 
       Logger.info('ValidationEngine', 'Unique validation completed', {
         tableName,
@@ -545,7 +545,7 @@ class ValidationEngine {
     const timeMs = new Date() - startTime;
     const isValid = allErrors.length === 0;
 
-    PerformanceMetrics.trackOperation('FULL_VALIDATION', tableName, timeMs, false);
+    PerformanceMonitor.integrateWithExisting('FULL_VALIDATION', tableName, timeMs, false);
 
     Logger.info('ValidationEngine', 'Validação completa finalizada', {
       tableName,
@@ -882,7 +882,7 @@ const DatabaseManager = {
         const cached = CacheManager.get(tableName, cacheKey);
         if (cached) {
           const timeMs = new Date() - startTime;
-          PerformanceMetrics.trackOperation('QUERY', tableName, timeMs, true);
+          PerformanceMonitor.integrateWithExisting('QUERY', tableName, timeMs, true);
           Logger.info('DatabaseManager', 'Cache hit', { tableName, filters, pagination: paginationOptions, time: timeMs });
           return cached;
         }
@@ -948,7 +948,7 @@ const DatabaseManager = {
       }
 
       const timeMs = new Date() - startTime;
-      PerformanceMetrics.trackOperation('QUERY', tableName, timeMs, false);
+      PerformanceMonitor.integrateWithExisting('QUERY', tableName, timeMs, false);
       return finalResult;
 
     } catch (error) {
@@ -1104,7 +1104,7 @@ const DatabaseManager = {
       }
 
       const timeMs = new Date() - startTime;
-      PerformanceMetrics.trackOperation('INSERT', tableName, timeMs, false);
+      PerformanceMonitor.integrateWithExisting('INSERT', tableName, timeMs, false);
       Logger.info('DatabaseManager', 'Insert completed', { tableName, id: finalId, time: timeMs });
 
       // Invalidar cache para forçar reload na próxima query
@@ -1196,7 +1196,7 @@ const DatabaseManager = {
       CacheManager.invalidate(tableName);
 
       const timeMs = new Date() - startTime;
-      PerformanceMetrics.trackOperation('UPDATE', tableName, timeMs, false);
+      PerformanceMonitor.integrateWithExisting('UPDATE', tableName, timeMs, false);
       Logger.info('DatabaseManager', 'Update completed', { tableName, id, time: timeMs });
       return { success: true };
 
@@ -1227,7 +1227,7 @@ const DatabaseManager = {
 
       if (result.success) {
         const timeMs = new Date() - startTime;
-        PerformanceMetrics.trackOperation('DELETE', tableName, timeMs, false);
+        PerformanceMonitor.integrateWithExisting('DELETE', tableName, timeMs, false);
         Logger.info('DatabaseManager', 'Delete completed', { tableName, id, time: timeMs });
       }
 
