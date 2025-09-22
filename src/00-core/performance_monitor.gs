@@ -126,6 +126,7 @@ class PerformanceMonitor {
    * @returns {Object} Classificação
    */
   static _classifyOperation(operation, timeMs) {
+    this.init(); // Garantir que benchmarks estão inicializados
     const benchmarks = this._benchmarks[operation] || this._benchmarks['QUERY'];
 
     if (timeMs <= benchmarks.fast) {
@@ -517,6 +518,173 @@ class PerformanceMonitor {
   static clearCache() {
     this.reset();
   }
+
+  /**
+   * Salvar log de performance na tabela persistente
+   * @param {string} operation - Tipo da operação
+   * @param {string} tableName - Nome da tabela
+   * @param {number} timeMs - Duração em ms
+   * @param {Object} context - Contexto adicional
+   */
+  static async savePerformanceLog(operation, tableName, timeMs, context = {}) {
+    try {
+      const classification = this._classifyOperation(operation, timeMs);
+      const now = new Date();
+
+      const logData = {
+        operation_type: operation,
+        table_name: tableName,
+        duration_ms: timeMs,
+        classification: classification.label,
+        context: JSON.stringify(context),
+        timestamp: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss'),
+        created_at: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
+      };
+
+      const result = await DatabaseManager.insert('performance_logs', logData);
+
+      if (!result.success) {
+        Logger.warn('PerformanceMonitor', 'Falha ao salvar log de performance', {
+          operation, tableName, timeMs, error: result.error
+        });
+      }
+
+      return result;
+
+    } catch (error) {
+      Logger.error('PerformanceMonitor', 'Erro ao salvar performance log', {
+        error: error.message, operation, tableName, timeMs
+      });
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Salvar relatório diário de saúde do sistema
+   * @param {Object} healthData - Dados do relatório de saúde
+   */
+  static async saveDailyHealthReport(healthData = null) {
+    try {
+      // Se não fornecido, gerar relatório atual
+      if (!healthData) {
+        const report = this.getAdvancedReport();
+        healthData = {
+          health_score: report.advanced.healthScore,
+          total_operations: report.summary.totalOperations || 0,
+          cache_hit_rate: report.summary.cacheHitRate || 0,
+          slow_operations: this._slowOperations.length,
+          critical_alerts: this._alerts.length,
+          recommendations: JSON.stringify(report.advanced.recommendations || [])
+        };
+      }
+
+      const today = new Date();
+      const dateStr = Utilities.formatDate(today, 'America/Sao_Paulo', 'yyyy-MM-dd');
+
+      const reportData = {
+        date: dateStr,
+        health_score: healthData.health_score,
+        total_operations: healthData.total_operations,
+        cache_hit_rate: healthData.cache_hit_rate,
+        slow_operations: healthData.slow_operations,
+        critical_alerts: healthData.critical_alerts,
+        recommendations: healthData.recommendations,
+        created_at: Utilities.formatDate(today, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
+      };
+
+      // Verificar se já existe relatório para hoje
+      const existingReport = DatabaseManager.query('system_health', { date: dateStr });
+
+      let result;
+      if (existingReport && existingReport.length > 0) {
+        // Atualizar relatório existente
+        const reportId = existingReport[0].id;
+        result = await DatabaseManager.update('system_health', reportId, reportData);
+        Logger.info('PerformanceMonitor', 'Relatório diário atualizado', { date: dateStr });
+      } else {
+        // Criar novo relatório
+        result = await DatabaseManager.insert('system_health', reportData);
+        Logger.info('PerformanceMonitor', 'Novo relatório diário criado', { date: dateStr });
+      }
+
+      return result;
+
+    } catch (error) {
+      Logger.error('PerformanceMonitor', 'Erro ao salvar relatório de saúde', {
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Obter histórico de performance logs
+   * @param {Object} filters - Filtros para consulta
+   * @param {number} days - Número de dias para buscar (padrão: 7)
+   */
+  static getPerformanceHistory(filters = {}, days = 7) {
+    try {
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - (days * 24 * 60 * 60 * 1000));
+
+      const startDateStr = Utilities.formatDate(startDate, 'America/Sao_Paulo', 'yyyy-MM-dd');
+      const endDateStr = Utilities.formatDate(endDate, 'America/Sao_Paulo', 'yyyy-MM-dd');
+
+      // Buscar logs no período
+      const logs = DatabaseManager.query('performance_logs', {
+        ...filters,
+        timestamp_gte: startDateStr,
+        timestamp_lte: endDateStr
+      });
+
+      Logger.info('PerformanceMonitor', 'Histórico de performance obtido', {
+        logsFound: logs.length,
+        days,
+        startDate: startDateStr,
+        endDate: endDateStr
+      });
+
+      return logs;
+
+    } catch (error) {
+      Logger.error('PerformanceMonitor', 'Erro ao obter histórico de performance', {
+        error: error.message
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Obter relatórios de saúde históricos
+   * @param {number} days - Número de dias para buscar (padrão: 30)
+   */
+  static getHealthHistory(days = 30) {
+    try {
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - (days * 24 * 60 * 60 * 1000));
+
+      const startDateStr = Utilities.formatDate(startDate, 'America/Sao_Paulo', 'yyyy-MM-dd');
+      const endDateStr = Utilities.formatDate(endDate, 'America/Sao_Paulo', 'yyyy-MM-dd');
+
+      const reports = DatabaseManager.query('system_health', {
+        date_gte: startDateStr,
+        date_lte: endDateStr
+      });
+
+      Logger.info('PerformanceMonitor', 'Histórico de saúde obtido', {
+        reportsFound: reports.length,
+        days
+      });
+
+      return reports;
+
+    } catch (error) {
+      Logger.error('PerformanceMonitor', 'Erro ao obter histórico de saúde', {
+        error: error.message
+      });
+      return [];
+    }
+  }
 }
 
 // ================================================================================
@@ -543,204 +711,66 @@ PerformanceMonitor.integrateWithExisting = function(operation, tableName, timeMs
   }
 
   // Chamar sistema avançado
-  this.trackOperation(operation, tableName, timeMs, { cacheHit });
-};
+  const context = { cacheHit };
+  this.trackOperation(operation, tableName, timeMs, context);
 
-// ================================================================================
-// FUNÇÕES DE TESTE E DEMONSTRAÇÃO
-// ================================================================================
-
-/**
- * Função para testar o sistema de monitoramento (SEM integração com PerformanceMetrics)
- */
-function testPerformanceMonitor() {
-  console.log('🧪 TESTANDO PERFORMANCE MONITOR');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-  try {
-    // Reset para teste limpo
-    PerformanceMonitor.reset();
-
-    // Simular algumas operações
-    console.log('\n📊 Simulando operações...');
-
-    // Operações rápidas
-    PerformanceMonitor._trackOperationDirect('QUERY', 'usuarios', 300);
-    PerformanceMonitor._trackOperationDirect('INSERT', 'atividades', 800);
-
-    // Operações normais
-    PerformanceMonitor._trackOperationDirect('QUERY', 'membros', 1500);
-    PerformanceMonitor._trackOperationDirect('UPDATE', 'participacoes', 2000);
-
-    // Operações lentas
-    PerformanceMonitor._trackOperationDirect('QUERY', 'atividades', 4000);
-    PerformanceMonitor._trackOperationDirect('FULL_VALIDATION', 'membros', 6000);
-
-    // Operações críticas
-    PerformanceMonitor._trackOperationDirect('QUERY', 'participacoes', 12000);
-    PerformanceMonitor._trackOperationDirect('INSERT', 'atividades', 18000);
-
-    console.log('✅ Operações simuladas');
-
-    // Gerar relatório
-    console.log('\n📋 Gerando relatório...');
-    const report = PerformanceMonitor.logAdvancedReport();
-
-    console.log('\n🎉 TESTE CONCLUÍDO COM SUCESSO!');
-    return { success: true, report };
-
-  } catch (error) {
-    console.error('❌ Erro no teste:', error.message);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Método direto de tracking para testes (sem integração)
- */
-PerformanceMonitor._trackOperationDirect = function(operation, tableName, timeMs, context = {}) {
-  this.init();
-
-  // Classificar performance
-  const classification = this._classifyOperation(operation, timeMs);
-
-  // Se for operação lenta, registrar
-  if (classification.level >= 2) { // Lento ou Crítico
-    this._recordSlowOperation({
-      operation,
-      tableName,
-      timeMs,
-      classification,
-      context,
-      timestamp: new Date()
-    });
-  }
-
-  // Gerar alerta se crítico
-  if (classification.level >= 3) { // Crítico
-    this._generateAlert({
-      type: 'CRITICAL_PERFORMANCE',
-      operation,
-      tableName,
-      timeMs,
-      classification,
-      timestamp: new Date()
-    });
-  }
-
-  Logger.debug('PerformanceMonitor', `${operation} classificada como ${classification.label}`, {
-    operation, tableName, timeMs, level: classification.label
-  });
+  // Salvar persistentemente (async, não bloqueia operação principal)
+  this._savePersistentLog(operation, tableName, timeMs, context);
 };
 
 /**
- * Testar integração com operações reais do sistema
+ * Salvar log persistente de forma async (não bloqueia operação principal)
  */
-async function testRealSystemIntegration() {
-  console.log('🔗 TESTANDO INTEGRAÇÃO COM SISTEMA REAL');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
+PerformanceMonitor._savePersistentLog = function(operation, tableName, timeMs, context) {
   try {
-    // Reset para teste limpo
-    PerformanceMonitor.reset();
-    console.log('✅ Sistema de monitoramento resetado');
+    // Evitar recursão infinita - não salvar logs das próprias operações de performance
+    if (tableName === 'performance_logs' || tableName === 'system_health') {
+      return; // Não logar operações das próprias tabelas de log
+    }
 
-    // 1. Testar operações QUERY reais
-    console.log('\n🔍 1. Testando QUERY operations...');
-    const users = DatabaseManager.query('usuarios', {});
-    const atividades = DatabaseManager.query('atividades', {});
-    const membros = DatabaseManager.query('membros', {});
-
-    console.log(`   ✅ Query usuarios: ${users.length} registros`);
-    console.log(`   ✅ Query atividades: ${atividades.length} registros`);
-    console.log(`   ✅ Query membros: ${membros.length} registros`);
-
-    // 2. Testar validação complexa
-    console.log('\n✅ 2. Testando VALIDATION...');
-    const validationResult = await ValidationEngine.validateRecord('atividades', {
-      id: 'TEST-PERF-001',
-      titulo: 'Teste Performance',
-      data: '2025-09-22',
-      categoria_atividade_id: 'CAT-001'
-    });
-    console.log(`   ✅ Validação: ${validationResult.isValid ? 'Válida' : 'Inválida'}`);
-
-    // 3. Aguardar um momento para operações processarem
-    console.log('\n⏳ 3. Processando métricas...');
-    Utilities.sleep(1000); // Google Apps Script usa Utilities.sleep() ao invés de setTimeout
-
-    // 4. Gerar relatório com dados reais
-    console.log('\n📊 4. Gerando relatório de performance...');
-    const report = PerformanceMonitor.logAdvancedReport();
-
-    console.log('\n🎉 TESTE DE INTEGRAÇÃO CONCLUÍDO!');
-    console.log(`📊 Operações monitoradas: ${report.advanced.slowOperations.count + (report.summary.totalOperations || 0)}`);
-    console.log(`🏥 Score de saúde: ${report.advanced.healthScore}/100`);
-
-    return {
-      success: true,
-      report,
-      operations: {
-        users: users.length,
-        atividades: atividades.length,
-        membros: membros.length,
-        validation: validationResult.isValid
+    // Só salvar se for operação significativa (evitar spam de logs)
+    if (timeMs > 100 || operation.includes('VALIDATION')) {
+      // Executar de forma síncrona, mas com tratamento de erro
+      const self = this;
+      try {
+        // Remover await para evitar problemas async em contexto não-async
+        const result = self.savePerformanceLog(operation, tableName, timeMs, context);
+        // Se retornar promise, capturar erro silenciosamente
+        if (result && typeof result.catch === 'function') {
+          result.catch(error => {
+            Logger.warn('PerformanceMonitor', 'Falha silenciosa ao salvar log persistente', {
+              operation, tableName, timeMs, error: error.message
+            });
+          });
+        }
+      } catch (syncError) {
+        Logger.warn('PerformanceMonitor', 'Erro síncrono ao salvar log persistente', {
+          operation, tableName, timeMs, error: syncError.message
+        });
       }
-    };
-
+    }
   } catch (error) {
-    console.error('❌ Erro no teste de integração:', error.message);
-    return { success: false, error: error.message };
+    // Falhas na persistência não devem quebrar operação principal
+    Logger.warn('PerformanceMonitor', 'Erro na preparação do log persistente', {
+      operation, tableName, timeMs, error: error.message
+    });
   }
-}
+};
+
+// ================================================================================
+// FUNÇÕES UTILITÁRIAS PARA MANUTENÇÃO
+// ================================================================================
 
 /**
- * Função para benchmark do sistema atual
+ * Obter resumo rápido para debugging
+ * @returns {string} Resumo do status atual
  */
-async function runSystemBenchmark() {
-  console.log('⚡ EXECUTANDO BENCHMARK DO SISTEMA');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+PerformanceMonitor.getQuickStatus = function() {
+  this.init();
+  const report = this.getSimpleReport();
+  return `Performance: ${report.totalOperations} ops | Health: ${report.healthScore}/100 | Slow: ${report.slowOperations} | Alerts: ${report.alerts}`;
+};
 
-  try {
-    // Reset métricas
-    PerformanceMonitor.reset();
-
-    // Benchmark de queries
-    console.log('\n🔍 Benchmark: Queries...');
-    const startQuery = new Date();
-    const users = DatabaseManager.query('usuarios', {});
-    const atividades = DatabaseManager.query('atividades', {});
-    const membros = DatabaseManager.query('membros', {});
-    const queryTime = new Date() - startQuery;
-
-    // Benchmark de inserção (simulada)
-    console.log('\n➕ Benchmark: Validações...');
-    const startValidation = new Date();
-    // Simular validações complexas
-    await ValidationEngine.validateRecord('atividades', {
-      id: 'TEST-001',
-      titulo: 'Benchmark Test',
-      data: '2025-09-22',
-      categoria_atividade_id: 'CAT-001'
-    });
-    const validationTime = new Date() - startValidation;
-
-    // Gerar relatório do benchmark
-    console.log('\n📊 Resultados do Benchmark:');
-    console.log(`   Queries (3 tabelas): ${queryTime}ms`);
-    console.log(`   Validação completa: ${validationTime}ms`);
-
-    const report = PerformanceMonitor.getAdvancedReport();
-
-    console.log('\n🏆 BENCHMARK CONCLUÍDO!');
-    return {
-      success: true,
-      benchmark: { queryTime, validationTime },
-      report
-    };
-
-  } catch (error) {
-    console.error('❌ Erro no benchmark:', error.message);
-    return { success: false, error: error.message };
-  }
-}
+// ================================================================================
+// FIM DO PERFORMANCE MONITOR
+// ================================================================================

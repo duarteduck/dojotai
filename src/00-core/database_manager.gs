@@ -1414,47 +1414,47 @@ const DatabaseManager = {
    * Gerar ID único baseado nos padrões reais do sistema
    */
   _generateId(tableName) {
-    const pattern = APP_CONFIG.ID_PATTERNS[tableName];
+    // Usar dicionário de dados ao invés de padrões manuais
+    const table = getTableDictionary(tableName);
 
-    if (!pattern) {
-      Logger.error('DatabaseManager', 'Pattern não encontrado para tabela', {
+    if (!table || !table.fields || !table.fields.id) {
+      Logger.error('DatabaseManager', 'Tabela ou campo ID não encontrado no dicionário', {
         tableName,
-        availablePatterns: Object.keys(APP_CONFIG.ID_PATTERNS)
+        hasTable: !!table,
+        hasFields: !!(table && table.fields),
+        hasIdField: !!(table && table.fields && table.fields.id)
       });
       // Fallback seguro
       return tableName.toUpperCase() + '-' + Date.now();
     }
 
-    switch (tableName) {
-      case 'usuarios':
-      case 'membros':
-      case 'participacoes':
-        // Padrão: U{timestamp completo} (como no sistema real)
-        const fullTimestamp = Date.now().toString();
-        return `${pattern.prefix}${fullTimestamp}`;
+    const idField = table.fields.id;
 
-      case 'atividades':
-        // Padrão: ACT-{timestamp}{random}
-        const timestamp = Date.now().toString().slice(-8);
-        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-        return `${pattern.prefix}-${timestamp}${random}`;
-
-      case 'categorias_atividades':
-      case 'menu':
-        // Padrão: CAT-{counter} - precisa buscar último número
-        const lastCounter = this._getLastCounter(tableName, pattern.prefix);
-        const nextCounter = (lastCounter + 1).toString().padStart(3, '0');
-        return `${pattern.prefix}-${nextCounter}`;
-
-      case 'sessoes':
-        // Padrão: SES-{timestamp}
-        const sessionTimestamp = Date.now().toString();
-        return `${pattern.prefix}-${sessionTimestamp}`;
-
-      default:
-        // Fallback
-        return `${pattern.prefix}-${Date.now()}`;
+    // Extrair padrão do campo pattern (ex: '^PERF-\\d+$' → 'PERF')
+    let prefix = tableName.toUpperCase();
+    if (idField.pattern) {
+      const match = idField.pattern.match(/^\^?([A-Z]+)/);
+      if (match) {
+        prefix = match[1];
+      }
     }
+
+    // Verificar se é formato contador ou timestamp
+    if (idField.pattern && idField.pattern.includes('\\d+')) {
+      // Formato contador (ex: PERF-001, CAT-001)
+      if (idField.pattern.includes('-')) {
+        const lastCounter = this._getLastCounter(tableName, prefix);
+        const nextCounter = (lastCounter + 1).toString().padStart(3, '0');
+        return `${prefix}-${nextCounter}`;
+      } else {
+        // Formato timestamp direto (ex: U1234567890, M1234567890)
+        const timestamp = Date.now().toString();
+        return `${prefix}${timestamp}`;
+      }
+    }
+
+    // Fallback para formato timestamp
+    return `${prefix}-${Date.now()}`;
   },
 
   /**

@@ -328,7 +328,7 @@ function getSessionStatsSimple() {
  * Função de manutenção automática - executar periodicamente
  * @returns {Object} Resultado da manutenção
  */
-function runSystemMaintenance() {
+async function runSystemMaintenance() {
   try {
     Logger.info('SystemMaintenance', 'Iniciando manutenção automática');
 
@@ -345,7 +345,11 @@ function runSystemMaintenance() {
     PerformanceMonitor.cleanup();
     results.tasks.performanceCleanup = { ok: true, message: 'Performance data cleaned' };
 
-    // 3. Gerar relatório de saúde do sistema
+    // 3. Salvar relatório diário de saúde
+    const dailyHealthSave = await PerformanceMonitor.saveDailyHealthReport();
+    results.tasks.dailyHealthReport = dailyHealthSave;
+
+    // 4. Gerar relatório de saúde do sistema
     const healthReport = PerformanceMonitor.getAdvancedReport();
     results.tasks.healthCheck = {
       ok: true,
@@ -353,7 +357,7 @@ function runSystemMaintenance() {
       recommendations: healthReport.advanced.recommendations.length
     };
 
-    // 4. Log de estatísticas do sistema
+    // 5. Log de estatísticas do sistema
     const sessionStats = getSessionStats();
     results.tasks.systemStats = {
       activeSessions: sessionStats.active_sessions,

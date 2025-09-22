@@ -70,54 +70,9 @@ const APP_CONFIG = {
   // Tabelas serão carregadas dinamicamente do dicionário
   // Usar getExistingTables() para obter lista atual
 
-  // Padrões de ID baseados no sistema real
-  ID_PATTERNS: {
-    usuarios: {
-      prefix: 'U',
-      format: 'U{timestamp}{random}', // Ex: U437880409339
-      description: 'ID de usuário - U + timestamp + random'
-    },
-    atividades: {
-      prefix: 'ACT',
-      format: 'ACT-{timestamp}{random}', // Ex: ACT-202509180001
-      description: 'ID de atividade - ACT- + timestamp + contador'
-    },
-    membros: {
-      prefix: 'M',
-      format: 'M{timestamp}{random}', // Ex: M437880409340
-      description: 'ID de membro - M + timestamp + random'
-    },
-    participacoes: {
-      prefix: 'P',
-      format: 'P{timestamp}{random}', // Ex: P437880409341
-      description: 'ID de participação - P + timestamp + random'
-    },
-    categorias_atividades: {
-      prefix: 'CAT',
-      format: 'CAT-{counter}', // Ex: CAT-001, CAT-002
-      description: 'ID de categoria - CAT- + contador sequencial'
-    },
-    menu: {
-      prefix: 'MNU',
-      format: 'MNU-{counter}', // Ex: MNU-001, MNU-002
-      description: 'ID de menu - MNU- + contador sequencial'
-    },
-    sessoes: {
-      prefix: 'SES',
-      format: 'SES-{timestamp}{random}', // Ex: SES-202509191234567
-      description: 'ID de sessão - SES- + timestamp + random'
-    },
-    notificacoes: {
-      prefix: 'NOT',
-      format: 'NOT-{counter}', // Ex: NOT-001, NOT-002
-      description: 'ID de notificação - NOT- + contador sequencial'
-    },
-    historico: {
-      prefix: 'HIS',
-      format: 'HIS-{counter}', // Ex: HIS-001, HIS-002
-      description: 'ID de histórico - HIS- + contador sequencial'
-    }
-  }
+  // NOTA: Padrões de ID agora são obtidos automaticamente do DATA_DICTIONARY
+  // Cada tabela define seu padrão no campo 'pattern' do seu campo 'id'
+  // Ex: pattern: '^PERF-\\d+$' → gera PERF-001, PERF-002, etc.
 };
 
 /**

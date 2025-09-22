@@ -37,6 +37,9 @@
  * 5. CATEGORIAS_ATIVIDADES - Categorias de atividades
  * 6. PARTICIPACOES       - Participações de membros em atividades
  * 7. MEMBROS             - Cadastro de membros do dojo (praticantes)
+ * 8. SESSOES             - Sessões de usuários (login/logout)
+ * 9. PERFORMANCE_LOGS    - Logs detalhados de performance das operações
+ * 10. SYSTEM_HEALTH      - Relatórios diários de saúde do sistema
  *
  * 🕐 FORMATO DE DATAS: yyyy-MM-dd HH:mm:ss (America/Sao_Paulo)
  */
@@ -1062,6 +1065,194 @@ const DATA_DICTIONARY = {
         timezone: 'America/Sao_Paulo',
         description: 'Data e hora de destruição da sessão (logout)',
         example: '2025-09-19 18:00:00'
+      }
+    }
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                                9. TABELA: PERFORMANCE_LOGS                                     │
+  // │ 📊 Logs detalhados de performance das operações do sistema                                    │
+  // │ 📂 Arquivo: Performance | Planilha: performance_logs | Referência: performance_logs          │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  performance_logs: {
+    tableName: 'performance_logs',
+    description: 'Logs detalhados de performance das operações do sistema',
+    primaryKey: 'id',
+    file: 'Performance',
+    sheet: 'performance_logs',
+
+    // 🔍 CAMPOS DA TABELA PERFORMANCE_LOGS
+    fields: {
+
+      // ID único do log de performance
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^PERF-\\d+$',
+        description: 'ID único do log de performance',
+        generated: true,
+        example: 'PERF-001'
+      },
+
+      // Timestamp da operação
+      timestamp: {
+        type: 'DATETIME',
+        required: true,
+        timezone: 'America/Sao_Paulo',
+        description: 'Timestamp exato da operação monitorada',
+        example: '2025-09-22 14:30:15'
+      },
+
+      // Tipo da operação
+      operation_type: {
+        type: 'TEXT',
+        required: true,
+        enum: ['QUERY', 'INSERT', 'UPDATE', 'DELETE', 'VALIDATION', 'FK_VALIDATION', 'BUSINESS_RULES', 'ADVANCED_VALIDATION', 'UNIQUE_VALIDATION', 'FULL_VALIDATION'],
+        description: 'Tipo da operação executada',
+        example: 'QUERY'
+      },
+
+      // Nome da tabela envolvida
+      table_name: {
+        type: 'TEXT',
+        required: true,
+        description: 'Nome da tabela onde a operação foi executada',
+        example: 'usuarios'
+      },
+
+      // Duração em milissegundos
+      duration_ms: {
+        type: 'NUMBER',
+        required: true,
+        min: 0,
+        description: 'Duração da operação em milissegundos',
+        example: 1250
+      },
+
+      // Classificação da performance
+      classification: {
+        type: 'TEXT',
+        required: true,
+        enum: ['FAST', 'NORMAL', 'SLOW', 'CRITICAL'],
+        description: 'Classificação automática da performance',
+        example: 'NORMAL'
+      },
+
+      // Contexto adicional da operação
+      context: {
+        type: 'TEXT',
+        required: false,
+        description: 'JSON com contexto adicional (cache hit, filtros, etc.)',
+        example: '{"cacheHit":true,"filters":{"status":"ativo"}}'
+      },
+
+      // Data de criação do log
+      created_at: {
+        type: 'DATETIME',
+        required: true,
+        timezone: 'America/Sao_Paulo',
+        description: 'Data e hora de criação do log',
+        example: '2025-09-22 14:30:15'
+      }
+    }
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                               10. TABELA: SYSTEM_HEALTH                                        │
+  // │ 📈 Relatórios diários consolidados de saúde do sistema                                        │
+  // │ 📂 Arquivo: Performance | Planilha: system_health | Referência: system_health                │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  system_health: {
+    tableName: 'system_health',
+    description: 'Relatórios diários consolidados de saúde do sistema',
+    primaryKey: 'id',
+    file: 'Performance',
+    sheet: 'system_health',
+
+    // 🔍 CAMPOS DA TABELA SYSTEM_HEALTH
+    fields: {
+
+      // ID único do relatório de saúde
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^HEALTH-\\d+$',
+        description: 'ID único do relatório de saúde',
+        generated: true,
+        example: 'HEALTH-001'
+      },
+
+      // Data do relatório
+      date: {
+        type: 'DATE',
+        required: true,
+        unique: true,
+        description: 'Data do relatório (um por dia)',
+        example: '2025-09-22'
+      },
+
+      // Score de saúde do sistema
+      health_score: {
+        type: 'NUMBER',
+        required: true,
+        min: 0,
+        max: 100,
+        description: 'Score de saúde do sistema (0-100)',
+        example: 85
+      },
+
+      // Total de operações no período
+      total_operations: {
+        type: 'NUMBER',
+        required: true,
+        min: 0,
+        description: 'Total de operações executadas no período',
+        example: 1247
+      },
+
+      // Taxa de cache hit
+      cache_hit_rate: {
+        type: 'NUMBER',
+        required: true,
+        min: 0,
+        max: 1,
+        description: 'Taxa de cache hit (0.0 a 1.0)',
+        example: 0.785
+      },
+
+      // Quantidade de operações lentas
+      slow_operations: {
+        type: 'NUMBER',
+        required: true,
+        min: 0,
+        description: 'Quantidade de operações lentas detectadas',
+        example: 12
+      },
+
+      // Quantidade de alertas críticos
+      critical_alerts: {
+        type: 'NUMBER',
+        required: true,
+        min: 0,
+        description: 'Quantidade de alertas críticos gerados',
+        example: 3
+      },
+
+      // Recomendações do sistema
+      recommendations: {
+        type: 'TEXT',
+        required: false,
+        description: 'JSON com recomendações de otimização',
+        example: '[{"type":"CACHE","priority":"HIGH","message":"Cache hit rate baixo"}]'
+      },
+
+      // Data de criação do relatório
+      created_at: {
+        type: 'DATETIME',
+        required: true,
+        timezone: 'America/Sao_Paulo',
+        description: 'Data e hora de criação do relatório',
+        example: '2025-09-22 23:59:59'
       }
     }
   }
