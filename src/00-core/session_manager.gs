@@ -325,6 +325,57 @@ function getSessionStatsSimple() {
 }
 
 /**
+ * Função de manutenção automática - executar periodicamente
+ * @returns {Object} Resultado da manutenção
+ */
+function runSystemMaintenance() {
+  try {
+    Logger.info('SystemMaintenance', 'Iniciando manutenção automática');
+
+    const results = {
+      timestamp: new Date(),
+      tasks: {}
+    };
+
+    // 1. Limpar sessões expiradas
+    const sessionCleanup = cleanupExpiredSessions();
+    results.tasks.sessionCleanup = sessionCleanup;
+
+    // 2. Limpar dados de performance antigos
+    PerformanceMonitor.cleanup();
+    results.tasks.performanceCleanup = { ok: true, message: 'Performance data cleaned' };
+
+    // 3. Gerar relatório de saúde do sistema
+    const healthReport = PerformanceMonitor.getAdvancedReport();
+    results.tasks.healthCheck = {
+      ok: true,
+      healthScore: healthReport.advanced.healthScore,
+      recommendations: healthReport.advanced.recommendations.length
+    };
+
+    // 4. Log de estatísticas do sistema
+    const sessionStats = getSessionStats();
+    results.tasks.systemStats = {
+      activeSessions: sessionStats.active_sessions,
+      totalOperations: healthReport.summary.totalOperations,
+      cacheHitRate: (healthReport.summary.cacheHitRate * 100).toFixed(1) + '%'
+    };
+
+    Logger.info('SystemMaintenance', 'Manutenção concluída', results.tasks);
+
+    return {
+      ok: true,
+      message: 'Manutenção automática concluída',
+      results
+    };
+
+  } catch (error) {
+    Logger.error('SystemMaintenance', 'Erro na manutenção automática', { error: error.message });
+    return { ok: false, error: error.message };
+  }
+}
+
+/**
  * Aliases para compatibilidade com auth.gs
  */
 function createSessionForUser(userId, deviceInfo) {
