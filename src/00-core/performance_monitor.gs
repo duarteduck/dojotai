@@ -485,15 +485,26 @@ class PerformanceMonitor {
 // ================================================================================
 
 /**
- * Hook no PerformanceMetrics existente para usar o sistema avançado
+ * Método para integração sem hook circular
+ * Chamado diretamente do DatabaseManager
  */
-const OriginalTrackOperation = PerformanceMetrics.trackOperation;
-PerformanceMetrics.trackOperation = function(operation, tableName, timeMs, cacheHit) {
-  // Chamar sistema original
-  OriginalTrackOperation.call(this, operation, tableName, timeMs, cacheHit);
+PerformanceMonitor.integrateWithExisting = function(operation, tableName, timeMs, cacheHit) {
+  // Chamar PerformanceMetrics original
+  if (typeof PerformanceMetrics !== 'undefined' && PerformanceMetrics.trackOperation) {
+    // Usar uma flag para evitar recursão
+    if (!this._integrationActive) {
+      this._integrationActive = true;
+      try {
+        PerformanceMetrics.trackOperation(operation, tableName, timeMs, cacheHit);
+      } catch (error) {
+        Logger.warn('PerformanceMonitor', 'Erro na integração com PerformanceMetrics', { error: error.message });
+      }
+      this._integrationActive = false;
+    }
+  }
 
   // Chamar sistema avançado
-  PerformanceMonitor.trackOperation(operation, tableName, timeMs, { cacheHit });
+  this.trackOperation(operation, tableName, timeMs, { cacheHit });
 };
 
 // ================================================================================
@@ -501,31 +512,34 @@ PerformanceMetrics.trackOperation = function(operation, tableName, timeMs, cache
 // ================================================================================
 
 /**
- * Função para testar o sistema de monitoramento
+ * Função para testar o sistema de monitoramento (SEM integração com PerformanceMetrics)
  */
 function testPerformanceMonitor() {
   console.log('🧪 TESTANDO PERFORMANCE MONITOR');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   try {
+    // Reset para teste limpo
+    PerformanceMonitor.reset();
+
     // Simular algumas operações
     console.log('\n📊 Simulando operações...');
 
     // Operações rápidas
-    PerformanceMonitor.trackOperation('QUERY', 'usuarios', 300);
-    PerformanceMonitor.trackOperation('INSERT', 'atividades', 800);
+    PerformanceMonitor._trackOperationDirect('QUERY', 'usuarios', 300);
+    PerformanceMonitor._trackOperationDirect('INSERT', 'atividades', 800);
 
     // Operações normais
-    PerformanceMonitor.trackOperation('QUERY', 'membros', 1500);
-    PerformanceMonitor.trackOperation('UPDATE', 'participacoes', 2000);
+    PerformanceMonitor._trackOperationDirect('QUERY', 'membros', 1500);
+    PerformanceMonitor._trackOperationDirect('UPDATE', 'participacoes', 2000);
 
     // Operações lentas
-    PerformanceMonitor.trackOperation('QUERY', 'atividades', 4000);
-    PerformanceMonitor.trackOperation('FULL_VALIDATION', 'membros', 6000);
+    PerformanceMonitor._trackOperationDirect('QUERY', 'atividades', 4000);
+    PerformanceMonitor._trackOperationDirect('FULL_VALIDATION', 'membros', 6000);
 
     // Operações críticas
-    PerformanceMonitor.trackOperation('QUERY', 'participacoes', 12000);
-    PerformanceMonitor.trackOperation('INSERT', 'atividades', 18000);
+    PerformanceMonitor._trackOperationDirect('QUERY', 'participacoes', 12000);
+    PerformanceMonitor._trackOperationDirect('INSERT', 'atividades', 18000);
 
     console.log('✅ Operações simuladas');
 
@@ -541,6 +555,44 @@ function testPerformanceMonitor() {
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Método direto de tracking para testes (sem integração)
+ */
+PerformanceMonitor._trackOperationDirect = function(operation, tableName, timeMs, context = {}) {
+  this.init();
+
+  // Classificar performance
+  const classification = this._classifyOperation(operation, timeMs);
+
+  // Se for operação lenta, registrar
+  if (classification.level >= 2) { // Lento ou Crítico
+    this._recordSlowOperation({
+      operation,
+      tableName,
+      timeMs,
+      classification,
+      context,
+      timestamp: new Date()
+    });
+  }
+
+  // Gerar alerta se crítico
+  if (classification.level >= 3) { // Crítico
+    this._generateAlert({
+      type: 'CRITICAL_PERFORMANCE',
+      operation,
+      tableName,
+      timeMs,
+      classification,
+      timestamp: new Date()
+    });
+  }
+
+  Logger.debug('PerformanceMonitor', `${operation} classificada como ${classification.label}`, {
+    operation, tableName, timeMs, level: classification.label
+  });
+};
 
 /**
  * Função para benchmark do sistema atual

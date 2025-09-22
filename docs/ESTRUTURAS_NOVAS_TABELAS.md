@@ -99,6 +99,59 @@ HIS-003 | U1726692234567 | LOGIN | usuarios | U1726692234567 | {"successful":tru
 
 ---
 
+## 📊 **Tabela: Performance_Logs**
+
+### **Estrutura Sugerida**
+```
+id | timestamp | operation_type | table_name | duration_ms | classification | context | created_at
+```
+
+### **Campos Detalhados**
+- **id**: TEXT - ID único (ex: `PERF-001`, `PERF-002`)
+- **timestamp**: DATETIME - Momento da operação
+- **operation_type**: TEXT - Tipo (`QUERY`, `INSERT`, `UPDATE`, `DELETE`, `VALIDATION`)
+- **table_name**: TEXT - Tabela envolvida
+- **duration_ms**: NUMBER - Duração em milissegundos
+- **classification**: TEXT - Classificação (`FAST`, `NORMAL`, `SLOW`, `CRITICAL`)
+- **context**: TEXT - JSON com contexto adicional (cache hit, filtros, etc.)
+- **created_at**: DATETIME - Data de criação do log
+
+### **Exemplos de Uso**
+```
+PERF-001 | 2025-09-22 11:30:00 | QUERY | atividades | 1200 | NORMAL | {"cacheHit":false,"filters":{"status":"ativo"}} | 2025-09-22 11:30:00
+PERF-002 | 2025-09-22 11:31:15 | INSERT | sessoes | 15000 | CRITICAL | {"userId":"U001","validation":true} | 2025-09-22 11:31:15
+```
+
+---
+
+## 📈 **Tabela: System_Health**
+
+### **Estrutura Sugerida**
+```
+id | date | health_score | total_operations | cache_hit_rate | slow_operations | critical_alerts | recommendations | created_at
+```
+
+### **Campos Detalhados**
+- **id**: TEXT - ID único (ex: `HEALTH-001`)
+- **date**: DATE - Data do relatório (diário)
+- **health_score**: NUMBER - Score de saúde (0-100)
+- **total_operations**: NUMBER - Total de operações no período
+- **cache_hit_rate**: NUMBER - Taxa de cache hit (0.0-1.0)
+- **slow_operations**: NUMBER - Quantidade de operações lentas
+- **critical_alerts**: NUMBER - Quantidade de alertas críticos
+- **recommendations**: TEXT - JSON com recomendações
+- **created_at**: DATETIME - Data de criação
+
+### **Exemplo de recommendations (JSON)**
+```json
+[
+  {"type":"CACHE","priority":"HIGH","message":"Cache hit rate baixo (45%). Considere aumentar TTL."},
+  {"type":"PERFORMANCE","priority":"MEDIUM","message":"Tabela 'atividades' com muitas operações lentas."}
+]
+```
+
+---
+
 ## 🔧 **Integração com Sistema Atual**
 
 ### **Campos FK que Referenciam Tabelas Existentes**
