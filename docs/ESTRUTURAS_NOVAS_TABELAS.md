@@ -1,196 +1,162 @@
-# 📊 Estruturas das Novas Tabelas para Layout Futuro
+# 📊 Estruturas das Novas Tabelas - Revisão Final
 
 > **Criado**: 19/09/2025
-> **Objetivo**: Preparar tabelas para futuro layout moderno
+> **Atualizado**: 22/09/2025
+> **Status**: ✅ **DATA_DICTIONARY ATUALIZADO** - Estruturas prontas para implementação
 
 ---
 
-## 🔔 **Tabela: Notificacoes**
-
-### **Estrutura Sugerida**
-```
-id | id_usuario | tipo | titulo | mensagem | lida | criado_em | expires_at
-```
-
-### **Campos Detalhados**
-- **id**: TEXT - ID único (ex: `NOT-001`, `NOT-002`)
-- **id_usuario**: TEXT - FK para usuarios.id
-- **tipo**: TEXT - Tipo da notificação (`info`,`warning`, `success`, `error`,`atividade`,`confirmação`)
-- **titulo**: TEXT - Título curto da notificação
-- **mensagem**: TEXT - Mensagem completa
-- **lida**: TEXT - Status (`sim`/vazio) - seguindo padrão do sistema
-- **criado_em**: DATETIME - Timestamp de criação
-- **expires_at**: DATETIME - Data de expiração (opcional)
-
-### **Exemplos de Uso**
-```
-NOT-001 | U1726692234567 | info | Nova Atividade | "Atividade de Kata criada para amanhã" | vazio | 2025-09-19 20:00 | 2025-09-26 20:00
-NOT-002 | U1726692234567 | warning | Confirmação Pendente | "Confirme sua participação na atividade de hoje" | vazio | 2025-09-19 08:00 | 2025-09-19 18:00
-```
+## ✅ **TABELAS JÁ IMPLEMENTADAS**
+- **performance_logs** ✅ Funcional desde 22/09/2025
+- **system_health** ✅ Funcional desde 22/09/2025
 
 ---
 
-## ⚙️ **Tabela: Preferencias**
+## 🔔 **TABELA: notificacoes** - **ESTRUTURA FINALIZADA**
 
-### **Estrutura Sugerida**
+### **✅ Estrutura Otimizada (Já no Data Dictionary)**
 ```
-id_usuario | tema | notificacoes_ativas | configuracao_dashboard | idioma | atualizado_em
+id | id_usuario | tipo | titulo | mensagem | lida | expires_at | criado_em | deleted
 ```
 
-### **Campos Detalhados**
-- **id_usuario**: TEXT - FK para usuarios.id (PK)
-- **tema**: TEXT - Tema da interface (`claro`, `escuro`, `auto`)
-- **notificacoes_ativas**: TEXT - Receber notificações (`sim`/vazio)
-- **configuracao_dashboard**: TEXT - JSON com config do dashboard
-- **idioma**: TEXT - Idioma da interface (`pt-BR`, `en-US`)
-- **atualizado_em**: DATETIME - Última atualização
+### **🔧 Melhorias Aplicadas:**
+- ✅ **Campos obrigatórios adicionados**: `criado_em`, `deleted`
+- ✅ **FK validation**: `id_usuario` → `usuarios.uid`
+- ✅ **Pattern ID**: `^NOT-\\d+$` com geração automática
+- ✅ **Enum `lida`**: `['sim', '']` seguindo padrão do sistema
+- ✅ **Validações de tamanho**: título (100 chars), mensagem (500 chars)
 
-### **Exemplo de configuracao_dashboard (JSON)**
+### **📋 Campos Detalhados:**
+| Campo | Tipo | Obrigatório | Descrição | Exemplo |
+|-------|------|-------------|-----------|---------|
+| `id` | TEXT | Sim (auto) | ID único - gerado automaticamente | `NOT-001` |
+| `id_usuario` | TEXT | Sim | FK para usuarios.uid | `U1726692234567` |
+| `tipo` | TEXT | Sim | Tipo: info\|warning\|success\|error\|atividade\|confirmacao | `info` |
+| `titulo` | TEXT | Sim | Título (max 100 chars) | `Nova Atividade` |
+| `mensagem` | TEXT | Sim | Mensagem (max 500 chars) | `Atividade criada para amanhã` |
+| `lida` | TEXT | Não | Status: vazio=não lida, sim=lida | `''` ou `'sim'` |
+| `expires_at` | DATETIME | Não | Data de expiração (opcional) | `2025-09-26 20:00:00` |
+| `criado_em` | DATETIME | Sim (auto) | Data de criação - gerado automaticamente | `2025-09-22 15:30:00` |
+| `deleted` | TEXT | Não | Soft delete: vazio=ativo, x=deletado | `''` |
+
+---
+
+## ⚙️ **TABELA: preferencias** - **ESTRUTURA FINALIZADA**
+
+### **✅ Estrutura Otimizada (Já no Data Dictionary)**
+```
+id_usuario | tema | notificacoes_ativas | configuracao_dashboard | idioma | atualizado_em | deleted
+```
+
+### **🔧 Melhorias Aplicadas:**
+- ✅ **PK correta**: `id_usuario` como chave primária
+- ✅ **FK validation**: `id_usuario` → `usuarios.uid`
+- ✅ **Enum otimizado**: `tema` com valores `['claro', 'escuro', 'auto']`
+- ✅ **Defaults inteligentes**: `tema='auto'`, `notificacoes_ativas='sim'`, `idioma='pt-BR'`
+- ✅ **JSON validation**: `configuracao_dashboard` com validação
+
+### **📋 Campos Detalhados:**
+| Campo | Tipo | Obrigatório | Padrão | Descrição |
+|-------|------|-------------|--------|-----------|
+| `id_usuario` | TEXT | Sim | - | FK para usuarios.uid (PK) |
+| `tema` | TEXT | Não | `auto` | Tema: claro\|escuro\|auto |
+| `notificacoes_ativas` | TEXT | Não | `sim` | Receber notificações: vazio=não, sim=sim |
+| `configuracao_dashboard` | TEXT | Não | - | JSON com config personalizada |
+| `idioma` | TEXT | Não | `pt-BR` | Idioma: pt-BR\|en-US |
+| `atualizado_em` | DATETIME | Não | - | Última atualização |
+| `deleted` | TEXT | Não | `''` | Soft delete |
+
+### **📄 Exemplo de `configuracao_dashboard`:**
 ```json
 {
   "widgets": ["atividades_proximas", "estatisticas", "participacoes"],
   "layout": "compacto",
   "cards_por_pagina": 10,
-  "exibir_graficos": true
+  "exibir_graficos": true,
+  "tema_cards": "moderno"
 }
-```
-
-### **Exemplos de Uso**
-```
-U1726692234567 | escuro | sim | {"widgets":["atividades"],"layout":"compacto"} | pt-BR | 2025-09-19 20:00
 ```
 
 ---
 
-## 📚 **Tabela: Historico**
+## 📚 **TABELA: historico** - **ESTRUTURA FINALIZADA**
 
-### **Estrutura Sugerida**
+### **✅ Estrutura Otimizada (Já no Data Dictionary)**
 ```
-id | id_usuario | acao | tabela_alvo | id_alvo | detalhes | ip_address | criado_em
+id | id_usuario | acao | tabela_alvo | id_alvo | detalhes | user_agent | criado_em | deleted
 ```
 
-### **Campos Detalhados**
-- **id**: TEXT - ID único (ex: `HIS-001`, `HIS-002`)
-- **id_usuario**: TEXT - FK para usuarios.id
-- **acao**: TEXT - Tipo de ação (`CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `LOGOUT`)
-- **tabela_alvo**: TEXT - Tabela afetada (`atividades`, `membros`, etc.)
-- **id_alvo**: TEXT - ID do registro afetado
-- **tipo_alvo**: TEXT - Tipo do registro afetado (`atividade`,`usuario`,`membro`)
-- **detalhes**: TEXT - JSON com detalhes da operação
-- **ip_address**: TEXT - IP do usuário (se disponível)
-- **criado_em**: DATETIME - Timestamp da ação
+### **🔧 Melhorias Aplicadas:**
+- ✅ **Campo removido**: `tipo_alvo` (redundante com `tabela_alvo`)
+- ✅ **Campo alterado**: `ip_address` → `user_agent` (mais útil no Google Apps Script)
+- ✅ **Enum `acao`**: `['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW']`
+- ✅ **Pattern ID**: `^HIS-\\d+$` com geração automática
+- ✅ **FK validation**: `id_usuario` → `usuarios.uid`
 
-### **Exemplo de detalhes (JSON)**
+### **📋 Campos Detalhados:**
+| Campo | Tipo | Obrigatório | Descrição | Exemplo |
+|-------|------|-------------|-----------|---------|
+| `id` | TEXT | Sim (auto) | ID único - gerado automaticamente | `HIS-001` |
+| `id_usuario` | TEXT | Sim | FK para usuarios.uid | `U1726692234567` |
+| `acao` | TEXT | Sim | Ação: CREATE\|UPDATE\|DELETE\|LOGIN\|LOGOUT\|VIEW | `CREATE` |
+| `tabela_alvo` | TEXT | Não | Tabela afetada (opcional para LOGIN/LOGOUT) | `atividades` |
+| `id_alvo` | TEXT | Não | ID do registro afetado | `ACT-202509190001` |
+| `detalhes` | TEXT | Não | JSON com detalhes da operação | `{"campos":["titulo"]}` |
+| `user_agent` | TEXT | Não | User agent do navegador (max 500 chars) | `Mozilla/5.0...` |
+| `criado_em` | DATETIME | Sim (auto) | Data da ação - gerado automaticamente | `2025-09-22 15:30:00` |
+| `deleted` | TEXT | Não | Soft delete | `''` |
+
+### **📄 Exemplo de `detalhes`:**
 ```json
 {
   "campos_alterados": ["titulo", "data_inicio"],
   "valores_anteriores": {"titulo": "Kata Antiga"},
   "valores_novos": {"titulo": "Kata Nova"},
-  "user_agent": "Mozilla/5.0..."
-}
-```
-
-### **Exemplos de Uso**
-```
-HIS-001 | U1726692234567 | CREATE | atividades | ACT-202509190001 | {"titulo":"Nova Atividade"} | 192.168.1.100 | 2025-09-19 20:00
-HIS-002 | U1726692234567 | UPDATE | membros | M1726692234568 | {"campos_alterados":["grau"]} | 192.168.1.100 | 2025-09-19 20:05
-HIS-003 | U1726692234567 | LOGIN | usuarios | U1726692234567 | {"successful":true} | 192.168.1.100 | 2025-09-19 19:55
-```
-
----
-
-## 📊 **Tabela: Performance_Logs**
-
-### **Estrutura Sugerida**
-```
-id | timestamp | operation_type | table_name | duration_ms | classification | context | created_at
-```
-
-### **Campos Detalhados**
-- **id**: TEXT - ID único (ex: `PERF-001`, `PERF-002`)
-- **timestamp**: DATETIME - Momento da operação
-- **operation_type**: TEXT - Tipo (`QUERY`, `INSERT`, `UPDATE`, `DELETE`, `VALIDATION`)
-- **table_name**: TEXT - Tabela envolvida
-- **duration_ms**: NUMBER - Duração em milissegundos
-- **classification**: TEXT - Classificação (`FAST`, `NORMAL`, `SLOW`, `CRITICAL`)
-- **context**: TEXT - JSON com contexto adicional (cache hit, filtros, etc.)
-- **created_at**: DATETIME - Data de criação do log
-
-### **Exemplos de Uso**
-```
-PERF-001 | 2025-09-22 11:30:00 | QUERY | atividades | 1200 | NORMAL | {"cacheHit":false,"filters":{"status":"ativo"}} | 2025-09-22 11:30:00
-PERF-002 | 2025-09-22 11:31:15 | INSERT | sessoes | 15000 | CRITICAL | {"userId":"U001","validation":true} | 2025-09-22 11:31:15
-```
-
----
-
-## 📈 **Tabela: System_Health**
-
-### **Estrutura Sugerida**
-```
-id | date | health_score | total_operations | cache_hit_rate | slow_operations | critical_alerts | recommendations | created_at
-```
-
-### **Campos Detalhados**
-- **id**: TEXT - ID único (ex: `HEALTH-001`)
-- **date**: DATE - Data do relatório (diário)
-- **health_score**: NUMBER - Score de saúde (0-100)
-- **total_operations**: NUMBER - Total de operações no período
-- **cache_hit_rate**: NUMBER - Taxa de cache hit (0.0-1.0)
-- **slow_operations**: NUMBER - Quantidade de operações lentas
-- **critical_alerts**: NUMBER - Quantidade de alertas críticos
-- **recommendations**: TEXT - JSON com recomendações
-- **created_at**: DATETIME - Data de criação
-
-### **Exemplo de recommendations (JSON)**
-```json
-[
-  {"type":"CACHE","priority":"HIGH","message":"Cache hit rate baixo (45%). Considere aumentar TTL."},
-  {"type":"PERFORMANCE","priority":"MEDIUM","message":"Tabela 'atividades' com muitas operações lentas."}
-]
-```
-
----
-
-## 🔧 **Integração com Sistema Atual**
-
-### **Campos FK que Referenciam Tabelas Existentes**
-- **Notificacoes.id_usuario** → usuarios.id
-- **Preferencias.id_usuario** → usuarios.id
-- **Historico.id_usuario** → usuarios.id
-- **Historico.id_alvo** → Depende da tabela_alvo
-
-### **Padrões de ID Sugeridos**
-```javascript
-// Em 00_config.gs - adicionar:
-ID_PATTERNS: {
-  // ... existentes ...
-  notificacoes: {
-    prefix: 'NOT',
-    format: 'NOT-{counter}',
-    description: 'ID de notificação - NOT- + contador'
-  },
-  historico: {
-    prefix: 'HIS',
-    format: 'HIS-{counter}',
-    description: 'ID de histórico - HIS- + contador'
-  }
+  "ip": "192.168.1.100",
+  "sessao": "SES-abc123"
 }
 ```
 
 ---
 
-## 📋 **Para Você Revisar e Ajustar**
+## 🔄 **PRÓXIMOS PASSOS**
 
-### **Pontos para Decisão**
-1. **Notificações**: Os tipos `info/warning/success/error` fazem sentido?
-2. **Preferências**: Que outras configurações o usuário deve poder personalizar?
-3. **Histórico**: Quais ações são importantes de auditar?
-4. **Campos extras**: Algum campo específico do dojo que esqueci?
+### **✅ JÁ CONCLUÍDO:**
+1. ✅ **Data Dictionary atualizado** - Todas as 3 tabelas adicionadas com estruturas otimizadas
+2. ✅ **Validações configuradas** - FK, patterns, enums, defaults
+3. ✅ **Compatibilidade verificada** - Seguem padrões do sistema atual
 
-### **Próximos Passos**
-1. **Revisar** estruturas propostas
-2. **Ajustar** campos conforme necessário
-3. **Criar** as tabelas no Google Sheets
-4. **Atualizar** data_dictionary.gs com as novas tabelas
-5. **Testar** inserção/consulta básica
+### **📋 PENDENTE (Sua Revisão):**
+1. **Revisar estruturas finais** - Campos e tipos estão adequados?
+2. **Validar tipos de notificação** - Os 6 tipos cobrem suas necessidades?
+3. **Confirmar preferências** - Que outras configs o usuário deve personalizar?
+4. **Definir ações de auditoria** - Quais ações são importantes rastrear no histórico?
+
+### **🚀 IMPLEMENTAÇÃO (Após Sua Aprovação):**
+1. **Criar planilhas no Google Sheets** - Configurar abas com cabeçalhos
+2. **Atualizar tabela "Planilhas"** - Adicionar configuração de acesso
+3. **Testar CRUD básico** - Inserção e consulta via DatabaseManager
+4. **Implementar APIs** - Funções específicas para cada tabela
+
+---
+
+## 💡 **SUGESTÕES PARA DISCUSSÃO**
+
+### **🔔 Notificações:**
+- Adicionar campo `prioridade` (baixa/média/alta)?
+- Implementar sistema de templates para tipos recorrentes?
+- Notificações automáticas baseadas em eventos do sistema?
+
+### **⚙️ Preferências:**
+- Adicionar configurações de timezone pessoal?
+- Preferências de email/push notifications?
+- Customização de cores/temas personalizados?
+
+### **📚 Histórico:**
+- Implementar retenção automática (ex: deletar logs > 1 ano)?
+- Adicionar integração com PerformanceMonitor?
+- Log automático de todas as operações do DatabaseManager?
+
+---
+
+**🎯 SISTEMA V2.0:** Estruturas prontas para Frontend V3 e funcionalidades avançadas!

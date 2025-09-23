@@ -301,6 +301,64 @@ function cleanupExpiredSessions() {
   }
 }
 
+/**
+ * Limpar logs do sistema antigos (>7 dias)
+ * @returns {Object} Resultado da limpeza
+ */
+async function cleanupOldSystemLogs() {
+  try {
+    Logger.info('SystemMaintenance', 'Iniciando limpeza de logs antigos');
+
+    // ✅ USAR DatabaseManager.query() em vez de readTableByNome_
+    const logsQuery = await DatabaseManager.query('system_logs', {});
+    if (!logsQuery.success || !logsQuery.data || logsQuery.data.length === 0) {
+      return { ok: true, cleaned: 0, message: 'Nenhum log para limpar' };
+    }
+
+    const now = new Date();
+    const cutoffDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000)); // 7 dias atrás
+    let cleanedCount = 0;
+
+    // Identificar logs antigos para remoção
+    const logsToDelete = [];
+    logsQuery.data.forEach(log => {
+      const logTimestamp = new Date(log.created_at);
+
+      // Se log for mais antigo que 7 dias
+      if (logTimestamp < cutoffDate) {
+        logsToDelete.push(log.id);
+      }
+    });
+
+    // Deletar logs antigos usando DatabaseManager
+    for (const logId of logsToDelete) {
+      try {
+        const deleteResult = await DatabaseManager.delete('system_logs', logId);
+        if (deleteResult.success) {
+          cleanedCount++;
+        }
+      } catch (error) {
+        Logger.warn('SystemMaintenance', 'Falha ao deletar log antigo', { logId, error: error.message });
+      }
+    }
+
+    Logger.info('SystemMaintenance', 'Limpeza de logs concluída', {
+      logsCleanedCount: cleanedCount,
+      totalIdentified: logsToDelete.length
+    });
+
+    return {
+      ok: true,
+      cleaned: cleanedCount,
+      message: `${cleanedCount} logs antigos foram removidos`
+    };
+
+  } catch (error) {
+    Logger.error('SystemMaintenance', 'Erro na limpeza de logs', { error: error.message });
+    return { ok: false, error: error.message };
+  }
+}
+
 // ================================================================================
 // FUNÇÕES DE COMPATIBILIDADE COM CÓDIGO EXISTENTE
 // ================================================================================
@@ -345,7 +403,11 @@ async function runSystemMaintenance() {
     PerformanceMonitor.cleanup();
     results.tasks.performanceCleanup = { ok: true, message: 'Performance data cleaned' };
 
-    // 3. Salvar relatório diário de saúde
+    // 3. Limpar logs do sistema antigos (>7 dias)
+    const logsCleanup = await cleanupOldSystemLogs();
+    results.tasks.systemLogsCleanup = logsCleanup;
+
+    // 4. Salvar relatório diário de saúde
     const dailyHealthSave = await PerformanceMonitor.saveDailyHealthReport();
     results.tasks.dailyHealthReport = dailyHealthSave;
 

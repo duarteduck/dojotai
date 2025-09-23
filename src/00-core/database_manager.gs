@@ -6,9 +6,17 @@
  */
 
 /**
- * Logger - Sistema de logs estruturado com níveis
+ * Logger com sistema anti-recursão integrado
+ */
+
+// Flag para prevenção de recursão
+var _LOGGER_IS_LOGGING = false;
+
+/**
+ * Logger - Sistema de logs estruturado com níveis (Anti-recursão)
  */
 class Logger {
+
   static _getLevelValue(level) {
     const levels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
     return levels[level] || 1;
@@ -28,32 +36,217 @@ class Logger {
   }
 
   static debug(context, message, data = null) {
-    // DEBUG só aparece se currentLevel for DEBUG
-    const currentLevel = APP_CONFIG.LOG_LEVEL || 'INFO';
-    if (currentLevel === 'DEBUG') {
+    if (this._shouldLog('DEBUG')) {
       console.log(this._formatMessage('DEBUG', context, message, data));
+      // DEBUG não é salvo no banco para evitar spam
     }
   }
 
   static info(context, message, data = null) {
-    // INFO aparece se currentLevel for DEBUG ou INFO
-    const currentLevel = APP_CONFIG.LOG_LEVEL || 'INFO';
-    if (currentLevel === 'DEBUG' || currentLevel === 'INFO') {
+    if (this._shouldLog('INFO')) {
       console.log(this._formatMessage('INFO', context, message, data));
+
+      // INFO só persiste se for de contextos importantes
+      const importantContexts = APP_CONFIG.LOG_PERSISTENCE?.IMPORTANT_CONTEXTS || [];
+      if (importantContexts.includes(context)) {
+        this._persistLogSafe('INFO', context, message, data);
+      }
     }
   }
 
   static warn(context, message, data = null) {
-    // WARN aparece se currentLevel for DEBUG, INFO ou WARN
-    const currentLevel = APP_CONFIG.LOG_LEVEL || 'INFO';
-    if (currentLevel === 'DEBUG' || currentLevel === 'INFO' || currentLevel === 'WARN') {
+    if (this._shouldLog('WARN')) {
       console.warn(this._formatMessage('WARN', context, message, data));
+
+      // WARN persiste apenas se for relevante para análise
+      const excludePatterns = APP_CONFIG.LOG_PERSISTENCE?.WARN_EXCLUDE_PATTERNS || [];
+      const excludeContexts = APP_CONFIG.LOG_PERSISTENCE?.WARN_EXCLUDE_CONTEXTS || [];
+
+      const hasExcludePattern = excludePatterns.some(pattern => message.includes(pattern));
+      const isExcludeContext = excludeContexts.includes(context);
+
+      if (!hasExcludePattern && !isExcludeContext) {
+        this._persistLogSafe('WARN', context, message, data);
+      }
     }
   }
 
   static error(context, message, data = null) {
-    // ERROR sempre aparece
-    console.error(this._formatMessage('ERROR', context, message, data));
+    if (this._shouldLog('ERROR')) {
+      console.error(this._formatMessage('ERROR', context, message, data));
+
+      // ERROR sempre persiste, EXCETO se for spam de PerformanceMonitor
+      const isPerformanceSpam = context === 'PerformanceMonitor' &&
+                               (message.includes('ALERTA CRÍTICO') || message.includes('muito lenta'));
+
+      if (!isPerformanceSpam) {
+        this._persistLogSafe('ERROR', context, message, data);
+      }
+    }
+  }
+
+  /**
+   * Persiste logs usando DatabaseManager com modo silencioso
+   * @param {string} level - Nível do log
+   * @param {string} context - Contexto/módulo
+   * @param {string} message - Mensagem
+   * @param {Object} data - Dados adicionais
+   */
+  static _persistLogSafe(level, context, message, data = null) {
+    // Prevenir recursão absoluta
+    if (_LOGGER_IS_LOGGING) {
+      return;
+    }
+
+    try {
+      _LOGGER_IS_LOGGING = true;
+
+      // Filtros anti-recursão CIRÚRGICOS - bloquear apenas recursão real
+      const isSystemLogsOperation = (data && data.tableName === 'system_logs') ||
+                                   message.includes('system_logs');
+
+      const isLoggerSelfLog = context === 'Logger';
+
+      const isDatabaseManagerOnSystemLogs = context === 'DatabaseManager' && isSystemLogsOperation;
+
+      // Bloquear recursão real
+      if (isLoggerSelfLog || isDatabaseManagerOnSystemLogs || isSystemLogsOperation) {
+        return;
+      }
+
+      // Bloquear PerformanceMonitor (previne spam e loops infinitos)
+      if (context === 'PerformanceMonitor') {
+        return;
+      }
+
+      const now = new Date();
+
+      // Preparar dados do log
+      const logData = {
+        timestamp: Utilities.formatDate(now, APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss.SSS'),
+        level: level,
+        module: context,
+        message: message,
+        context: data ? JSON.stringify(data) : null,
+        user_id: this._getCurrentUserId(),
+        session_id: this._getCurrentSessionId()
+      };
+
+      // Usar DatabaseManager em modo SILENCIOSO para system_logs
+      // Assim mantemos validações, IDs automáticos, etc. mas sem logs recursivos
+      DatabaseManager.insert('system_logs', logData, true).catch(error => {
+        // Em caso de erro, fallback para inserção direta COM ID ÚNICO
+        console.error(`[LOGGER] DatabaseManager falhou, usando fallback: ${error.message}`);
+
+        // Gerar ID único para fallback
+        const uniqueId = 'LOG-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+
+        this._insertDirectToSheet('system_logs', {
+          id: uniqueId,
+          ...logData,
+          created_at: Utilities.formatDate(now, APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss')
+        });
+      });
+
+    } catch (error) {
+      // Em caso de erro, não quebrar o fluxo principal
+      console.error(`[LOGGER] Erro na persistência: ${error.message}`);
+    } finally {
+      _LOGGER_IS_LOGGING = false;
+    }
+  }
+
+  /**
+   * Inserir dados diretamente na planilha sem usar DatabaseManager
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados a inserir
+   */
+  static _insertDirectToSheet(tableName, data) {
+    try {
+      // Obter configuração da tabela
+      const ss = SpreadsheetApp.openById('1hfl-CeO6nK4FLYl4uacK5NncBoJ3q-8PPzUWh7W6PmY');
+      const configSheet = ss.getSheetByName('Planilhas');
+      if (!configSheet) return;
+
+      const values = configSheet.getDataRange().getValues();
+      const header = values[0];
+      const nomeIndex = header.indexOf('nome');
+      const ssidIndex = header.indexOf('ssid');
+      const planilhaIndex = header.indexOf('planilha');
+
+      // Buscar configuração da tabela
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        if (row[nomeIndex] === tableName) {
+          const targetSsid = row[ssidIndex];
+          const sheetName = row[planilhaIndex];
+
+          if (targetSsid && sheetName) {
+            const targetSs = SpreadsheetApp.openById(targetSsid);
+            const targetSheet = targetSs.getSheetByName(sheetName);
+
+            if (targetSheet) {
+              // Obter cabeçalho da planilha alvo
+              const headerRow = targetSheet.getRange(1, 1, 1, targetSheet.getLastColumn()).getValues()[0];
+
+              // Montar linha de dados na ordem correta
+              const rowData = headerRow.map(col => data[col] || '');
+
+              // Inserir linha
+              targetSheet.appendRow(rowData);
+            }
+          }
+          break;
+        }
+      }
+    } catch (error) {
+      // Falha silenciosa
+      console.error(`[LOGGER] Erro ao inserir direto na planilha: ${error.message}`);
+    }
+  }
+
+
+  /**
+   * Função pública para persistir logs manualmente quando necessário
+   * @param {string} level - Nível do log
+   * @param {string} context - Contexto/módulo
+   * @param {string} message - Mensagem
+   * @param {Object} data - Dados adicionais
+   */
+  static persistLog(level, context, message, data = null) {
+    this._persistLogSafe(level, context, message, data);
+  }
+
+  /**
+   * Obter ID do usuário atual (se disponível)
+   * @returns {string|null}
+   */
+  static _getCurrentUserId() {
+    try {
+      // Tentar obter do contexto global ou session
+      if (typeof getCurrentUserId === 'function') {
+        return getCurrentUserId();
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Obter ID da sessão atual (se disponível)
+   * @returns {string|null}
+   */
+  static _getCurrentSessionId() {
+    try {
+      // Tentar obter do contexto global ou session
+      if (typeof getCurrentSessionId === 'function') {
+        return getCurrentSessionId();
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 }
 
@@ -883,7 +1076,7 @@ const DatabaseManager = {
         if (cached) {
           const timeMs = new Date() - startTime;
           PerformanceMonitor.integrateWithExisting('QUERY', tableName, timeMs, true);
-          Logger.info('DatabaseManager', 'Cache hit', { tableName, filters, pagination: paginationOptions, time: timeMs });
+          // Logger.info('DatabaseManager', 'Cache hit', { tableName, filters, pagination: paginationOptions, time: timeMs });
           return cached;
         }
       }
@@ -934,12 +1127,12 @@ const DatabaseManager = {
           time: new Date() - startTime
         });
       } else {
-        Logger.info('DatabaseManager', 'Query completed', {
-          tableName,
-          filters,
-          results: results.length,
-          time: new Date() - startTime
-        });
+        // Logger.info('DatabaseManager', 'Query completed', {
+        //   tableName,
+        //   filters,
+        //   results: results.length,
+        //   time: new Date() - startTime
+        // });
       }
 
       // Salvar no cache
@@ -1004,9 +1197,10 @@ const DatabaseManager = {
    * Inserir novo registro
    * @param {string} tableName - Nome da tabela
    * @param {Object} data - Dados a inserir
+   * @param {boolean} silent - Modo silencioso (sem logs)
    * @returns {Object} { success: boolean, id?: string, error?: string }
    */
-  async insert(tableName, data) {
+  async insert(tableName, data, silent = false) {
     try {
       const startTime = new Date();
 
@@ -1019,11 +1213,11 @@ const DatabaseManager = {
       if (data[primaryKey]) {
         // Usar ID fornecido
         finalId = data[primaryKey];
-        Logger.debug('DatabaseManager', 'Using provided ID', { tableName, primaryKey, providedId: finalId });
+        if (!silent) Logger.debug('DatabaseManager', 'Using provided ID', { tableName, primaryKey, providedId: finalId });
       } else {
         // Gerar novo ID
         finalId = this._generateId(tableName);
-        Logger.debug('DatabaseManager', 'Generated new ID', { tableName, primaryKey, generatedId: finalId });
+        if (!silent) Logger.debug('DatabaseManager', 'Generated new ID', { tableName, primaryKey, generatedId: finalId });
       }
 
       // Preparar dados base com ID já definido
@@ -1054,7 +1248,7 @@ const DatabaseManager = {
       // Validar Foreign Keys
       const fkValidation = await ValidationEngine.validateRecord(tableName, record);
       if (!fkValidation.isValid) {
-        Logger.warn('DatabaseManager', 'FK validation failed on INSERT', {
+        if (!silent) Logger.warn('DatabaseManager', 'FK validation failed on INSERT', {
           tableName,
           errors: fkValidation.errors
         });
@@ -1105,7 +1299,7 @@ const DatabaseManager = {
 
       const timeMs = new Date() - startTime;
       PerformanceMonitor.integrateWithExisting('INSERT', tableName, timeMs, false);
-      Logger.info('DatabaseManager', 'Insert completed', { tableName, id: finalId, time: timeMs });
+      if (!silent) Logger.info('DatabaseManager', 'Insert completed', { tableName, id: finalId, time: timeMs });
 
       // Invalidar cache para forçar reload na próxima query
       CacheManager.invalidate(tableName);
@@ -1139,7 +1333,7 @@ const DatabaseManager = {
       const updatedRecord = {
         ...currentRecord,
         ...data,
-        updated_at: new Date().toISOString()
+        updated_at: this._formatTimestamp(new Date())
       };
 
       // Validar Foreign Keys do registro atualizado
@@ -1462,6 +1656,14 @@ const DatabaseManager = {
    */
   _getLastCounter(tableName, prefix) {
     try {
+      // ⚠️ PROTEÇÃO CONTRA RECURSÃO: system_logs usa timestamp único
+      if (tableName === 'system_logs') {
+        // Para logs, usar timestamp + random para garantir unicidade
+        const timestamp = Date.now();
+        const random = Math.floor(Math.random() * 10000);
+        return timestamp + random; // Retorna número único baseado em timestamp
+      }
+
       const allRecords = this.query(tableName, {}, false); // Sem cache
       let maxCounter = 0;
 
@@ -1656,7 +1858,7 @@ const DatabaseManager = {
             break;
 
           case 'created_at':
-            fields.created_at = new Date().toISOString();
+            fields.created_at = this._formatTimestamp(new Date());
             break;
 
           default:

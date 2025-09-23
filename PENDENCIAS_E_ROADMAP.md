@@ -141,10 +141,10 @@
 
 ## 📋 PENDÊNCIAS CRÍTICAS
 
-### 1. **REVISAR Estruturas das Novas Tabelas**
-**Status:** PENDENTE
-**Arquivo:** `ESTRUTURAS_NOVAS_TABELAS.md`
-**Ação:** Validar estruturas de notificações e histórico antes da implementação
+### 1. **~~REVISAR Estruturas das Novas Tabelas~~** ✅ **CONCLUÍDO**
+**Status:** ✅ **100% FINALIZADO**
+**Data:** 22/09/2025
+**Resultado:** 3 tabelas otimizadas e adicionadas ao data_dictionary.gs (notificacoes, preferencias, historico)
 
 ### 2. **~~Finalizar Sistema de Sessões~~** ✅ **CONCLUÍDO**
 **Status:** ✅ **100% FUNCIONAL**
@@ -168,7 +168,13 @@
 
 ### 📈 FASE 2 - Sistemas Avançados (1-2 semanas)
 - [ ] **PermissionManager** - Sistema de permissões granulares
-- [ ] **Sistema de Logs Estruturados** - shared_logger.gs completo
+- [~] **Sistema de Logs Estruturados** - 🔄 **EM DESENVOLVIMENTO** (22/09/2025)
+  - ✅ Logger Core funcional (4 níveis, formatação, configuração)
+  - ✅ Data Dictionary (tabela system_logs definida)
+  - ✅ Estrutura de planilha criada
+  - ❌ Persistência automática (loop infinito DatabaseManager ↔ Logger)
+  - ✅ Limpeza automática implementada (aguarda persistência)
+  - **Próximo**: Resolver recursão ou implementar sistema híbrido
 - [x] **Performance Monitoring** - ✅ **CONCLUÍDO** - Sistema avançado integrado com DatabaseManager
 
 ### 📊 FASE 3 - Otimizações (2-3 semanas)
@@ -220,14 +226,17 @@
 ## 🎖️ MÉTRICAS DO DESENVOLVIMENTO
 
 ### Progresso Geral V2.0
-- **Concluído:** ~70% do core system
-- **Em desenvolvimento:** Sistema de sessões (90%)
-- **Próximo marco:** SessionManager funcional (100%)
+- **Concluído:** ~80% do core system
+- **Em desenvolvimento:** Estruturas das novas tabelas finalizadas
+- **Próximo marco:** PermissionManager ou Frontend V3
 
 ### Arquivos Modificados Hoje
-- ✅ `src/00-core/database_manager.gs` - Bug fix em insert()
+- ✅ `src/00-core/database_manager.gs` - Bug fix em insert() + Logger completo + persistência (com loop)
 - ✅ `session_manager_simple.gs` - NOVO arquivo criado
 - ✅ `PENDENCIAS_E_ROADMAP.md` - NOVO arquivo de roadmap
+- ✅ `src/00-core/data_dictionary.gs` - **4 novas tabelas adicionadas** (notificacoes, preferencias, historico, system_logs)
+- ✅ `docs/ESTRUTURAS_NOVAS_TABELAS.md` - **Estruturas finalizadas e otimizadas**
+- ✅ `src/00-core/session_manager.gs` - **Função cleanupOldSystemLogs() e integração**
 
 ---
 

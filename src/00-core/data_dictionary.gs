@@ -40,6 +40,10 @@
  * 8. SESSOES             - Sessões de usuários (login/logout)
  * 9. PERFORMANCE_LOGS    - Logs detalhados de performance das operações
  * 10. SYSTEM_HEALTH      - Relatórios diários de saúde do sistema
+ * 11. SYSTEM_LOGS        - Logs estruturados do sistema para auditoria
+ * 12. NOTIFICACOES       - Sistema de notificações para usuários
+ * 13. PREFERENCIAS       - Preferências personalizadas dos usuários
+ * 14. HISTORICO          - Auditoria e histórico de ações do sistema
  *
  * 🕐 FORMATO DE DATAS: yyyy-MM-dd HH:mm:ss (America/Sao_Paulo)
  */
@@ -1253,6 +1257,382 @@ const DATA_DICTIONARY = {
         timezone: 'America/Sao_Paulo',
         description: 'Data e hora de criação do relatório',
         example: '2025-09-22 23:59:59'
+      }
+    }
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                                11. TABELA: SYSTEM_LOGS                                         │
+  // │ 📝 Logs estruturados do sistema para auditoria e debugging                                    │
+  // │ 📂 Arquivo: Logs | Planilha: system_logs | Referência: system_logs                            │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  system_logs: {
+    tableName: 'system_logs',
+    description: 'Logs estruturados do sistema para auditoria e debugging',
+    primaryKey: 'id',
+    file: 'Logs',
+    sheet: 'Sistema',
+
+    // 🔍 CAMPOS DA TABELA SYSTEM_LOGS
+    fields: {
+
+      // ID único do log
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^LOG-\\d+$',
+        description: 'ID único do log',
+        generated: true,
+        example: 'LOG-001'
+      },
+
+      // Timestamp do log
+      timestamp: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss.SSS',
+        timezone: 'America/Sao_Paulo',
+        generated: true,
+        description: 'Data e hora exata do log com milissegundos'
+      },
+
+      // Nível do log
+      level: {
+        type: 'TEXT',
+        required: true,
+        enum: ['DEBUG', 'INFO', 'WARN', 'ERROR'],
+        description: 'Nível de severidade do log'
+      },
+
+      // Módulo/contexto que gerou o log
+      module: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 50,
+        description: 'Módulo que gerou o log (SessionManager, DatabaseManager, etc.)',
+        example: 'SessionManager'
+      },
+
+      // Mensagem do log
+      message: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 500,
+        description: 'Mensagem descritiva do log',
+        example: 'Sessão criada com sucesso'
+      },
+
+      // Dados estruturados (JSON)
+      context: {
+        type: 'TEXT',
+        required: false,
+        description: 'Dados estruturados em JSON para debugging',
+        validation: 'JSON válido',
+        example: '{"userId":"U001","sessionId":"SES-abc"}'
+      },
+
+      // ID do usuário (quando disponível)
+      user_id: {
+        type: 'TEXT',
+        required: false,
+        foreignKey: 'usuarios.uid',
+        description: 'ID do usuário relacionado ao log (opcional)',
+        example: 'U1726692234567'
+      },
+
+      // ID da sessão (quando disponível)
+      session_id: {
+        type: 'TEXT',
+        required: false,
+        description: 'ID da sessão ativa (opcional)',
+        example: 'SES-abc123'
+      },
+
+      // Data de criação
+      created_at: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        generated: true,
+        description: 'Data de criação do registro'
+      }
+    }
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                               12. TABELA: NOTIFICACOES                                        │
+  // │ 🔔 Sistema de notificações para usuários                                                      │
+  // │ 📂 Arquivo: Sistema - Notificacoes | Planilha: notificacoes | Referência: notificacoes       │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  notificacoes: {
+    tableName: 'notificacoes',
+    description: 'Sistema de notificações para usuários',
+    primaryKey: 'id',
+    file: 'Sistema - Notificacoes',
+    sheet: 'notificacoes',
+
+    // 🔍 CAMPOS DA TABELA NOTIFICACOES
+    fields: {
+
+      // ID único da notificação
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^NOT-\\d+$',
+        description: 'ID único da notificação',
+        generated: true,
+        example: 'NOT-001'
+      },
+
+      // ID do usuário destinatário (FK)
+      id_usuario: {
+        type: 'TEXT',
+        required: true,
+        foreignKey: 'usuarios.uid',
+        description: 'ID do usuário destinatário da notificação',
+        example: 'U1726692234567'
+      },
+
+      // Tipo da notificação
+      tipo: {
+        type: 'TEXT',
+        required: true,
+        enum: ['info', 'warning', 'success', 'error', 'atividade', 'confirmacao'],
+        description: 'Tipo da notificação',
+        example: 'info'
+      },
+
+      // Título da notificação
+      titulo: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 100,
+        description: 'Título curto da notificação',
+        example: 'Nova Atividade'
+      },
+
+      // Mensagem da notificação
+      mensagem: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 500,
+        description: 'Mensagem completa da notificação',
+        example: 'Atividade de Kata criada para amanhã'
+      },
+
+      // Status de leitura
+      lida: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', ''],
+        default: '',
+        description: 'Status de leitura da notificação (vazio = não lida, sim = lida)'
+      },
+
+      // Data de expiração
+      expires_at: {
+        type: 'DATETIME',
+        required: false,
+        timezone: 'America/Sao_Paulo',
+        description: 'Data de expiração da notificação (opcional)',
+        example: '2025-09-26 20:00:00'
+      },
+
+      // Data de criação
+      criado_em: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        generated: true,
+        description: 'Data e hora de criação da notificação'
+      },
+
+      // Soft delete
+      deleted: {
+        type: 'TEXT',
+        required: false,
+        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
+        default: ''
+      }
+    }
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                               13. TABELA: PREFERENCIAS                                        │
+  // │ ⚙️ Preferências personalizadas dos usuários                                                   │
+  // │ 📂 Arquivo: Sistema - Preferencias | Planilha: preferencias | Referência: preferencias       │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  preferencias: {
+    tableName: 'preferencias',
+    description: 'Preferências personalizadas dos usuários',
+    primaryKey: 'id_usuario',
+    file: 'Sistema - Preferencias',
+    sheet: 'preferencias',
+
+    // 🔍 CAMPOS DA TABELA PREFERENCIAS
+    fields: {
+
+      // ID do usuário (chave primária e FK)
+      id_usuario: {
+        type: 'TEXT',
+        required: true,
+        foreignKey: 'usuarios.uid',
+        description: 'ID do usuário (chave primária)',
+        example: 'U1726692234567'
+      },
+
+      // Tema da interface
+      tema: {
+        type: 'TEXT',
+        required: false,
+        enum: ['claro', 'escuro', 'auto'],
+        default: 'auto',
+        description: 'Tema da interface do usuário',
+        example: 'escuro'
+      },
+
+      // Notificações ativas
+      notificacoes_ativas: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', ''],
+        default: 'sim',
+        description: 'Receber notificações do sistema (vazio = não, sim = sim)'
+      },
+
+      // Configuração do dashboard
+      configuracao_dashboard: {
+        type: 'TEXT',
+        required: false,
+        description: 'JSON com configurações personalizadas do dashboard',
+        validation: 'JSON válido',
+        example: '{"widgets":["atividades_proximas","estatisticas"],"layout":"compacto"}'
+      },
+
+      // Idioma da interface
+      idioma: {
+        type: 'TEXT',
+        required: false,
+        enum: ['pt-BR', 'en-US'],
+        default: 'pt-BR',
+        description: 'Idioma da interface do usuário',
+        example: 'pt-BR'
+      },
+
+      // Data de atualização
+      atualizado_em: {
+        type: 'DATETIME',
+        required: false,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        description: 'Última atualização das preferências'
+      },
+
+      // Soft delete
+      deleted: {
+        type: 'TEXT',
+        required: false,
+        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
+        default: ''
+      }
+    }
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                                14. TABELA: HISTORICO                                          │
+  // │ 📚 Auditoria e histórico de ações do sistema                                                  │
+  // │ 📂 Arquivo: Sistema - Historico | Planilha: historico | Referência: historico                │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  historico: {
+    tableName: 'historico',
+    description: 'Auditoria e histórico de ações do sistema',
+    primaryKey: 'id',
+    file: 'Sistema - Historico',
+    sheet: 'historico',
+
+    // 🔍 CAMPOS DA TABELA HISTORICO
+    fields: {
+
+      // ID único do log de histórico
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^HIS-\\d+$',
+        description: 'ID único do log de histórico',
+        generated: true,
+        example: 'HIS-001'
+      },
+
+      // ID do usuário que executou a ação (FK)
+      id_usuario: {
+        type: 'TEXT',
+        required: true,
+        foreignKey: 'usuarios.uid',
+        description: 'ID do usuário que executou a ação',
+        example: 'U1726692234567'
+      },
+
+      // Tipo de ação executada
+      acao: {
+        type: 'TEXT',
+        required: true,
+        enum: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW'],
+        description: 'Tipo de ação executada pelo usuário',
+        example: 'CREATE'
+      },
+
+      // Tabela afetada pela ação
+      tabela_alvo: {
+        type: 'TEXT',
+        required: false,
+        description: 'Nome da tabela afetada pela ação (opcional para LOGIN/LOGOUT)',
+        example: 'atividades'
+      },
+
+      // ID do registro afetado
+      id_alvo: {
+        type: 'TEXT',
+        required: false,
+        description: 'ID do registro específico afetado (opcional)',
+        example: 'ACT-202509190001'
+      },
+
+      // Detalhes da operação
+      detalhes: {
+        type: 'TEXT',
+        required: false,
+        description: 'JSON com detalhes da operação (campos alterados, valores, etc.)',
+        validation: 'JSON válido',
+        example: '{"campos_alterados":["titulo"],"valores_anteriores":{"titulo":"Antiga"}}'
+      },
+
+      // User agent do navegador
+      user_agent: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 500,
+        description: 'User agent do navegador do usuário',
+        example: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)...'
+      },
+
+      // Data de criação do log
+      criado_em: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        generated: true,
+        description: 'Data e hora da ação'
+      },
+
+      // Soft delete
+      deleted: {
+        type: 'TEXT',
+        required: false,
+        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
+        default: ''
       }
     }
   }

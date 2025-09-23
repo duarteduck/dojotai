@@ -14,6 +14,34 @@ const APP_CONFIG = {
   // Configuração de logs
   LOG_LEVEL: 'INFO', // DEBUG, INFO, WARN, ERROR
 
+  // Configuração de persistência de logs
+  LOG_PERSISTENCE: {
+    // Níveis que sempre persistem
+    ALWAYS_PERSIST: ['ERROR'],
+
+    // Contextos importantes para INFO
+    IMPORTANT_CONTEXTS: [
+      'SessionManager',
+      'SecurityManager',
+      'Application',
+      'AuthManager',
+      'UserAction',
+      'BusinessLogic'
+    ],
+
+    // Filtros para WARN (não persistir se contém)
+    WARN_EXCLUDE_PATTERNS: [
+      'FK validation failed',
+      'validation completed',
+      'Cache',
+      'Query completed',
+      'Insert completed'
+    ],
+
+    // Contextos que não persistem WARN
+    WARN_EXCLUDE_CONTEXTS: ['ValidationEngine', 'PerformanceMetrics', 'PerformanceMonitor']
+  },
+
   // Configuração de sessões
   SESSION: {
     TTL_HOURS: 8,        // 8 horas de duração da sessão
