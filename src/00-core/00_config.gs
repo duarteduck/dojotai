@@ -1,25 +1,41 @@
 /**
  * Sistema Dojotai V2.0 - Configuração Central
- * Criado: 18/09/2025
- * Semana 1: Configuração básica e core
+ *
+ * @fileoverview Configurações centralizadas do sistema incluindo cache, logs,
+ * sessões, validações e configurações de planilhas.
+ *
+ * @author Sistema Dojotai Team
+ * @version 2.0.0-alpha.1
+ * @since 18/09/2025
  */
 
+/**
+ * Configuração principal do sistema
+ * @type {Object}
+ * @constant
+ */
 const APP_CONFIG = {
+  /** @type {string} Versão atual do sistema */
   VERSION: '2.0.0-alpha.1',
+
+  /** @type {string} Timezone padrão (UTC-3 Brasil) */
   TZ: 'America/Sao_Paulo',
 
-  // Configuração de cache
+  /** @type {number} TTL do cache em minutos */
   CACHE_TTL_MINUTES: 5,
 
-  // Configuração de logs
-  LOG_LEVEL: 'INFO', // DEBUG, INFO, WARN, ERROR
+  /** @type {string} Nível de log (DEBUG|INFO|WARN|ERROR) */
+  LOG_LEVEL: 'INFO',
 
-  // Configuração de persistência de logs
+  /**
+   * Configuração de persistência de logs
+   * @type {Object}
+   */
   LOG_PERSISTENCE: {
-    // Níveis que sempre persistem
+    /** @type {string[]} Níveis que sempre persistem */
     ALWAYS_PERSIST: ['ERROR'],
 
-    // Contextos importantes para INFO
+    /** @type {string[]} Contextos importantes para INFO */
     IMPORTANT_CONTEXTS: [
       'SessionManager',
       'SecurityManager',
@@ -29,7 +45,7 @@ const APP_CONFIG = {
       'BusinessLogic'
     ],
 
-    // Filtros para WARN (não persistir se contém)
+    /** @type {string[]} Padrões para excluir de WARN */
     WARN_EXCLUDE_PATTERNS: [
       'FK validation failed',
       'validation completed',
@@ -38,82 +54,159 @@ const APP_CONFIG = {
       'Insert completed'
     ],
 
-    // Contextos que não persistem WARN
+    /** @type {string[]} Contextos que não persistem WARN */
     WARN_EXCLUDE_CONTEXTS: ['ValidationEngine', 'PerformanceMetrics', 'PerformanceMonitor']
   },
 
-  // Configuração de sessões
+  /**
+   * Configuração de sessões
+   * @type {Object}
+   */
   SESSION: {
-    TTL_HOURS: 8,        // 8 horas de duração da sessão
-    CLEANUP_INTERVAL: 60, // Limpar sessões expiradas a cada 60 min
-    MAX_SESSIONS_PER_USER: 3 // Máximo 3 sessões simultâneas por usuário
+    /** @type {number} Duração da sessão em horas */
+    TTL_HOURS: 8,
+
+    /** @type {number} Intervalo de limpeza em minutos */
+    CLEANUP_INTERVAL: 60,
+
+    /** @type {number} Máximo de sessões simultâneas por usuário */
+    MAX_SESSIONS_PER_USER: 3
   },
 
-  // Configuração de validações
+  /**
+   * Configuração de validações
+   * @type {Object}
+   */
   VALIDATION: {
-    ENABLE_FK_VALIDATION: true,     // Validar foreign keys
-    ENABLE_BUSINESS_RULES: true,    // Validar regras de negócio
-    ENABLE_ADVANCED_VALIDATION: true, // Validar pattern, enum, etc
-    ENABLE_UNIQUE_CONSTRAINTS: true,  // Validar campos únicos
-    FAIL_ON_VALIDATION_ERROR: true   // Falhar operação se validação falhar
+    /** @type {boolean} Validar foreign keys */
+    ENABLE_FK_VALIDATION: true,
+
+    /** @type {boolean} Validar regras de negócio */
+    ENABLE_BUSINESS_RULES: true,
+
+    /** @type {boolean} Validar pattern, enum, etc */
+    ENABLE_ADVANCED_VALIDATION: true,
+
+    /** @type {boolean} Validar campos únicos */
+    ENABLE_UNIQUE_CONSTRAINTS: true,
+
+    /** @type {boolean} Falhar operação se validação falhar */
+    FAIL_ON_VALIDATION_ERROR: true
   },
 
-  // Configuração de tags
+  /**
+   * Configuração de tags
+   * @type {Object}
+   */
   TAGS: {
-    MAX_LENGTH: 200,              // Tamanho máximo do campo tags
-    SEPARATOR: ',',               // Separador entre tags
-    NORMALIZE_CASE: true,         // Converter para lowercase
-    TRIM_WHITESPACE: true,        // Remover espaços em branco
-    ALLOWED_PATTERN: '^[a-zA-Z0-9_,\\s]*$' // Padrão permitido
+    /** @type {number} Tamanho máximo do campo tags */
+    MAX_LENGTH: 200,
+
+    /** @type {string} Separador entre tags */
+    SEPARATOR: ',',
+
+    /** @type {boolean} Converter para lowercase */
+    NORMALIZE_CASE: true,
+
+    /** @type {boolean} Remover espaços em branco */
+    TRIM_WHITESPACE: true,
+
+    /** @type {string} Padrão permitido (regex) */
+    ALLOWED_PATTERN: '^[a-zA-Z0-9_,\\s]*$'
   },
 
-  // Configuração de auditoria/histórico
+  /**
+   * Configuração de auditoria/histórico
+   * @type {Object}
+   */
   AUDIT: {
-    ENABLE_AUDIT_LOG: false,      // Ativar log de auditoria
-    LOG_OPERATIONS: ['INSERT', 'UPDATE', 'DELETE'], // Operações para logar
-    RETENTION_DAYS: 365,          // Dias para manter logs
-    INCLUDE_DATA_CHANGES: true    // Incluir dados alterados nos logs
+    /** @type {boolean} Ativar log de auditoria */
+    ENABLE_AUDIT_LOG: false,
+
+    /** @type {string[]} Operações para logar */
+    LOG_OPERATIONS: ['INSERT', 'UPDATE', 'DELETE'],
+
+    /** @type {number} Dias para manter logs */
+    RETENTION_DAYS: 365,
+
+    /** @type {boolean} Incluir dados alterados nos logs */
+    INCLUDE_DATA_CHANGES: true
   },
 
-  // Configuração de notificações (futuro)
+  /**
+   * Configuração de notificações (futuro)
+   * @type {Object}
+   */
   NOTIFICATIONS: {
-    ENABLE_NOTIFICATIONS: false,  // Ativar sistema de notificações
-    DEFAULT_TTL_DAYS: 30,        // Dias para expirar notificações
-    MAX_NOTIFICATIONS_PER_USER: 50, // Máximo de notificações por usuário
-    AUTO_CLEANUP: true           // Limpeza automática de notificações expiradas
+    /** @type {boolean} Ativar sistema de notificações */
+    ENABLE_NOTIFICATIONS: false,
+
+    /** @type {number} Dias para expirar notificações */
+    DEFAULT_TTL_DAYS: 30,
+
+    /** @type {number} Máximo de notificações por usuário */
+    MAX_NOTIFICATIONS_PER_USER: 50,
+
+    /** @type {boolean} Limpeza automática de notificações expiradas */
+    AUTO_CLEANUP: true
   },
 
-  // Configuração principal de planilhas
+  /**
+   * Configuração principal de planilhas
+   * @type {Object}
+   */
   PLANILHAS: {
-    // ID da planilha principal de configuração
+    /** @type {string} ID da planilha principal de configuração */
     SSID: '1hfl-CeO6nK4FLYl4uacK5NncBoJ3q-8PPzUWh7W6PmY',
 
-    // Named range para configuração
+    /** @type {string} Named range para configuração */
     NAMED: 'PLANILHA_TBL',
 
-    // Fallback A1 notation
+    /** @type {string} Fallback A1 notation */
     A1: 'Planilhas!A1:H'
   },
 
-  // Tabelas serão carregadas dinamicamente do dicionário
-  // Usar getExistingTables() para obter lista atual
-
-  // NOTA: Padrões de ID agora são obtidos automaticamente do DATA_DICTIONARY
-  // Cada tabela define seu padrão no campo 'pattern' do seu campo 'id'
-  // Ex: pattern: '^PERF-\\d+$' → gera PERF-001, PERF-002, etc.
+  /**
+   * NOTA: Tabelas são carregadas dinamicamente do DATA_DICTIONARY
+   * Use getExistingTables() para obter lista atual
+   *
+   * Padrões de ID são obtidos automaticamente do DATA_DICTIONARY
+   * Cada tabela define seu padrão no campo 'pattern' do seu campo 'id'
+   * Ex: pattern: '^PERF-\\d+$' → gera PERF-001, PERF-002, etc.
+   */
 };
 
 /**
- * Função para obter configuração
- * Compatível com sistema atual
+ * Obtém a configuração principal do sistema
+ *
+ * @description Retorna o objeto de configuração completo do sistema.
+ * Compatível com o sistema atual para manter retrocompatibilidade.
+ *
+ * @returns {Object} Objeto de configuração completo
+ * @example
+ * const config = getAppConfig();
+ * console.log(config.VERSION); // '2.0.0-alpha.1'
+ *
+ * @since 1.0.0
  */
 function getAppConfig() {
   return APP_CONFIG;
 }
 
 /**
- * Função para obter todas as tabelas do dicionário
- * @returns {Object} Tabelas disponíveis
+ * Obtém todas as tabelas disponíveis do dicionário de dados
+ *
+ * @description Carrega dinamicamente as tabelas do DATA_DICTIONARY.
+ * Se o dicionário não estiver disponível, retorna configuração básica.
+ *
+ * @returns {Object<string, {name: string, description: string}>} Mapa de tabelas disponíveis
+ *
+ * @example
+ * const tables = getExistingTables();
+ * console.log(tables.usuarios.name); // 'usuarios'
+ * console.log(tables.usuarios.description); // 'Usuários do sistema'
+ *
+ * @since 2.0.0
  */
 function getExistingTables() {
   if (typeof DATA_DICTIONARY === 'undefined') {
@@ -142,30 +235,80 @@ function getExistingTables() {
 }
 
 /**
- * Função para obter configuração de uma tabela específica
- * @param {string} tableName - Nome da tabela
- * @returns {Object|null} Configuração da tabela
+ * Obtém a configuração de uma tabela específica
+ *
+ * @description Busca a configuração de uma tabela pelo nome.
+ * Retorna null se a tabela não existir.
+ *
+ * @param {string} tableName - Nome da tabela a buscar
+ * @returns {Object|null} Configuração da tabela ou null se não encontrada
+ *
+ * @example
+ * const userTable = getTableConfig('usuarios');
+ * if (userTable) {
+ *   console.log(userTable.description);
+ * }
+ *
+ * @since 2.0.0
  */
 function getTableConfig(tableName) {
+  if (!tableName || typeof tableName !== 'string') {
+    console.warn('⚠️ getTableConfig: tableName deve ser uma string válida');
+    return null;
+  }
+
   const existingTables = getExistingTables();
   return existingTables[tableName] || null;
 }
 
 /**
- * Função para obter padrão de ID
+ * Obtém o padrão de ID para uma tabela
+ *
+ * @description Busca o padrão de ID definido no DATA_DICTIONARY.
+ * Retorna padrão genérico se não encontrado.
+ *
  * @param {string} tableName - Nome da tabela
  * @returns {Object} Padrão de ID da tabela
+ * @returns {string} returns.prefix - Prefixo do ID
+ * @returns {string} returns.format - Formato do ID
+ * @returns {string} returns.description - Descrição do padrão
+ *
+ * @example
+ * const pattern = getIdPattern('usuarios');
+ * console.log(pattern.prefix); // 'USR'
+ *
+ * @since 2.0.0
+ * @deprecated Use DATA_DICTIONARY diretamente para padrões de ID
  */
 function getIdPattern(tableName) {
-  return APP_CONFIG.ID_PATTERNS[tableName] || {
+  if (!tableName || typeof tableName !== 'string') {
+    console.warn('⚠️ getIdPattern: tableName deve ser uma string válida');
+  }
+
+  // Fallback para compatibilidade (APP_CONFIG.ID_PATTERNS não existe mais)
+  return {
     prefix: 'GEN',
     format: 'GEN-{timestamp}',
-    description: 'ID genérico'
+    description: 'ID genérico (deprecated)'
   };
 }
 
 /**
- * Log de inicialização
+ * Log de inicialização do sistema
+ *
+ * @description Exibe informações básicas sobre a configuração do sistema
+ * no console. Útil para debugging e verificação da inicialização.
+ *
+ * @returns {void}
+ *
+ * @example
+ * logConfigInit();
+ * // 🚀 Sistema Dojotai V2.0.0-alpha.1 inicializado
+ * // 📊 Tabelas configuradas: 7
+ * // 🕒 Timezone: America/Sao_Paulo
+ * // 📝 Log Level: INFO
+ *
+ * @since 2.0.0
  */
 function logConfigInit() {
   const existingTables = getExistingTables();

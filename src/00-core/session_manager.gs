@@ -1,19 +1,54 @@
 /**
  * SessionManager V4 - Sistema de Sessões Centralizado
- * Criado: 22/09/2025
  *
- * Sistema robusto de gerenciamento de sessões integrado com:
+ * @fileoverview Sistema robusto de gerenciamento de sessões com integração
+ * completa ao DatabaseManager, validações automáticas e logs estruturados.
+ *
+ * @author Sistema Dojotai Team
+ * @version 4.0.0
+ * @since 22/09/2025
+ *
+ * @description Funcionalidades principais:
  * - DatabaseManager centralizado
  * - Validações FK automáticas
  * - Logs estruturados
  * - Cache management
+ * - Tokens únicos seguros
+ * - Limpeza automática de sessões expiradas
  */
 
 /**
  * Criar nova sessão usando DatabaseManager centralizado
+ *
+ * @description Cria uma nova sessão para um usuário autenticado.
+ * Gera token único, verifica existência do usuário e persiste no banco.
+ *
  * @param {string} userId - ID do usuário (usuarios.uid)
- * @param {Object} deviceInfo - Informações do dispositivo
- * @returns {Object} Resultado da operação
+ * @param {Object} [deviceInfo={}] - Informações do dispositivo
+ * @param {string} [deviceInfo.ip] - IP do cliente
+ * @param {string} [deviceInfo.userAgent] - User agent do browser
+ * @param {string} [deviceInfo.platform] - Plataforma (web, mobile, etc)
+ * @param {string} [deviceInfo.login_method] - Método de login usado
+ *
+ * @returns {Promise<Object>} Resultado da operação
+ * @returns {boolean} returns.ok - Se a operação foi bem-sucedida
+ * @returns {Object} [returns.session] - Dados da sessão criada
+ * @returns {string} [returns.session.id] - Token único da sessão
+ * @returns {string} [returns.session.user_id] - ID do usuário
+ * @returns {string} [returns.session.expires_at] - Data de expiração
+ * @returns {string} [returns.error] - Mensagem de erro se falhou
+ *
+ * @example
+ * const result = await createSession('USR-123', {
+ *   ip: '192.168.1.1',
+ *   userAgent: 'Mozilla/5.0...',
+ *   platform: 'web'
+ * });
+ * if (result.ok) {
+ *   console.log('Sessão criada:', result.session.id);
+ * }
+ *
+ * @since 4.0.0
  */
 async function createSession(userId, deviceInfo = {}) {
   try {

@@ -2,13 +2,29 @@
  * ╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
  * ║                             SISTEMA DOJOTAI V2.0 - DICIONÁRIO DE DADOS                          ║
  * ║                                    Criado: 18/09/2025                                           ║
- * ║                                  Atualizado: 19/09/2025                                         ║
+ * ║                                  Atualizado: 23/09/2025                                         ║
  * ╚══════════════════════════════════════════════════════════════════════════════════════════════════╝
  *
- * 📋 DEFINIÇÃO CENTRAL DE TODAS AS TABELAS DO SISTEMA
+ * @fileoverview Definição central de todas as tabelas do sistema incluindo
+ * estrutura de campos, validações, tipos de dados e relações entre tabelas.
  *
- * Este arquivo define a estrutura completa de dados do Sistema Dojotai V2.0.
+ * @author Sistema Dojotai Team
+ * @version 2.0.0-alpha.1
+ * @since 18/09/2025
+ *
+ * @description Este arquivo define a estrutura completa de dados do Sistema Dojotai V2.0.
  * Todas as validações, campos obrigatórios e padrões são baseados neste dicionário.
+ *
+ * @example
+ * // Acessar definição de uma tabela
+ * const userTable = DATA_DICTIONARY.usuarios;
+ * console.log(userTable.fields.email.required); // true
+ *
+ * @example
+ * // Validar campo
+ * const isValid = ValidationEngine.validateField('usuarios', 'email', 'test@example.com');
+ *
+ * 📋 DEFINIÇÃO CENTRAL DE TODAS AS TABELAS DO SISTEMA
  *
  * 🎯 COMO USAR:
  * - Para adicionar campo: Copie um campo similar e modifique

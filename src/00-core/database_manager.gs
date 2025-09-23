@@ -1,27 +1,50 @@
 /**
  * Sistema Dojotai V2.0 - Database Manager
- * Criado: 18/09/2025
- * Semana 1: Versão básica compatível com sistema atual
- * Dia 2: Sistema de logs, cache persistente e métricas
+ *
+ * @fileoverview Sistema centralizado de gerenciamento de banco de dados
+ * incluindo Logger com anti-recursão, DatabaseManager com cache e validações.
+ *
+ * @author Sistema Dojotai Team
+ * @version 2.0.0-alpha.1
+ * @since 18/09/2025
  */
 
 /**
- * Logger com sistema anti-recursão integrado
+ * Flag global para prevenção de recursão no sistema de logs
+ * @type {boolean}
+ * @global
  */
-
-// Flag para prevenção de recursão
 var _LOGGER_IS_LOGGING = false;
 
 /**
- * Logger - Sistema de logs estruturado com níveis (Anti-recursão)
+ * Sistema de logs estruturado com níveis e anti-recursão
+ *
+ * @description Classe responsável por logging estruturado do sistema.
+ * Previne recursão infinita entre Logger e DatabaseManager através de
+ * flag global e filtragem inteligente de contextos.
+ *
+ * @class Logger
+ * @since 2.0.0
  */
 class Logger {
 
+  /**
+   * Obtém o valor numérico de um nível de log
+   * @private
+   * @param {string} level - Nível do log (DEBUG|INFO|WARN|ERROR)
+   * @returns {number} Valor numérico do nível (0-3)
+   */
   static _getLevelValue(level) {
     const levels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
     return levels[level] || 1;
   }
 
+  /**
+   * Verifica se deve logar baseado no nível configurado
+   * @private
+   * @param {string} level - Nível do log a verificar
+   * @returns {boolean} True se deve logar
+   */
   static _shouldLog(level) {
     const currentLevel = APP_CONFIG.LOG_LEVEL || 'INFO';
     const currentLevelValue = this._getLevelValue(currentLevel);
@@ -29,12 +52,28 @@ class Logger {
     return logLevelValue >= currentLevelValue;
   }
 
+  /**
+   * Formata mensagem de log com timestamp e dados
+   * @private
+   * @param {string} level - Nível do log
+   * @param {string} context - Contexto/módulo que gera o log
+   * @param {string} message - Mensagem principal
+   * @param {Object|null} data - Dados adicionais (opcional)
+   * @returns {string} Mensagem formatada
+   */
   static _formatMessage(level, context, message, data) {
     const timestamp = Utilities.formatDate(new Date(), APP_CONFIG.TZ, 'HH:mm:ss.SSS');
     const dataStr = data ? ` | ${JSON.stringify(data)}` : '';
     return `${timestamp} [${level}] ${context}: ${message}${dataStr}`;
   }
 
+  /**
+   * Log de nível DEBUG
+   * @param {string} context - Contexto do log
+   * @param {string} message - Mensagem
+   * @param {Object|null} [data=null] - Dados adicionais
+   * @example Logger.debug('DatabaseManager', 'Query executada', { table: 'usuarios' });
+   */
   static debug(context, message, data = null) {
     if (this._shouldLog('DEBUG')) {
       console.log(this._formatMessage('DEBUG', context, message, data));
@@ -93,29 +132,27 @@ class Logger {
    * @param {Object} data - Dados adicionais
    */
   static _persistLogSafe(level, context, message, data = null) {
-    // Prevenir recursão absoluta
+    // Prevenir recursão absoluta (verificação rápida)
     if (_LOGGER_IS_LOGGING) {
+      return;
+    }
+
+    // Cache de contextos bloqueados para performance
+    const blockedContexts = new Set(['Logger', 'PerformanceMonitor']);
+    if (blockedContexts.has(context)) {
+      return;
+    }
+
+    // Verificação rápida de recursão sem strings custosas
+    if (data && data.tableName === 'system_logs') {
       return;
     }
 
     try {
       _LOGGER_IS_LOGGING = true;
 
-      // Filtros anti-recursão CIRÚRGICOS - bloquear apenas recursão real
-      const isSystemLogsOperation = (data && data.tableName === 'system_logs') ||
-                                   message.includes('system_logs');
-
-      const isLoggerSelfLog = context === 'Logger';
-
-      const isDatabaseManagerOnSystemLogs = context === 'DatabaseManager' && isSystemLogsOperation;
-
-      // Bloquear recursão real
-      if (isLoggerSelfLog || isDatabaseManagerOnSystemLogs || isSystemLogsOperation) {
-        return;
-      }
-
-      // Bloquear PerformanceMonitor (previne spam e loops infinitos)
-      if (context === 'PerformanceMonitor') {
+      // Verificação adicional apenas se necessário
+      if (context === 'DatabaseManager' && message.includes('system_logs')) {
         return;
       }
 
@@ -247,6 +284,99 @@ class Logger {
     } catch (error) {
       return null;
     }
+  }
+}
+
+/**
+ * SecurityUtils - Utilitários de segurança e sanitização
+ */
+class SecurityUtils {
+
+  /**
+   * Sanitiza input para prevenir ataques de injeção
+   * @param {any} input - Input a ser sanitizado
+   * @param {string} type - Tipo esperado (string|number|email|boolean)
+   * @returns {any} Input sanitizado
+   */
+  static sanitizeInput(input, type = 'string') {
+    if (input === null || input === undefined) {
+      return input;
+    }
+
+    switch (type) {
+      case 'string':
+        return String(input)
+          .trim()
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
+          .replace(/[<>'"]/g, '') // Remove caracteres perigosos
+          .substring(0, 1000); // Limitar tamanho
+
+      case 'email':
+        const emailStr = String(input).toLowerCase().trim();
+        // Validação básica de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(emailStr) ? emailStr : '';
+
+      case 'number':
+        const num = parseFloat(input);
+        return isNaN(num) ? 0 : Math.max(-999999999, Math.min(999999999, num));
+
+      case 'boolean':
+        return Boolean(input === true || input === 'true' || input === 'sim' || input === 1);
+
+      case 'id':
+        return String(input)
+          .trim()
+          .replace(/[^a-zA-Z0-9_-]/g, '') // Apenas alfanuméricos, _ e -
+          .substring(0, 50);
+
+      default:
+        return String(input).trim().substring(0, 1000);
+    }
+  }
+
+  /**
+   * Sanitiza objeto completo recursivamente
+   * @param {Object} data - Dados a sanitizar
+   * @param {Object} schema - Schema com tipos por campo
+   * @returns {Object} Dados sanitizados
+   */
+  static sanitizeObject(data, schema = {}) {
+    if (!data || typeof data !== 'object') {
+      return data;
+    }
+
+    const sanitized = {};
+    Object.keys(data).forEach(key => {
+      const fieldType = schema[key] || 'string';
+      sanitized[key] = this.sanitizeInput(data[key], fieldType);
+    });
+
+    return sanitized;
+  }
+
+  /**
+   * Valida se string contém apenas caracteres seguros
+   * @param {string} input - String a validar
+   * @returns {boolean} True se segura
+   */
+  static isSafeString(input) {
+    if (typeof input !== 'string') return false;
+
+    // Bloquear scripts, SQL injection comum, etc
+    const dangerousPatterns = [
+      /<script/i,
+      /javascript:/i,
+      /vbscript:/i,
+      /onload=/i,
+      /onerror=/i,
+      /eval\(/i,
+      /union.*select/i,
+      /drop.*table/i,
+      /delete.*from/i
+    ];
+
+    return !dangerousPatterns.some(pattern => pattern.test(input));
   }
 }
 
@@ -1065,10 +1195,10 @@ const DatabaseManager = {
         };
       }
 
-      // Chave de cache inclui paginação se presente
+      // Chave de cache otimizada (evita JSON.stringify desnecessário)
       const cacheKey = paginationOptions
-        ? `${JSON.stringify(filters)}_page${paginationOptions.page}_per${paginationOptions.per_page}`
-        : JSON.stringify(filters);
+        ? `${this._createFilterKey(filters)}_page${paginationOptions.page}_per${paginationOptions.per_page}`
+        : this._createFilterKey(filters);
 
       // Verificar cache primeiro
       if (useCache) {
@@ -1226,15 +1356,18 @@ const DatabaseManager = {
         ...data
       };
 
+      // Sanitizar dados de entrada para segurança
+      const sanitizedData = this._sanitizeDataForTable(tableName, baseData);
+
       // Para tabela sessoes, id e session_id são diferentes
       // id = contador sequencial (SES-001), session_id = token único (sess_abc123)
 
       // Adicionar campos específicos da tabela (sem sobrescrever a chave primária)
-      const tableFields = this._getTableSpecificFields(tableName, baseData);
+      const tableFields = this._getTableSpecificFields(tableName, sanitizedData);
 
       // Montar record final
       const record = {
-        ...baseData,
+        ...sanitizedData,
         ...tableFields
       };
 
@@ -1580,27 +1713,67 @@ const DatabaseManager = {
   },
 
   /**
-   * Aplicar filtros aos dados
+   * Aplica filtros aos dados de forma otimizada
+   * @private
+   * @param {Array} data - Dados a filtrar
+   * @param {Object} filters - Filtros a aplicar
+   * @returns {Array} Dados filtrados
    */
   _applyFilters(data, filters) {
+    if (!filters || Object.keys(filters).length === 0) {
+      return data;
+    }
+
+    // Pré-processar filtros para otimização
+    const filterKeys = Object.keys(filters);
+    const processedFilters = filterKeys.map(field => {
+      const filterValue = filters[field];
+
+      // Pular filtros vazios
+      if (filterValue === undefined || filterValue === null || filterValue === '') {
+        return null;
+      }
+
+      // Pré-converter strings para lowercase
+      if (typeof filterValue === 'string') {
+        return {
+          field,
+          value: filterValue.toLowerCase(),
+          isString: true
+        };
+      }
+
+      return {
+        field,
+        value: filterValue,
+        isString: false
+      };
+    }).filter(f => f !== null);
+
+    // Se não há filtros válidos, retornar todos os dados
+    if (processedFilters.length === 0) {
+      return data;
+    }
+
+    // Aplicar filtros otimizados
     return data.filter(record => {
-      return Object.keys(filters).every(field => {
-        const filterValue = filters[field];
-        const recordValue = record[field];
+      for (let i = 0; i < processedFilters.length; i++) {
+        const filter = processedFilters[i];
+        const recordValue = record[filter.field];
 
-        if (filterValue === undefined || filterValue === null || filterValue === '') {
-          return true;
+        if (filter.isString) {
+          // Filtro por string (case insensitive)
+          if (!recordValue?.toString().toLowerCase().includes(filter.value)) {
+            return false;
+          }
+        } else {
+          // Filtro exato
+          if (recordValue !== filter.value) {
+            return false;
+          }
         }
-
-        // Filtro por string (case insensitive)
-        if (typeof filterValue === 'string') {
-          return recordValue?.toString().toLowerCase()
-            .includes(filterValue.toLowerCase());
-        }
-
-        // Filtro exato
-        return recordValue === filterValue;
-      });
+      }
+      return true;
     });
   },
 
@@ -1804,6 +1977,102 @@ const DatabaseManager = {
     } catch (error) {
       console.error(`❌ Erro ao encontrar linha para ID ${id}:`, error);
       return -1;
+    }
+  },
+
+  /**
+   * Cria chave de cache otimizada para filtros
+   * @private
+   * @param {Object} filters - Filtros a serem convertidos
+   * @returns {string} Chave de cache otimizada
+   */
+  _createFilterKey(filters) {
+    if (!filters || Object.keys(filters).length === 0) {
+      return '_all';
+    }
+
+    // Ordenar chaves para garantir consistência
+    const sortedKeys = Object.keys(filters).sort();
+    const keyParts = sortedKeys.map(key => `${key}:${filters[key]}`);
+    return keyParts.join('|');
+  },
+
+  /**
+   * Sanitiza dados para uma tabela específica usando schema
+   * @private
+   * @param {string} tableName - Nome da tabela
+   * @param {Object} data - Dados a sanitizar
+   * @returns {Object} Dados sanitizados
+   */
+  _sanitizeDataForTable(tableName, data) {
+    try {
+      // Obter schema da tabela do dicionário
+      const tableSchema = this._getTableSchema(tableName);
+
+      // Usar SecurityUtils para sanitizar
+      const sanitized = SecurityUtils.sanitizeObject(data, tableSchema);
+
+      // Validar strings perigosas
+      Object.keys(sanitized).forEach(key => {
+        if (typeof sanitized[key] === 'string' && !SecurityUtils.isSafeString(sanitized[key])) {
+          Logger.warn('SecurityUtils', 'Conteúdo perigoso removido', {
+            tableName,
+            field: key,
+            originalLength: data[key]?.length || 0
+          });
+          sanitized[key] = ''; // Remover conteúdo perigoso
+        }
+      });
+
+      return sanitized;
+    } catch (error) {
+      Logger.error('DatabaseManager', 'Erro na sanitização', { tableName, error: error.message });
+      return data; // Retornar dados originais em caso de erro
+    }
+  },
+
+  /**
+   * Obtém schema de tipos de uma tabela
+   * @private
+   * @param {string} tableName - Nome da tabela
+   * @returns {Object} Schema com tipos por campo
+   */
+  _getTableSchema(tableName) {
+    try {
+      if (typeof DATA_DICTIONARY === 'undefined' || !DATA_DICTIONARY[tableName]) {
+        return {}; // Schema vazio se não encontrar
+      }
+
+      const tableConfig = DATA_DICTIONARY[tableName];
+      const schema = {};
+
+      Object.entries(tableConfig.fields || {}).forEach(([fieldName, fieldConfig]) => {
+        // Mapear tipos do dicionário para tipos de sanitização
+        switch (fieldConfig.type) {
+          case 'string':
+          case 'text':
+            schema[fieldName] = fieldName.includes('email') ? 'email' : 'string';
+            break;
+          case 'number':
+          case 'integer':
+            schema[fieldName] = 'number';
+            break;
+          case 'boolean':
+            schema[fieldName] = 'boolean';
+            break;
+          case 'datetime':
+          case 'date':
+            schema[fieldName] = 'string'; // Datas como string
+            break;
+          default:
+            schema[fieldName] = fieldName.includes('id') ? 'id' : 'string';
+        }
+      });
+
+      return schema;
+    } catch (error) {
+      Logger.error('DatabaseManager', 'Erro ao obter schema', { tableName, error: error.message });
+      return {};
     }
   },
 
