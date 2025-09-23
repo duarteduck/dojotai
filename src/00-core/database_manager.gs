@@ -1226,6 +1226,9 @@ const DatabaseManager = {
         ...data
       };
 
+      // Para tabela sessoes, id e session_id são diferentes
+      // id = contador sequencial (SES-001), session_id = token único (sess_abc123)
+
       // Adicionar campos específicos da tabela (sem sobrescrever a chave primária)
       const tableFields = this._getTableSpecificFields(tableName, baseData);
 

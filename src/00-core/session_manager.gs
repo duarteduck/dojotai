@@ -27,13 +27,15 @@ async function createSession(userId, deviceInfo = {}) {
     }
 
     // Gerar dados da sessão
-    const sessionId = 'SES-' + new Date().getTime();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // 8 horas
 
+    // Gerar token único da sessão
+    const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
     // Preparar dados estruturados para DatabaseManager
     const sessionData = {
-      session_id: sessionId,
+      session_id: sessionToken, // Token único da sessão
       user_id: userId,
       created_at: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss'),
       expires_at: Utilities.formatDate(expiresAt, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss'),
@@ -54,14 +56,15 @@ async function createSession(userId, deviceInfo = {}) {
 
     if (insertResult.success) {
       Logger.info('SessionManager', 'Sessão criada com sucesso', {
-        sessionId: insertResult.id,
+        sessionId: sessionToken,
+        recordId: insertResult.id,
         userId
       });
 
       return {
         ok: true,
         session: {
-          id: insertResult.id,
+          id: sessionToken, // Retornar o token da sessão para o frontend
           user_id: userId,
           expires_at: sessionData.expires_at,
           created_at: sessionData.created_at,
@@ -165,21 +168,40 @@ function destroySession(sessionId) {
   try {
     Logger.info('SessionManager', 'Destruindo sessão', { sessionId });
 
-    // Atualizar sessão para inativa usando DatabaseManager
-    const updateResult = DatabaseManager.update('sessoes', sessionId, {
+    // Primeiro, encontrar a sessão usando session_id (não id)
+    const sessionsQuery = DatabaseManager.query('sessoes', { session_id: sessionId });
+
+    if (!sessionsQuery || sessionsQuery.length === 0) {
+      Logger.warn('SessionManager', 'Sessão não encontrada', { sessionId });
+      return { ok: false, error: 'Sessão não encontrada' };
+    }
+
+    const session = sessionsQuery[0];
+
+    // Para sessões antigas sem campo id, usar session_id como fallback
+    const recordId = session.id || session.session_id;
+
+    // Atualizar usando o ID real da linha
+    const updateResult = DatabaseManager.update('sessoes', recordId, {
       active: '',
       destroyed_at: Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
     });
 
-    if (updateResult.success) {
+    // Update executado com sucesso
+
+    // Se updateResult está vazio ({}), significa que funcionou
+    // DatabaseManager.update() pode retornar objeto vazio quando bem-sucedido
+    if (updateResult.ok || updateResult.success ||
+        (typeof updateResult === 'object' && !updateResult.error)) {
       Logger.info('SessionManager', 'Sessão destruída com sucesso', { sessionId });
       return { ok: true, message: 'Sessão destruída' };
     } else {
       Logger.error('SessionManager', 'Falha ao destruir sessão', {
         sessionId,
-        error: updateResult.error
+        error: updateResult.error || updateResult.message || 'Erro desconhecido',
+        updateResult: updateResult
       });
-      return { ok: false, error: updateResult.error };
+      return { ok: false, error: updateResult.error || updateResult.message || 'Erro desconhecido' };
     }
 
   } catch (error) {

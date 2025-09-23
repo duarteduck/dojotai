@@ -979,21 +979,31 @@ const DATA_DICTIONARY = {
   sessoes: {
     tableName: 'sessoes',
     description: 'Gerenciamento robusto de sessões de usuários',
-    primaryKey: 'session_id',
+    primaryKey: 'id',
     file: 'Sistema - Sessões',
     sheet: 'sessoes',
 
     // 🔍 CAMPOS DA TABELA SESSOES
     fields: {
 
-      // ID único da sessão
+      // ID da linha (padrão DatabaseManager)
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^SES-\\d+$',
+        description: 'ID único da linha',
+        generated: true,
+        example: 'SES-001'
+      },
+
+      // Token único da sessão
       session_id: {
         type: 'TEXT',
         required: true,
-        pattern: '^SES-[A-Z0-9\\-]+$',
-        description: 'ID único da sessão',
-        generated: true,
-        example: 'SES-001'
+        pattern: '^sess_[0-9]+_[a-z0-9]+$',
+        description: 'Token único da sessão',
+        generated: false,
+        example: 'sess_1234567890_abc123def'
       },
 
       // ID do usuário (FK)
