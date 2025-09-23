@@ -340,7 +340,7 @@ var Views = {
 
         if (res && res.ok) {
           if (msg) msg.textContent = 'Login realizado!';
-          Router.go('#/dash');
+          Router.go('#/dashboard');
         } else {
           if (msg) msg.textContent = res.error || 'Falha ao autenticar.';
           if (btn) btn.disabled = false;
@@ -739,6 +739,106 @@ var Views = {
       UI.toast('Falha ao carregar dados','err');
       listEl.innerHTML='';
     });
+  },
+
+  initDashboard: function(){
+    console.log('✅ Views.initDashboard called');
+
+    // Load User Menu Component
+    Views.loadUserMenuComponent();
+
+    // Configurar menu de navegação
+    var navTabs = document.querySelectorAll('.nav-tab');
+    navTabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        var page = this.getAttribute('data-page');
+        console.log('📱 Navegando para:', page);
+
+        // Remove active class from all tabs
+        navTabs.forEach(function(t) { t.classList.remove('active'); });
+        // Add active class to clicked tab
+        this.classList.add('active');
+
+        // Navigate to the selected page
+        if (page === 'activities') {
+          Router.go('#/dash');
+        } else if (page === 'dashboard') {
+          Router.go('#/dashboard');
+        } else if (page === 'members') {
+          Router.go('#/members');
+        } else {
+          console.log('⚠️ Página não implementada:', page);
+        }
+      });
+    });
+
+    // Carregar dados do dashboard
+    Views.loadDashboardData();
+
+    // Menu overlay (simples por enquanto)
+    var btnMenu = document.getElementById('btn-menu');
+    if (btnMenu) {
+      btnMenu.addEventListener('click', function() {
+        console.log('📱 Menu clicado');
+        // Por enquanto só um log, depois implementamos menu lateral
+      });
+    }
+
+    // Initialize simple logout
+    if (typeof Views.initSimpleLogout === 'function') {
+      Views.initSimpleLogout();
+    }
+  },
+
+  loadDashboardData: function() {
+    console.log('📊 Carregando dados do dashboard...');
+
+    // Simulação de dados por enquanto - depois conectar com API real
+    setTimeout(function() {
+      // Card Atividades
+      var atividadesCount = document.getElementById('atividades-count');
+      var atividadesStatus = document.getElementById('atividades-status');
+      var atividadesProgress = document.getElementById('atividades-progress');
+
+      if (atividadesCount) atividadesCount.textContent = '12';
+      if (atividadesStatus) atividadesStatus.textContent = '3 pendentes, 9 realizadas';
+      if (atividadesProgress) atividadesProgress.style.width = '75%';
+
+      // Card Membros
+      var membrosCount = document.getElementById('membros-count');
+      var membrosVariacao = document.getElementById('membros-variacao');
+      var membrosParticipacao = document.getElementById('membros-participacao');
+      var membrosProgress = document.getElementById('membros-progress');
+
+      if (membrosCount) membrosCount.textContent = '47';
+      if (membrosVariacao) membrosVariacao.textContent = '+5 este mês';
+      if (membrosParticipacao) membrosParticipacao.textContent = '85% de participação regular';
+      if (membrosProgress) membrosProgress.style.width = '85%';
+
+      // Card Práticas
+      var praticasCount = document.getElementById('praticas-count');
+      var praticasTotal = document.getElementById('praticas-total');
+      var praticasCompletude = document.getElementById('praticas-completude');
+      var praticasProgress = document.getElementById('praticas-progress');
+
+      if (praticasCount) praticasCount.textContent = '18';
+      if (praticasTotal) praticasTotal.textContent = 'de 21 práticas';
+      if (praticasCompletude) praticasCompletude.textContent = '86% de completude';
+      if (praticasProgress) praticasProgress.style.width = '86%';
+
+      // Card Estatísticas
+      var statsPercent = document.getElementById('stats-percent');
+      var statsVariacao = document.getElementById('stats-variacao');
+      var statsDesc = document.getElementById('stats-desc');
+      var statsProgress = document.getElementById('stats-progress');
+
+      if (statsPercent) statsPercent.textContent = '92%';
+      if (statsVariacao) statsVariacao.textContent = '↗ +3%';
+      if (statsDesc) statsDesc.textContent = 'Engajamento médio dos jovens';
+      if (statsProgress) statsProgress.style.width = '92%';
+
+      console.log('✅ Dados do dashboard carregados');
+    }, 500);
   },
 
   initNew: function(){

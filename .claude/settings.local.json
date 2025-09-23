@@ -1,8 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(findstr:*)",
-      "Bash(dir view_login:*)"
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

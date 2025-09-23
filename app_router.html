@@ -2,6 +2,7 @@
 /**
  * Router simples por hash:
  * - #/login
+ * - #/dashboard
  * - #/dash
  * - #/new
  * - #/edit?id={ID}
@@ -28,6 +29,7 @@ var Router = {
       
       var init = null;
       if (view === 'login')  init = Views.initLogin;
+      if (view === 'dashboard') init = Views.initDashboard;
       if (view === 'dash')   init = Views.initDash;
       if (view === 'new')    init = Views.initNew;
       if (view === 'members') init = Views.initMembers;  // ← ESTA LINHA É CRUCIAL
@@ -52,17 +54,19 @@ var Router = {
     console.log('🗺️ Router.resolve - Rota:', route, 'Autenticado:', authed);
 
     // Proteção de rotas autenticadas
+    if (route.indexOf('#/dashboard') === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/dash') === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/new')  === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/edit') === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/members') === 0 && !authed) { return this.go('#/login'); } // ← PROTEÇÃO MEMBERS
     if (route.indexOf('#/member') === 0 && !authed) { return this.go('#/login'); } // ← PROTEÇÃO MEMBER
-    
+
     // Redirecionamento se já logado
-    if (route.indexOf('#/login') === 0 && authed) { return this.go('#/dash'); }
+    if (route.indexOf('#/login') === 0 && authed) { return this.go('#/dashboard'); }
 
     // Determinação da view
     var view = 'login';
+    if (route.indexOf('#/dashboard') === 0) view = 'dashboard';
     if (route.indexOf('#/dash') === 0) view = 'dash';
     if (route.indexOf('#/new')  === 0) view = 'new';
     if (route.indexOf('#/edit') === 0) view = 'new';
