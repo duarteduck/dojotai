@@ -271,55 +271,152 @@ var UI = {
   }
 };
 
+// Simple Login Functions (debugging)
+
 /* ===========================
    Views
    =========================== */
 var Views = {
   initLogin: function(){
-    var btn=document.getElementById('btn-login');
-    var inpLogin=document.getElementById('inp-login');
-    var inpPin=document.getElementById('inp-pin');
-    var msg=document.getElementById('login-msg');
+    console.log('✅ Views.initLogin called');
 
-    function setLoading(v){
-      if(!btn) return;
-      btn.disabled=!!v;
-      if(btn.classList) btn.classList.toggle('is-loading',!!v);
-      if(msg) msg.textContent=v?'Autenticando...':'';
-    }
-    function doLogin(){
-      var login=(inpLogin&&inpLogin.value?inpLogin.value:'').trim();
-      var pin=(inpPin&&inpPin.value?inpPin.value:'').trim();
-      if(!login||!pin){ if(msg) msg.textContent='Informe login e PIN.'; return; }
-      setLoading(true);
-      API.login(login,pin).then(function(res){
-        var uidFromRes=(res&&res.user&&res.user.uid)?res.user.uid:null;
-        var hasOk=!!(res&&res.ok);
-        var uid=uidFromRes||(window.State&&State.uid)||null;
-        if(hasOk&&uid){
-          try{ if(uidFromRes) State.uid=uidFromRes; }catch(e){}
+    // Basic login functionality
+    var btn = document.getElementById('btn-login');
+    var inpLogin = document.getElementById('inp-login');
+    var inpPin = document.getElementById('inp-pin');
+    var msg = document.getElementById('login-msg');
+
+    console.log('🔍 Elements found:', {
+      btn: !!btn,
+      inpLogin: !!inpLogin,
+      inpPin: !!inpPin,
+      msg: !!msg
+    });
+
+    function doLogin() {
+      console.log('🔐 doLogin called');
+
+      if (!inpLogin || !inpPin) {
+        console.error('❌ Input elements not found');
+        return;
+      }
+
+      var login = inpLogin.value.trim();
+      var pin = inpPin.value.trim();
+
+      if (!login || !pin) {
+        if (msg) msg.textContent = 'Informe login e PIN.';
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      if (msg) msg.textContent = 'Autenticando...';
+
+      // Try to show overlay
+      try {
+        var overlay = document.getElementById('login-loading-overlay');
+        if (overlay) {
+          overlay.style.display = 'flex';
+          overlay.classList.remove('hidden');
+          console.log('📱 Overlay mostrado');
+        }
+      } catch (e) {
+        console.warn('⚠️ Erro ao mostrar overlay:', e);
+      }
+
+      API.login(login, pin).then(function(res) {
+        console.log('🔐 Login response:', res);
+
+        // Hide overlay
+        try {
+          var overlay = document.getElementById('login-loading-overlay');
+          if (overlay) {
+            overlay.style.display = 'none';
+            overlay.classList.add('hidden');
+          }
+        } catch (e) {
+          console.warn('⚠️ Erro ao esconder overlay:', e);
+        }
+
+        if (res && res.ok) {
+          if (msg) msg.textContent = 'Login realizado!';
           Router.go('#/dash');
         } else {
-          if(msg) msg.textContent=(res&&res.error)||'Falha ao autenticar.';
+          if (msg) msg.textContent = res.error || 'Falha ao autenticar.';
+          if (btn) btn.disabled = false;
         }
-        setLoading(false);
-      }).catch(function(err){
-        console.error('[login] hard error',err);
-        if(msg) msg.textContent='Erro ao autenticar.';
-        setLoading(false);
+      }).catch(function(err) {
+        console.error('❌ Login error:', err);
+
+        // Hide overlay
+        try {
+          var overlay = document.getElementById('login-loading-overlay');
+          if (overlay) {
+            overlay.style.display = 'none';
+            overlay.classList.add('hidden');
+          }
+        } catch (e) {
+          console.warn('⚠️ Erro ao esconder overlay:', e);
+        }
+
+        if (msg) msg.textContent = 'Erro ao autenticar.';
+        if (btn) btn.disabled = false;
       });
     }
-    if(btn) btn.onclick=doLogin;
-    function onKey(ev){
-      ev=ev||window.event;
-      var key=ev.key||ev.keyCode;
-      if(key==='Enter'||key===13){
-        if(ev.preventDefault) ev.preventDefault();
-        doLogin();
-      }
+
+    if (btn) {
+      btn.onclick = doLogin;
+      console.log('🔧 Button click handler added');
     }
-    if(inpLogin) inpLogin.addEventListener('keydown',onKey);
-    if(inpPin)   inpPin.addEventListener('keydown',onKey);
+
+    // Enter key
+    if (inpLogin) {
+      inpLogin.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          doLogin();
+        }
+      });
+    }
+
+    if (inpPin) {
+      inpPin.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          doLogin();
+        }
+      });
+    }
+
+    // Password toggle functionality
+    var passwordToggle = document.getElementById('passwordToggle');
+    var passwordToggleIcon = document.querySelector('.password-toggle-icon');
+
+    console.log('🔍 Toggle elements:', {
+      passwordToggle: !!passwordToggle,
+      passwordToggleIcon: !!passwordToggleIcon,
+      inpPin: !!inpPin
+    });
+
+    if (passwordToggle && inpPin) {
+      passwordToggle.addEventListener('click', function() {
+        console.log('👁️ Password toggle clicked');
+
+        if (inpPin.type === 'password') {
+          inpPin.type = 'text';
+          if (passwordToggleIcon) passwordToggleIcon.textContent = '🙈';
+          console.log('👁️ Password shown');
+        } else {
+          inpPin.type = 'password';
+          if (passwordToggleIcon) passwordToggleIcon.textContent = '👁️';
+          console.log('👁️ Password hidden');
+        }
+      });
+
+      console.log('🔧 Password toggle handler added');
+    }
+
+    console.log('✅ Login initialization complete');
   },
 
   initDash: function(){
@@ -364,30 +461,12 @@ var Views = {
     State.ui.nomeFiltro='';
     State.ui.categoriaAtividadeFiltro='todas';
 
-    // Botões principais
-    var btnLogout=document.getElementById('btn-logout');
-    var btnNew   =document.getElementById('btn-new');
-    if(btnLogout) btnLogout.addEventListener('click', async function(){
-      // Destruir sessão no backend se existir
-      if(State.user && State.session && State.session.id) {
-        try {
-          console.log('🚪 Fazendo logout com destruição de sessão:', State.session.id);
-          const logoutResult = await API.logout(State.session.id);
-          if(logoutResult.ok) {
-            console.log('✅ Sessão destruída com sucesso');
-          } else {
-            console.warn('⚠️ Erro ao destruir sessão:', logoutResult.error);
-          }
-        } catch(error) {
-          console.warn('⚠️ Erro no logout:', error);
-        }
-      }
+    // Load User Menu Component
+    Views.loadUserMenuComponent();
 
-      // Limpar estado local e redirecionar
-      State.clear();
-      Router.go('#/login');
-    });
-    if(btnNew)    btnNew.addEventListener('click', function(){ Router.go('#/new'); });
+    // Botão Nova Atividade
+    var btnNew = document.getElementById('btn-new');
+    if(btnNew) btnNew.addEventListener('click', function(){ Router.go('#/new'); });
 
     // Menu overlay
     var btnMenu=document.getElementById('btn-menu');
@@ -2345,6 +2424,181 @@ window.atualizarContadoresCategorias = function() {
     }
   }
 };
+
+// Load User Menu Component function (standalone)
+Views.loadUserMenuComponent = function() {
+    const container = document.getElementById('user-menu-container');
+    const template = document.getElementById('tpl-user-menu');
+
+    if (container && template) {
+      container.innerHTML = template.innerHTML;
+
+      // Component will self-initialize when DOM is ready
+      setTimeout(() => {
+        if (typeof initializeLogoutComponent === 'function') {
+          initializeLogoutComponent();
+        }
+      }, 100);
+    }
+
+    // Also initialize simple logout button
+    if (typeof Views.initSimpleLogout === 'function') {
+      Views.initSimpleLogout();
+    }
+};
+
+// Simple Logout Button Handler
+Views.initSimpleLogout = function() {
+  const logoutBtn = document.getElementById('btn-logout-simple');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function() {
+      console.log('🚪 Logout iniciado');
+
+      // Show logout overlay (same pattern as login)
+      try {
+        var overlay = document.getElementById('logout-loading-overlay');
+        if (overlay) {
+          overlay.style.display = 'flex';
+          overlay.classList.remove('hidden');
+          console.log('📱 Overlay logout mostrado');
+        }
+      } catch (e) {
+        console.warn('⚠️ Erro ao mostrar overlay logout:', e);
+      }
+
+      // Disable button
+      logoutBtn.disabled = true;
+      logoutBtn.textContent = 'Saindo...';
+
+      // Get session ID
+      var sessionId = getCurrentSessionId();
+
+      if (sessionId && typeof API !== 'undefined' && API.logout) {
+        console.log('🚪 Fazendo logout via API...');
+
+        API.logout(sessionId).then(function(result) {
+          console.log('🚪 Logout response:', result);
+
+          // Hide overlay
+          try {
+            var overlay = document.getElementById('logout-loading-overlay');
+            if (overlay) {
+              overlay.style.display = 'none';
+              overlay.classList.add('hidden');
+            }
+          } catch (e) {
+            console.warn('⚠️ Erro ao esconder overlay logout:', e);
+          }
+
+          // Clear local data
+          clearLocalSession();
+
+          // Navigate to login
+          Router.go('#/login');
+
+        }).catch(function(err) {
+          console.error('❌ Logout error:', err);
+
+          // Hide overlay
+          try {
+            var overlay = document.getElementById('logout-loading-overlay');
+            if (overlay) {
+              overlay.style.display = 'none';
+              overlay.classList.add('hidden');
+            }
+          } catch (e) {
+            console.warn('⚠️ Erro ao esconder overlay logout:', e);
+          }
+
+          // Clear local data anyway
+          clearLocalSession();
+
+          // Navigate to login
+          Router.go('#/login');
+        });
+      } else {
+        console.warn('⚠️ SessionId ou API.logout não disponível, fazendo logout local');
+
+        // Hide overlay after short delay
+        setTimeout(function() {
+          try {
+            var overlay = document.getElementById('logout-loading-overlay');
+            if (overlay) {
+              overlay.style.display = 'none';
+              overlay.classList.add('hidden');
+            }
+          } catch (e) {
+            console.warn('⚠️ Erro ao esconder overlay logout:', e);
+          }
+
+          clearLocalSession();
+          Router.go('#/login');
+        }, 1000);
+      }
+    });
+  }
+};
+
+// Helper functions for logout
+function getCurrentSessionId() {
+  try {
+    // Try to get session ID from various sources
+    if (typeof State !== 'undefined' && State.session && State.session.id) {
+      return State.session.id;
+    }
+
+    return localStorage.getItem('sessionId') ||
+           localStorage.getItem('sessionToken') ||
+           sessionStorage.getItem('sessionId');
+  } catch (e) {
+    console.warn('Erro ao obter sessionId:', e);
+    return null;
+  }
+}
+
+function clearLocalSession() {
+  try {
+    // Clear all possible session data
+    localStorage.removeItem('uid');
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('currentUser');
+    sessionStorage.clear();
+
+    // Clear State object
+    if (typeof State !== 'undefined') {
+      State.uid = null;
+      if (State.clear) State.clear();
+      if (State.session) State.session = null;
+      if (State.user) State.user = null;
+    }
+
+    console.log('🧹 Sessão local limpa');
+  } catch (e) {
+    console.warn('Erro ao limpar sessão local:', e);
+  }
+}
+
+function showLogoutOverlay(show = true) {
+  const overlay = document.getElementById('logout-loading-overlay');
+
+  console.log('🔄 showLogoutOverlay chamado:', { show, overlay: !!overlay });
+
+  if (!overlay) {
+    console.error('❌ Logout overlay not found');
+    return;
+  }
+
+  if (show) {
+    console.log('📱 Mostrando overlay de logout...');
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+  } else {
+    console.log('🔽 Escondendo overlay de logout...');
+    overlay.classList.add('hidden');
+    overlay.style.display = 'none';
+  }
+}
 
 window.initResponsiveCalendar = function(containerId, options) {
   const container = document.querySelector(containerId);

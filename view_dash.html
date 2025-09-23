@@ -7,7 +7,10 @@
         <span>Menu</span>
       </button>
       <button class="btn" id="btn-new">+ Nova</button>
-      <button class="btn" id="btn-logout">Sair</button>
+      <!-- User Menu Component -->
+      <div id="user-menu-container"></div>
+      <!-- Temporary Simple Logout Button -->
+      <button class="btn btn-logout" id="btn-logout-simple">Sair</button>
     </div>
   </div>
 
@@ -34,4 +37,13 @@
   </div>
 
 <div id="list" class="row"></div>
+
+<!-- Logout Loading Overlay -->
+<div id="logout-loading-overlay" class="logout-loading-overlay hidden">
+  <div class="loading-content">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Encerrando sessão...</p>
+  </div>
+</div>
+
 </div>

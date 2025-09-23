@@ -1,10 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)",
-      "Bash(clasp push:*)",
-      "Bash(clasp open)",
-      "Bash(clasp:*)"
+      "Bash(findstr:*)",
+      "Bash(dir view_login:*)"
     ],
     "deny": [],
     "ask": []

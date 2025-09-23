@@ -3368,6 +3368,61 @@
   border-color: var(--border);
 }
 
+/* ===== LOGOUT LOADING OVERLAY (CÓPIA EXATA DO LOGIN) ===== */
+.logout-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: all 0.3s ease;
+}
+
+.logout-loading-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  display: none !important;
+}
+
+.logout-loading-overlay .loading-content {
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  max-width: 300px;
+  width: 90%;
+}
+
+.logout-loading-overlay .loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #ef4444;
+  border-radius: 50%;
+  animation: spin-logout-loading 1s linear infinite;
+  margin: 0 auto 24px;
+}
+
+.logout-loading-overlay .loading-text {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+@keyframes spin-logout-loading {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* Loading components */
 .loading-container {
   display: flex;
