@@ -56,6 +56,8 @@
 
   /* Gradientes */
   --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  --gradient-secondary: linear-gradient(135deg, var(--gray) 0%, var(--gray-dark) 100%);
+  --gradient-success: linear-gradient(135deg, var(--success) 0%, #16a085 100%);
   --gradient-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
   /* Bordas e Raios */
@@ -92,6 +94,62 @@
   /* Status chips */
   --chip-pendente: #fff1cc;
   --chip-concluida: #e6f6ea;
+
+  /* Botões base */
+  --btn-bg: var(--white);
+  --btn-fg: var(--text);
+  --btn-bd: var(--border);
+}
+
+/* ===== TEMA ESCURO - SEGUINDO PROTÓTIPO ===== */
+[data-theme="dark"] {
+  /* Backgrounds mais suaves */
+  --white: #1e2028;
+  --light: #2a2d3a;
+  --gray-light: #3a3f4b;
+  --gray: #64748b;
+  --gray-dark: #475569;
+
+  /* Textos com melhor contraste */
+  --text: #f8fafc;
+  --text-light: #e2e8f0;
+
+  /* Gradient de fundo mais elegante */
+  --gradient-background: linear-gradient(135deg, #0f1419 0%, #1e2028 50%, #2a2d3a 100%);
+
+  /* Cores de atividades suavizadas para dark */
+  --okiyome-light: #1e40af;
+  --okiyome-dark: #a5b4fc;
+
+  --estudo-light: #6d28d9;
+  --estudo-dark: #c7d2fe;
+
+  --cerimonia-light: #b45309;
+  --cerimonia-dark: #fde047;
+
+  --pratica-pessoas-light: #059669;
+  --pratica-pessoas-dark: #a7f3d0;
+
+  --pratica-outros-light: #6d28d9;
+  --pratica-outros-dark: #c7d2fe;
+
+  --pratica-receber-light: #059669;
+  --pratica-receber-dark: #a7f3d0;
+
+  /* Sombras mais sutis no dark */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+
+  /* Cores de status suavizadas */
+  --success: #16a34a;
+  --warning: #eab308;
+  --danger: #ef4444;
+  --info: #3b82f6;
+
+  /* Status chips para tema escuro */
+  --chip-pendente: #451a03;
+  --chip-concluida: #052e16;
 }
 
 *,
@@ -122,22 +180,22 @@ body{
 
 .container{
   max-width: 1200px;
-  margin-inline: auto;
-  padding: 20px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  margin: 0 auto;
+  padding: var(--spacing-md);
+  padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
 }
 
 @media (max-width: 768px) {
   .container {
-    padding: 16px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    padding: var(--spacing-sm) var(--spacing-md);
+    padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
   }
 }
 
 @media (min-width: 1400px) {
   .container {
-    max-width: 1400px;
-    padding: 24px;
+    max-width: 1200px;
+    padding: var(--spacing-lg);
   }
 }
 
@@ -150,24 +208,43 @@ h2{
   font-size: clamp(1.1rem, 4vw, 1.35rem); 
 }
 
-/* Controls - Melhorados para mobile */
+/* Controls - Altura uniforme */
 .btn{
-  display:inline-flex; 
-  align-items:center; 
-  justify-content:center; 
-  gap:.5rem;
-  min-height: 44px;
-  padding: .7rem 1.2rem;
-  border-radius: 10px;
-  border: 1px solid var(--btn-bd);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: none;
   background: var(--btn-bg);
   color: var(--btn-fg);
   cursor: pointer;
-  transition: all .2s ease;
-  font-size: .9rem;
-  font-weight: 500;
-  white-space: nowrap;
+  transition: var(--transition);
   text-decoration: none;
+  white-space: nowrap;
+  min-height: 32px;
+}
+
+/* Theme toggle com mesma altura */
+.theme-toggle {
+  min-height: 32px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== BOTÕES DO HEADER - ALTURA UNIFORME ===== */
+#btn-header-menu,
+#btn-header-logout {
+  min-height: 32px !important;
+  padding: var(--spacing-xs) var(--spacing-md) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: var(--spacing-xs) !important;
+  font-size: 0.8rem !important;
 }
 
 .btn:hover {
@@ -363,4 +440,237 @@ select:focus-visible {
 .force-mobile input, .force-mobile select, .force-mobile textarea,
 .touch-wide input, .touch-wide select, .touch-wide textarea{
   font-size: 16px !important; padding: 1rem 1.05rem !important; min-height: 48px !important;
+}
+
+/* ===== BOTÕES COM GRADIENTES - SEGUINDO PROTÓTIPO ===== */
+.btn-primary {
+  background: var(--gradient-primary) !important;
+  color: var(--white) !important;
+  border: none !important;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+}
+
+.btn-secondary {
+  background: var(--gradient-secondary) !important;
+  color: var(--white) !important;
+  border: none !important;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background: var(--gray-dark) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(100, 116, 139, 0.3);
+}
+
+.btn-success {
+  background: var(--gradient-success) !important;
+  color: var(--white) !important;
+  border: none !important;
+  font-weight: 500;
+}
+
+.btn-success:hover {
+  background: var(--success) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
+
+.btn-outline {
+  background: transparent !important;
+  color: var(--primary) !important;
+  border: 2px solid var(--primary) !important;
+  font-weight: 500;
+}
+
+.btn-outline:hover {
+  background: var(--gradient-primary) !important;
+  color: var(--white) !important;
+  border-color: var(--primary) !important;
+  transform: translateY(-1px);
+}
+
+.btn-logout {
+  background: var(--gray-light) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  font-weight: 500;
+}
+
+.btn-logout:hover {
+  background: var(--danger) !important;
+  color: var(--white) !important;
+  border-color: var(--danger) !important;
+  transform: translateY(-1px);
+}
+
+/* Tema escuro - ajustes dos gradientes */
+[data-theme="dark"] .btn-primary {
+  background: var(--gradient-primary);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: var(--gradient-secondary);
+}
+
+[data-theme="dark"] .btn-logout {
+  background: var(--gray-dark);
+  color: var(--text-light);
+  border-color: var(--gray);
+}
+
+[data-theme="dark"] .btn-logout:hover {
+  background: var(--danger);
+  color: var(--white);
+}
+
+/* ===== NAVEGAÇÃO COM GRADIENTE ===== */
+/* Botões de módulos/navegação - usar gradiente */
+.nav-tab.active {
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.nav-tab.active:hover {
+  background: var(--gradient-primary) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+}
+
+/* ===== BOTÕES ESPECÍFICOS DAS PÁGINAS ===== */
+/* Botões de adicionar (Nova Atividade/Novo Membro) - cor sólida */
+#btn-new,
+#btn-members-new,
+.page-buttons .btn-primary {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 500 !important;
+}
+
+#btn-new:hover,
+#btn-members-new:hover,
+.page-buttons .btn-primary:hover {
+  background: var(--primary-dark) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+}
+
+/* Botão Sair no header - fundo branco igual ao menu */
+#btn-header-logout {
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+  border: 1px solid var(--btn-bd) !important;
+  font-weight: 500;
+}
+
+#btn-header-logout:hover {
+  background: var(--danger) !important;
+  color: var(--white) !important;
+  border-color: var(--danger) !important;
+  transform: translateY(-1px);
+}
+
+/* ===== PROGRESS BARS - SEGUINDO PROTÓTIPO ===== */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--gray-light);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 9999px;
+  transition: width var(--transition-slow);
+}
+
+.progress-fill.success {
+  background: var(--success);
+}
+
+.progress-fill.warning {
+  background: var(--warning);
+}
+
+.progress-fill.danger {
+  background: var(--danger);
+}
+
+/* ===== CLASSES UTILITÁRIAS - SEGUINDO PROTÓTIPO ===== */
+.flex {
+  display: flex;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.mb-md {
+  margin-bottom: var(--spacing-md);
+}
+
+/* ===== CARDS DO DASHBOARD - ESTILO EXATO DO PROTÓTIPO ===== */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gray-light);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ===== CARD HEADER - MAIS COMPACTO ===== */
+.card .card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+/* ===== CARD ICONS - SEGUINDO PROTÓTIPO ===== */
+.card .card-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg);
+  color: var(--white);
+  flex-shrink: 0;
+}
+
+/* ===== CARD TITLES - SEGUINDO PROTÓTIPO ===== */
+.card .card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.card .card-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-light);
 }

@@ -1,42 +1,12 @@
-<div class="container" data-view="dash">
-  <div class="dash-header">
-    <h2>Atividades</h2>
-    <div class="dash-actions">
-      <button class="btn" id="btn-menu">
-        <span>☰</span>
-        <span>Menu</span>
-      </button>
-      <button class="btn" id="btn-new">+ Nova</button>
-      <!-- User Menu Component -->
-      <div id="user-menu-container"></div>
-      <!-- Temporary Simple Logout Button -->
-      <button class="btn btn-logout" id="btn-logout-simple">Sair</button>
-    </div>
-  </div>
+<div class="container" data-view="dash" data-page-icon="📅" data-page-title="Atividades">
+  <!-- Header componente reutilizável -->
+  <div id="dash-header-container"></div>
 
-  <!-- Navegação Horizontal Unificada -->
-  <nav class="nav-tabs">
-    <button class="nav-tab" data-page="dashboard">
-      <span>🏠</span>
-      <span>Dashboard</span>
-    </button>
-    <button class="nav-tab active" data-page="activities">
-      <span>📅</span>
-      <span>Atividades</span>
-    </button>
-    <button class="nav-tab" data-page="members">
-      <span>👥</span>
-      <span>Membros</span>
-    </button>
-    <button class="nav-tab" data-page="practices">
-      <span>🎯</span>
-      <span>Práticas</span>
-    </button>
-    <button class="nav-tab" data-page="reports">
-      <span>📊</span>
-      <span>Relatórios</span>
-    </button>
-  </nav>
+  <!-- Navigation componente reutilizável -->
+  <div id="nav-tabs-container"></div>
+
+  <!-- Page Actions (tema + botões específicos) -->
+  <div id="page-actions-container"></div>
 
   <div id="calendar-wrapper" style="display:none;">
     <div id="calendar"></div>

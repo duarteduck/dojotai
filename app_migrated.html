@@ -1,0 +1,2725 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Dojotai - Unificado</title>
+    <style>
+        /* ===== DESIGN SYSTEM UNIFICADO ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Paleta de Cores Principal */
+            --primary: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-dark: #3730a3;
+            --secondary: #f59e0b;
+            --gold: #fbbf24;
+
+            /* Cores de Status */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+
+            /* Cores Neutras */
+            --white: #ffffff;
+            --light: #f8fafc;
+            --gray-light: #f1f5f9;
+            --gray: #64748b;
+            --gray-dark: #475569;
+            --text: #1e293b;
+            --text-light: #64748b;
+
+            /* Cores Categorizadas para Atividades */
+            --okiyome: #3b82f6;
+            --okiyome-light: #dbeafe;
+            --okiyome-dark: #1e40af;
+
+            --estudo: #8b5cf6;
+            --estudo-light: #f3e8ff;
+            --estudo-dark: #7c3aed;
+
+            --cerimonia: #f59e0b;
+            --cerimonia-light: #fef3c7;
+            --cerimonia-dark: #d97706;
+
+            --pratica-pessoas: #10b981;
+            --pratica-pessoas-light: #dcfce7;
+            --pratica-pessoas-dark: #166534;
+
+            --pratica-outros: #8b5cf6;
+            --pratica-outros-light: #f3e8ff;
+            --pratica-outros-dark: #7c3aed;
+
+            --pratica-receber: #10b981;
+            --pratica-receber-light: #dcfce7;
+            --pratica-receber-dark: #166534;
+
+            /* Sombras e Efeitos */
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow: 0 10px 25px rgba(0,0,0,0.1);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+            /* Gradientes */
+            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            --gradient-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-okiyome: linear-gradient(135deg, var(--okiyome) 0%, var(--okiyome-light) 100%);
+            --gradient-estudo: linear-gradient(135deg, var(--estudo) 0%, var(--estudo-light) 100%);
+            --gradient-cerimonia: linear-gradient(135deg, var(--cerimonia) 0%, var(--cerimonia-light) 100%);
+
+            /* Bordas e Raios */
+            --radius-sm: 8px;
+            --radius: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+
+            /* Transições */
+            --transition: all 0.2s ease;
+            --transition-slow: all 0.3s ease;
+
+            /* Tipografia */
+            --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --font-size-xs: 0.75rem;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.25rem;
+            --font-size-2xl: 1.5rem;
+            --font-size-3xl: 1.875rem;
+
+            /* Espaçamentos */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+        }
+
+        /* Dark Mode - Aprimorado para melhor legibilidade */
+        [data-theme="dark"] {
+            /* Backgrounds mais suaves */
+            --white: #1e2028;
+            --light: #2a2d3a;
+            --gray-light: #3a3f4b;
+            --gray: #64748b;
+            --gray-dark: #475569;
+
+            /* Textos com melhor contraste */
+            --text: #f8fafc;
+            --text-light: #e2e8f0;
+
+            /* Gradient de fundo mais elegante */
+            --gradient-background: linear-gradient(135deg, #0f1419 0%, #1e2028 50%, #2a2d3a 100%);
+
+            /* Cores de atividades suavizadas para dark */
+            --okiyome-light: #1e40af;
+            --okiyome-dark: #a5b4fc;
+
+            --estudo-light: #6d28d9;
+            --estudo-dark: #c7d2fe;
+
+            --cerimonia-light: #b45309;
+            --cerimonia-dark: #fde047;
+
+            --pratica-pessoas-light: #059669;
+            --pratica-pessoas-dark: #a7f3d0;
+
+            --pratica-outros-light: #6d28d9;
+            --pratica-outros-dark: #c7d2fe;
+
+            --pratica-receber-light: #059669;
+            --pratica-receber-dark: #a7f3d0;
+
+            /* Sombras mais sutis no dark */
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+
+            /* Cores de status suavizadas */
+            --success: #16a34a;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        /* ===== BASE STYLES ===== */
+        body {
+            font-family: var(--font-family);
+            background: var(--gradient-background);
+            min-height: 100vh;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+
+        /* ===== HEADER UNIFICADO ===== */
+        .header {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg) var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: var(--spacing-lg);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-2xl);
+            color: var(--white);
+            font-weight: 700;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-text h1 {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .header-text p {
+            color: var(--text-light);
+            font-size: var(--font-size-sm);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            padding: var(--spacing-sm);
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: var(--font-size-lg);
+            transition: var(--transition);
+        }
+
+        .mobile-menu-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .theme-toggle {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--gray-light);
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: var(--font-size-lg);
+            transition: var(--transition);
+            color: var(--text);
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary);
+            color: var(--white);
+            transform: scale(1.05);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            background: var(--gray-light);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: 50px;
+            color: var(--text);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        /* ===== NAVEGAÇÃO HORIZONTAL UNIFICADA ===== */
+        .nav-tabs {
+            display: flex;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+            gap: var(--spacing-xs);
+        }
+
+        .nav-tab {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-light);
+            background: transparent;
+            border: none;
+            transition: var(--transition);
+            white-space: nowrap;
+            min-width: fit-content;
+        }
+
+        .nav-tab:hover {
+            background: var(--gray-light);
+            color: var(--text);
+        }
+
+        .nav-tab.active {
+            background: var(--gradient-primary);
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        /* ===== COMPONENTES UNIFICADOS ===== */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gray-light);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-xl);
+            color: var(--white);
+        }
+
+        .card-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .card-subtitle {
+            font-size: var(--font-size-sm);
+            color: var(--text-light);
+        }
+
+        /* ===== BOTÕES UNIFICADOS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--gray);
+            color: var(--white);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: var(--white);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: var(--white);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        /* ===== BADGES E CHIPS UNIFICADOS ===== */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-success {
+            background: var(--pratica-pessoas-light);
+            color: var(--pratica-pessoas-dark);
+            border: 1px solid var(--pratica-pessoas-dark);
+        }
+
+        .badge-warning {
+            background: var(--cerimonia-light);
+            color: var(--cerimonia-dark);
+            border: 1px solid var(--cerimonia-dark);
+        }
+
+        .badge-danger {
+            background: rgba(248, 113, 113, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .badge-info {
+            background: var(--okiyome-light);
+            color: var(--okiyome-dark);
+            border: 1px solid var(--okiyome-dark);
+        }
+
+        /* ===== GRIDS UNIFICADOS ===== */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .practices-grid {
+            display: grid;
+            gap: var(--spacing-lg);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        /* ===== ATIVIDADES ESPECÍFICAS ===== */
+        .activity-card {
+            padding: var(--spacing-lg);
+        }
+
+        .activity-card.okiyome {
+            border-left: 4px solid var(--okiyome);
+        }
+
+        .activity-card.okiyome .card-icon {
+            background: var(--gradient-okiyome);
+        }
+
+        .activity-card.estudo {
+            border-left: 4px solid var(--estudo);
+        }
+
+        .activity-card.estudo .card-icon {
+            background: var(--gradient-estudo);
+        }
+
+        .activity-card.cerimonia {
+            border-left: 4px solid var(--cerimonia);
+        }
+
+        .activity-card.cerimonia .card-icon {
+            background: var(--gradient-cerimonia);
+        }
+
+        .activity-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: var(--spacing-md) 0;
+            font-size: var(--font-size-sm);
+            color: var(--text-light);
+        }
+
+        .activity-date {
+            font-weight: 500;
+        }
+
+        .activity-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+        }
+
+        /* ===== SISTEMA DE PARTICIPAÇÃO UNIFICADO ===== */
+        .participation-summary {
+            margin-top: var(--spacing-md);
+            padding: var(--spacing-md);
+            background: var(--light);
+            border-radius: var(--radius);
+            font-size: var(--font-size-xs);
+        }
+
+        .participation-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .participation-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .participation-label {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .participation-values {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+
+        .participation-count {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: var(--font-size-xs);
+        }
+
+        .participation-count.confirmed {
+            background: var(--pratica-pessoas-light);
+            color: var(--pratica-pessoas-dark);
+        }
+
+        .participation-count.rejected {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .participation-count.present {
+            background: var(--pratica-pessoas-light);
+            color: var(--pratica-pessoas-dark);
+        }
+
+        .participation-count.absent {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .participation-count.total {
+            background: var(--gray-light);
+            color: var(--text);
+        }
+
+        /* ===== PRÁTICAS DIÁRIAS ESPECÍFICAS ===== */
+        .practices-header {
+            background: var(--gradient-primary);
+            color: var(--white);
+            padding: var(--spacing-lg);
+            margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) var(--spacing-lg);
+        }
+
+        .practices-controls {
+            background: var(--light);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--gray-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+
+        .day-card {
+            background: var(--white);
+            border: 1px solid var(--gray-light);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .day-card.today {
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+
+        .day-header {
+            padding: var(--spacing-md);
+            text-align: center;
+            background: var(--light);
+        }
+
+        .day-header.today {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .day-name {
+            font-weight: 600;
+            color: var(--text);
+            text-transform: capitalize;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .day-date {
+            font-size: var(--font-size-sm);
+            color: var(--text-light);
+        }
+
+        .practice-item {
+            padding: var(--spacing-md);
+            border-radius: var(--radius);
+            border: 1px solid;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .practice-item.pessoas {
+            background: var(--pratica-pessoas-light);
+            border-color: var(--pratica-pessoas);
+        }
+
+        .practice-item.outros {
+            background: var(--pratica-outros-light);
+            border-color: var(--pratica-outros);
+        }
+
+        .practice-item.receber {
+            background: var(--pratica-receber-light);
+            border-color: var(--pratica-receber);
+        }
+
+        .practice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .practice-title {
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .practice-title.pessoas {
+            color: var(--pratica-pessoas-dark);
+        }
+
+        .practice-title.outros {
+            color: var(--pratica-outros-dark);
+        }
+
+        .practice-title.receber {
+            color: var(--pratica-receber-dark);
+        }
+
+        .practice-explanation {
+            font-size: var(--font-size-xs);
+            opacity: 0.8;
+        }
+
+        .practice-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            flex-shrink: 0;
+        }
+
+        .practice-input {
+            width: 3rem;
+            height: 2rem;
+            font-size: var(--font-size-sm);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            padding: var(--spacing-xs);
+            background: var(--white);
+            color: var(--text);
+        }
+
+        .practice-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-increment {
+            width: 2rem;
+            height: 2rem;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .btn-increment:hover {
+            background: var(--primary-dark);
+        }
+
+        /* ===== MODAL UNIFICADO ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+            z-index: 50;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            max-width: 32rem;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .btn-close {
+            padding: var(--spacing-sm);
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            color: var(--text-light);
+            font-size: var(--font-size-lg);
+        }
+
+        .btn-close:hover {
+            background: var(--gray-light);
+        }
+
+        /* ===== FILTROS UNIFICADOS ===== */
+        .filters-container {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow);
+        }
+
+        .filters-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .filter-label {
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius);
+            background: var(--white);
+            color: var(--text);
+            font-size: var(--font-size-sm);
+            min-width: 120px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* ===== PROGRESS BARS UNIFICADOS ===== */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--gray-light);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 9999px;
+            transition: width var(--transition-slow);
+        }
+
+        .progress-fill.success {
+            background: var(--success);
+        }
+
+        .progress-fill.warning {
+            background: var(--warning);
+        }
+
+        .progress-fill.danger {
+            background: var(--danger);
+        }
+
+        /* ===== ESTADOS DE LOADING UNIFICADOS ===== */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+            color: var(--text-light);
+        }
+
+        .loading::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--gray-light);
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: var(--spacing-sm);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== ESTADOS VAZIOS UNIFICADOS ===== */
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            color: var(--text);
+        }
+
+        .empty-state-icon {
+            font-size: var(--font-size-3xl);
+            margin-bottom: var(--spacing-lg);
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .empty-state-description {
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* ===== MOBILE MENU MODAL ===== */
+        .mobile-menu-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: var(--spacing-xl);
+            z-index: 60;
+            backdrop-filter: blur(4px);
+        }
+
+        .mobile-menu {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            width: 90%;
+            max-width: 300px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .mobile-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .mobile-menu-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-md);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: var(--font-size-base);
+            font-weight: 500;
+            color: var(--text);
+            background: transparent;
+            border: none;
+            width: 100%;
+            margin-bottom: var(--spacing-xs);
+            transition: var(--transition);
+        }
+
+        .mobile-nav-item:hover {
+            background: var(--gray-light);
+        }
+
+        .mobile-nav-item.active {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .mobile-nav-item span:first-child {
+            font-size: var(--font-size-lg);
+            width: 24px;
+            text-align: center;
+        }
+
+        /* ===== RESPONSIVIDADE UNIFICADA ===== */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--spacing-md);
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: var(--spacing-md);
+            }
+
+            .header-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .nav-tabs {
+                display: none;
+            }
+
+            .dashboard-grid,
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .practices-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .practice-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--spacing-sm);
+            }
+
+            .practice-controls {
+                justify-content: center;
+            }
+
+            .filters-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .modal {
+                margin: var(--spacing-md);
+                max-width: calc(100vw - 2rem);
+            }
+
+            .activity-actions {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-tabs {
+                padding: var(--spacing-xs);
+            }
+
+            .nav-tab {
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: var(--font-size-xs);
+            }
+
+            .card {
+                margin: 0 calc(-1 * var(--spacing-md));
+                border-radius: 0;
+            }
+
+            .card:first-child {
+                margin-top: 0;
+                border-top-left-radius: var(--radius-lg);
+                border-top-right-radius: var(--radius-lg);
+            }
+
+            .card:last-child {
+                border-bottom-left-radius: var(--radius-lg);
+                border-bottom-right-radius: var(--radius-lg);
+            }
+        }
+
+        /* ===== UTILITÁRIOS ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .flex-col {
+            flex-direction: column;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .gap-sm {
+            gap: var(--spacing-sm);
+        }
+
+        .gap-md {
+            gap: var(--spacing-md);
+        }
+
+        .gap-lg {
+            gap: var(--spacing-lg);
+        }
+
+        .mt-sm {
+            margin-top: var(--spacing-sm);
+        }
+
+        .mt-md {
+            margin-top: var(--spacing-md);
+        }
+
+        .mt-lg {
+            margin-top: var(--spacing-lg);
+        }
+
+        .mb-sm {
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .mb-md {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .mb-lg {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .w-full {
+            width: 100%;
+        }
+
+        .h-full {
+            height: 100%;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="container">
+        <!-- Header Unificado -->
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo">D</div>
+                <div class="header-text">
+                    <h1>Sistema Dojotai</h1>
+                    <p>Gestão Unificada de Atividades e Práticas</p>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button class="mobile-menu-btn" onclick="toggleMobileMenu()" title="Menu">
+                    <span>☰</span>
+                </button>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+                    <span id="theme-icon">🌙</span>
+                </button>
+                <div class="user-info">
+                    <div class="user-avatar">DG</div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.875rem;">Diogo</div>
+                        <div style="font-size: 0.75rem; color: var(--text-light);">Administrador</div>
+                    </div>
+                </div>
+                <button class="btn logout-btn" onclick="logout()" title="Sair do sistema">
+                    <span>⚡</span>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navegação Horizontal Unificada -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-page="dashboard">
+                <span>🏠</span>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-tab" data-page="activities">
+                <span>📅</span>
+                <span>Atividades</span>
+            </button>
+            <button class="nav-tab" data-page="members">
+                <span>👥</span>
+                <span>Membros</span>
+            </button>
+            <button class="nav-tab" data-page="practices">
+                <span>🎯</span>
+                <span>Práticas</span>
+            </button>
+            <button class="nav-tab" data-page="reports">
+                <span>📊</span>
+                <span>Relatórios</span>
+            </button>
+            <button class="nav-tab" data-page="settings">
+                <span>⚙️</span>
+                <span>Configurações</span>
+            </button>
+        </nav>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page-content">
+            <div class="dashboard-grid">
+                <!-- Card Atividades -->
+                <div class="card">
+                    <div style="padding: var(--spacing-lg);">
+                        <div class="card-header">
+                            <div class="card-icon">📋</div>
+                            <div>
+                                <div class="card-title">Atividades Ativas</div>
+                                <div class="card-subtitle">Eventos e cerimônias programadas</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mb-md">
+                            <div style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--primary);">12</div>
+                            <div style="color: var(--text-light); font-size: var(--font-size-sm); font-weight: 500;">Este mês</div>
+                        </div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-lg); font-weight: 500;">
+                            3 pendentes, 9 realizadas
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill success" style="width: 75%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Membros -->
+                <div class="card">
+                    <div style="padding: var(--spacing-lg);">
+                        <div class="card-header">
+                            <div class="card-icon">👥</div>
+                            <div>
+                                <div class="card-title">Jovens Ativos</div>
+                                <div class="card-subtitle">Membros participantes</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mb-md">
+                            <div style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--primary);">47</div>
+                            <div style="color: var(--success); font-size: var(--font-size-sm);">+5 este mês</div>
+                        </div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-lg);">
+                            85% de participação regular
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill success" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Práticas -->
+                <div class="card">
+                    <div style="padding: var(--spacing-lg);">
+                        <div class="card-header">
+                            <div class="card-icon">🎯</div>
+                            <div>
+                                <div class="card-title">Práticas Diárias</div>
+                                <div class="card-subtitle">Registro pessoal esta semana</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mb-md">
+                            <div style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--primary);">18</div>
+                            <div style="color: var(--text-light); font-size: var(--font-size-sm);">de 21 práticas</div>
+                        </div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-lg);">
+                            86% de completude
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill warning" style="width: 86%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Relatórios -->
+                <div class="card">
+                    <div style="padding: var(--spacing-lg);">
+                        <div class="card-header">
+                            <div class="card-icon">📊</div>
+                            <div>
+                                <div class="card-title">Estatísticas</div>
+                                <div class="card-subtitle">Performance geral do sistema</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mb-md">
+                            <div style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--primary);">92%</div>
+                            <div style="color: var(--success); font-size: var(--font-size-sm);">↗ +3%</div>
+                        </div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-lg);">
+                            Engajamento médio dos jovens
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill success" style="width: 92%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activities Page -->
+        <div id="activities" class="page-content hidden">
+            <!-- Filtros -->
+            <div class="filters-container">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label class="filter-label">Categoria</label>
+                        <select class="filter-select" id="activities-category-filter">
+                            <option value="">Todas</option>
+                            <option value="okiyome">Okiyome</option>
+                            <option value="estudo">Estudo</option>
+                            <option value="cerimonia">Cerimônia</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <select class="filter-select" id="activities-status-filter">
+                            <option value="">Todos</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="realizada">Realizada</option>
+                            <option value="cancelada">Cancelada</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Período</label>
+                        <select class="filter-select" id="activities-period-filter">
+                            <option value="current-month">Este mês</option>
+                            <option value="next-30">Próximos 30 dias</option>
+                            <option value="last-30">Últimos 30 dias</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                    </div>
+                    <div style="margin-left: auto;">
+                        <button class="btn btn-primary" id="btn-nova-atividade">
+                            <span>➕</span>
+                            <span>Nova Atividade</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid de Atividades -->
+            <div class="cards-grid" id="activities-grid">
+                <!-- Carregando atividades... -->
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Carregando atividades...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Members Page -->
+        <div id="members" class="page-content hidden">
+            <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <div class="empty-state-title">Tela de Membros</div>
+                <div class="empty-state-description">Sistema de gestão de membros será implementado aqui</div>
+                <button class="btn btn-primary">Implementar Funcionalidade</button>
+            </div>
+        </div>
+
+        <!-- Practices Page -->
+        <div id="practices" class="page-content hidden">
+            <div class="card">
+                <div class="practices-header">
+                    <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Registro Diário de Práticas</h1>
+                    <p style="opacity: 0.9;">Acompanhe suas práticas dia a dia</p>
+                </div>
+
+                <div class="practices-controls">
+                    <h2 id="days-count" style="font-size: var(--font-size-lg); font-weight: 600;">7 dias selecionados</h2>
+                    <button class="btn btn-primary" onclick="openCalendar()">
+                        <span>📅</span>
+                        <span>Filtrar Dias</span>
+                    </button>
+                </div>
+
+                <div style="padding: var(--spacing-lg);">
+                    <div class="practices-grid" id="days-grid">
+                        <!-- Dias serão inseridos aqui via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Page -->
+        <div id="reports" class="page-content hidden">
+            <!-- Header do Relatório -->
+            <div class="card">
+                <div style="background: var(--gradient-primary); color: var(--white); padding: var(--spacing-xl); margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) var(--spacing-lg);">
+                    <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Relatório de Práticas</h1>
+                    <p style="opacity: 0.9;">Acompanhe sua evolução e progresso mensal</p>
+                </div>
+
+                <!-- Controles de Período -->
+                <div style="background: var(--light); padding: var(--spacing-md) var(--spacing-lg); border-bottom: 1px solid var(--gray-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--spacing-md);">
+                    <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
+                        <button class="btn btn-secondary" onclick="previousReportPeriod()" style="padding: var(--spacing-sm); min-width: 2.5rem;">‹</button>
+                        <div style="font-weight: 600; color: var(--text); min-width: 150px; text-align: center;" id="report-period-display">Setembro 2025</div>
+                        <button class="btn btn-secondary" onclick="nextReportPeriod()" style="padding: var(--spacing-sm); min-width: 2.5rem;">›</button>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="setReportViewMode('month')" id="btn-report-month">Mensal</button>
+                        <button class="btn btn-outline" onclick="setReportViewMode('comparison')" id="btn-report-comparison">Comparativo</button>
+                    </div>
+                </div>
+
+                <!-- Resumo Estatísticas -->
+                <div style="padding: var(--spacing-lg); display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg);">
+                    <div style="background: var(--white); border: 2px solid var(--gray-light); border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--spacing-sm); color: var(--success);" id="report-total-days">23</div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm);">Dias com Registros</div>
+                        <div class="badge badge-success" style="margin-top: var(--spacing-sm);" id="report-days-change">+5 que mês anterior</div>
+                    </div>
+
+                    <div style="background: var(--white); border: 2px solid var(--gray-light); border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--spacing-sm); color: var(--info);" id="report-completion-rate">76%</div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm);">Taxa de Completude</div>
+                        <div class="badge badge-info" style="margin-top: var(--spacing-sm);" id="report-completion-change">+12% que mês anterior</div>
+                    </div>
+
+                    <div style="background: var(--white); border: 2px solid var(--gray-light); border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--spacing-sm); color: var(--warning);" id="report-total-practices">189</div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm);">Total de Práticas</div>
+                        <div class="badge badge-warning" style="margin-top: var(--spacing-sm);" id="report-practices-change">+34 que mês anterior</div>
+                    </div>
+
+                    <div style="background: var(--white); border: 2px solid var(--gray-light); border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--spacing-sm); color: var(--estudo);" id="report-consistency">18</div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm);">Dias Consecutivos</div>
+                        <div class="badge badge-success" style="margin-top: var(--spacing-sm);" id="report-consistency-change">Recorde pessoal!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráfico de Progresso -->
+            <div class="card" id="report-chart-section">
+                <div style="padding: var(--spacing-lg);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg); flex-wrap: wrap; gap: var(--spacing-lg);">
+                        <h3 style="font-size: var(--font-size-xl); font-weight: 600; color: var(--text);">Evolução Mensal das Práticas</h3>
+                        <div style="display: flex; gap: var(--spacing-lg); font-size: var(--font-size-sm); flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                <div style="width: 12px; height: 12px; background: var(--okiyome); border-radius: var(--radius-sm);"></div>
+                                <span>Okiyome para Pessoas</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                <div style="width: 12px; height: 12px; background: var(--estudo); border-radius: var(--radius-sm);"></div>
+                                <span>Outros Okiyome</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                <div style="width: 12px; height: 12px; background: var(--success); border-radius: var(--radius-sm);"></div>
+                                <span>Receber Okiyome</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; height: 300px; background: var(--light); border-radius: var(--radius-lg); padding: var(--spacing-lg); display: flex; align-items: flex-end; justify-content: space-around; gap: var(--spacing-xs); overflow-x: auto;" id="report-progress-chart">
+                        <!-- Barras serão inseridas via JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalhamento por Prática -->
+            <div class="card" id="report-practices-section">
+                <div style="padding: var(--spacing-lg);">
+                    <h3 style="margin-bottom: var(--spacing-lg); color: var(--text); font-size: var(--font-size-xl); font-weight: 600;">
+                        Detalhamento por Prática - <span id="report-detail-period">Setembro 2025</span>
+                    </h3>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--spacing-lg);">
+                        <div style="border: 2px solid var(--okiyome-light); border-radius: var(--radius-lg); overflow: hidden;">
+                            <div style="padding: var(--spacing-lg); font-weight: 600; color: var(--white); font-size: var(--font-size-sm); background: var(--okiyome);">
+                                Okiyome para Pessoas
+                            </div>
+                            <div style="padding: var(--spacing-lg); background: var(--white);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Total no mês</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-pessoas-total">67 pessoas</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Média diária</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-pessoas-media">2.9 pessoas/dia</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Maior sequência</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-pessoas-sequencia">12 dias consecutivos</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0;">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Meta mensal</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-pessoas-meta">90 pessoas</span>
+                                </div>
+                                <div class="progress-bar" style="margin-top: var(--spacing-md);">
+                                    <div class="progress-fill" style="width: 74%; background: var(--okiyome);"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border: 2px solid var(--estudo-light); border-radius: var(--radius-lg); overflow: hidden;">
+                            <div style="padding: var(--spacing-lg); font-weight: 600; color: var(--white); font-size: var(--font-size-sm); background: var(--estudo);">
+                                Outros Okiyome
+                            </div>
+                            <div style="padding: var(--spacing-lg); background: var(--white);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Total no mês</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-outros-total">89 okiyome</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Média diária</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-outros-media">3.9 okiyome/dia</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Maior sequência</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-outros-sequencia">18 dias consecutivos</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0;">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Meta mensal</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-outros-meta">120 okiyome</span>
+                                </div>
+                                <div class="progress-bar" style="margin-top: var(--spacing-md);">
+                                    <div class="progress-fill" style="width: 84%; background: var(--estudo);"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border: 2px solid var(--success); border-radius: var(--radius-lg); overflow: hidden;">
+                            <div style="padding: var(--spacing-lg); font-weight: 600; color: var(--white); font-size: var(--font-size-sm); background: var(--success);">
+                                Receber Okiyome
+                            </div>
+                            <div style="padding: var(--spacing-lg); background: var(--white);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Dias que recebeu</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-receber-total">16 dias</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Frequência</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-receber-frequencia">70% dos dias</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Maior sequência</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-receber-sequencia">7 dias consecutivos</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0;">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Meta mensal</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-receber-meta">80% dos dias</span>
+                                </div>
+                                <div class="progress-bar" style="margin-top: var(--spacing-md);">
+                                    <div class="progress-fill" style="width: 88%; background: var(--success);"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparativo Mensal -->
+            <div class="card" id="report-comparison-section" style="display: none;">
+                <div style="padding: var(--spacing-lg);">
+                    <h3 style="margin-bottom: var(--spacing-lg); color: var(--text); font-size: var(--font-size-xl); font-weight: 600;">Comparativo dos Últimos 6 Meses</h3>
+
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: var(--spacing-md);">
+                            <thead>
+                                <tr>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Mês</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Okiyome p/ Pessoas</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Outros Okiyome</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Receber Okiyome</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Taxa Completude</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Total Práticas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-comparison-tbody">
+                                <tr style="background: var(--white);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);"><strong>Set/2025</strong></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">67 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">89 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">16 dias <span style="color: var(--gray); font-weight: 600;">→</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">76%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">189</td>
+                                </tr>
+                                <tr style="background: var(--light);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">Ago/2025</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">54 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">72 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">15 dias <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">64%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--gray); font-weight: 600;">155</td>
+                                </tr>
+                                <tr style="background: var(--white);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">Jul/2025</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">48 <span style="color: var(--gray); font-weight: 600;">→</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">86 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">12 dias <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">58%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">167</td>
+                                </tr>
+                                <tr style="background: var(--light);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">Jun/2025</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">45 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">63 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">18 dias <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">52%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">142</td>
+                                </tr>
+                                <tr style="background: var(--white);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">Mai/2025</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">52 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">78 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">14 dias <span style="color: var(--gray); font-weight: 600;">→</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">61%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">158</td>
+                                </tr>
+                                <tr style="background: var(--light);">
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text);">Abr/2025</td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text);">38 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text);">56 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text);">13 dias <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">45%</td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">124</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="settings" class="page-content hidden">
+            <div class="empty-state">
+                <div class="empty-state-icon">⚙️</div>
+                <div class="empty-state-title">Configurações</div>
+                <div class="empty-state-description">Painel de configurações do sistema</div>
+                <button class="btn btn-primary">Implementar Funcionalidade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal do Calendário (para Práticas) -->
+    <div id="calendar-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Filtrar Dias</h3>
+                <button class="btn-close" onclick="closeCalendar()">✕</button>
+            </div>
+            <div style="text-align: center; color: var(--text-light); padding: var(--spacing-xl);">
+                <div style="font-size: var(--font-size-3xl); margin-bottom: var(--spacing-lg);">📅</div>
+                <div style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-sm);">Calendário Interativo</div>
+                <div>Seleção de dias personalizável será implementada aqui</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Modal -->
+    <div id="mobile-menu-modal" class="mobile-menu-overlay hidden">
+        <div class="mobile-menu">
+            <div class="mobile-menu-header">
+                <div class="mobile-menu-title">Menu</div>
+                <button class="btn-close" onclick="closeMobileMenu()">✕</button>
+            </div>
+            <button class="mobile-nav-item active" data-page="dashboard">
+                <span>🏠</span>
+                <span>Dashboard</span>
+            </button>
+            <button class="mobile-nav-item" data-page="activities">
+                <span>📅</span>
+                <span>Atividades</span>
+            </button>
+            <button class="mobile-nav-item" data-page="members">
+                <span>👥</span>
+                <span>Membros</span>
+            </button>
+            <button class="mobile-nav-item" data-page="practices">
+                <span>🎯</span>
+                <span>Práticas</span>
+            </button>
+            <button class="mobile-nav-item" data-page="reports">
+                <span>📊</span>
+                <span>Relatórios</span>
+            </button>
+            <button class="mobile-nav-item" data-page="settings">
+                <span>⚙️</span>
+                <span>Configurações</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ===== SISTEMA UNIFICADO DE NAVEGAÇÃO =====
+        function initNavigation() {
+            const tabs = document.querySelectorAll('.nav-tab');
+            const mobileItems = document.querySelectorAll('.mobile-nav-item');
+            const pages = document.querySelectorAll('.page-content');
+
+            function navigateToPage(targetPage) {
+                // Remove active de todas as tabs e mobile items
+                tabs.forEach(t => t.classList.remove('active'));
+                mobileItems.forEach(m => m.classList.remove('active'));
+
+                // Adiciona active nos elementos corretos
+                tabs.forEach(t => {
+                    if (t.dataset.page === targetPage) t.classList.add('active');
+                });
+                mobileItems.forEach(m => {
+                    if (m.dataset.page === targetPage) m.classList.add('active');
+                });
+
+                // Esconde todas as páginas
+                pages.forEach(p => p.classList.add('hidden'));
+                // Mostra a página alvo
+                const targetPageEl = document.getElementById(targetPage);
+                if (targetPageEl) {
+                    targetPageEl.classList.remove('hidden');
+                }
+
+                // Inicializa funcionalidades específicas da página
+                if (targetPage === 'practices') {
+                    initPractices();
+                } else if (targetPage === 'reports') {
+                    initReports();
+                } else if (targetPage === 'activities') {
+                    initActivities();
+                }
+
+                // Fecha menu mobile se estiver aberto
+                closeMobileMenu();
+            }
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    navigateToPage(tab.dataset.page);
+                });
+            });
+
+            mobileItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    navigateToPage(item.dataset.page);
+                });
+            });
+        }
+
+        // ===== SISTEMA DE MENU MOBILE =====
+        function toggleMobileMenu() {
+            const modal = document.getElementById('mobile-menu-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function closeMobileMenu() {
+            const modal = document.getElementById('mobile-menu-modal');
+            modal.classList.add('hidden');
+        }
+
+        // Fechar menu ao clicar fora
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('mobile-menu-modal');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            const menu = document.querySelector('.mobile-menu');
+
+            if (!modal.classList.contains('hidden') &&
+                !menu.contains(event.target) &&
+                !menuBtn.contains(event.target)) {
+                closeMobileMenu();
+            }
+        });
+
+        // ===== SISTEMA DE TEMA UNIFICADO =====
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            const currentTheme = body.getAttribute('data-theme');
+
+            if (currentTheme === 'light') {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.setAttribute('data-theme', 'light');
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+
+            body.setAttribute('data-theme', savedTheme);
+            themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // ===== SISTEMA DE PRÁTICAS DIÁRIAS =====
+        const fixedPractices = [
+            {
+                id: 1,
+                name: "Okiyome para Pessoas",
+                unit: "pessoas",
+                defaultValue: 1,
+                explanation: "Contar cada 1 pessoa",
+                type: "counter",
+                class: "pessoas"
+            },
+            {
+                id: 2,
+                name: "Outros Okiyome",
+                unit: "okiyome",
+                defaultValue: 1,
+                explanation: "Autoaplicação, no ambiente, qualquer coisa que não seja outra pessoa",
+                type: "counter",
+                class: "outros"
+            },
+            {
+                id: 3,
+                name: "Receber Okiyome",
+                unit: "",
+                defaultValue: 1,
+                explanation: "Quando receber okiyome de outra pessoa",
+                type: "yesno",
+                class: "receber"
+            }
+        ];
+
+        let selectedDays = [];
+        let practices = {};
+
+        function initPractices() {
+            if (selectedDays.length === 0) {
+                selectLast7Days();
+            }
+            renderDays();
+        }
+
+        function getLast7Days() {
+            const days = [];
+            const today = new Date();
+            for (let i = 6; i >= 0; i--) {
+                const day = new Date(today);
+                day.setDate(today.getDate() - i);
+                days.push(day);
+            }
+            return days;
+        }
+
+        function selectLast7Days() {
+            selectedDays = getLast7Days();
+            initializePractices();
+            renderDays();
+            updateDaysCount();
+        }
+
+        function initializePractices() {
+            selectedDays.forEach(day => {
+                const dateKey = day.toISOString().split('T')[0];
+                if (!practices[dateKey]) {
+                    practices[dateKey] = {};
+                    fixedPractices.forEach(practice => {
+                        if (practice.type === 'yesno') {
+                            practices[dateKey][practice.id] = { completed: false, value: null };
+                        } else {
+                            practices[dateKey][practice.id] = { completed: false, quantity: 0 };
+                        }
+                    });
+                }
+            });
+        }
+
+        function getDayProgress(dateKey) {
+            const dayPractices = practices[dateKey];
+            if (!dayPractices) return { completed: 0, total: fixedPractices.length, percentage: 0 };
+
+            let completed = 0;
+            const total = fixedPractices.length;
+
+            fixedPractices.forEach(practice => {
+                const practiceData = dayPractices[practice.id];
+                if (practice.type === 'yesno') {
+                    if (practiceData?.completed && practiceData.value !== null) completed++;
+                } else if (practiceData?.completed && practiceData.quantity > 0) {
+                    completed++;
+                }
+            });
+
+            return { completed, total, percentage: Math.round((completed / total) * 100) };
+        }
+
+        function getProgressClass(percentage) {
+            if (percentage === 100) return 'success';
+            if (percentage > 0) return 'warning';
+            return 'danger';
+        }
+
+        function renderDays() {
+            const grid = document.getElementById('days-grid');
+            if (!grid) return;
+
+            const sortedDays = [...selectedDays].sort((a, b) => b - a);
+
+            grid.innerHTML = sortedDays.map(day => {
+                const dateKey = day.toISOString().split('T')[0];
+                const progress = getDayProgress(dateKey);
+                const isToday = day.toDateString() === new Date().toDateString();
+
+                return `
+                    <div class="day-card ${isToday ? 'today' : ''}">
+                        <div class="day-header ${isToday ? 'today' : ''}">
+                            <div class="day-name">${day.toLocaleDateString('pt-BR', { weekday: 'long' })}</div>
+                            <div class="day-date">${day.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
+                            <div style="margin-top: var(--spacing-sm);">
+                                <div class="badge badge-${getProgressClass(progress.percentage)}">
+                                    ${progress.completed}/${progress.total} registros
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding: var(--spacing-md); display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                            ${fixedPractices.map(practice => renderPractice(practice, dateKey)).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPractice(practice, dateKey) {
+            const practiceData = practices[dateKey]?.[practice.id] ||
+                (practice.type === 'yesno' ? { completed: false, value: null } : { completed: false, quantity: 0 });
+
+            if (practice.type === 'yesno') {
+                return `
+                    <div class="practice-item ${practice.class}">
+                        <div class="practice-header">
+                            <div>
+                                <div class="practice-title ${practice.class}">${practice.name}</div>
+                                <div class="practice-explanation">${practice.explanation}</div>
+                            </div>
+                            <div class="practice-controls">
+                                <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; color: var(--success);">
+                                    <input type="radio" name="${practice.class}-${dateKey}"
+                                           ${practiceData.value === true ? 'checked' : ''}
+                                           onchange="setYesNoValue('${dateKey}', ${practice.id}, true)">
+                                    <span>Sim</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; color: var(--danger); margin-left: var(--spacing-md);">
+                                    <input type="radio" name="${practice.class}-${dateKey}"
+                                           ${practiceData.value === false ? 'checked' : ''}
+                                           onchange="setYesNoValue('${dateKey}', ${practice.id}, false)">
+                                    <span>Não</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="practice-item ${practice.class}">
+                        <div class="practice-header">
+                            <div>
+                                <div class="practice-title ${practice.class}">${practice.name}</div>
+                                <div class="practice-explanation">${practice.explanation}</div>
+                            </div>
+                            <div class="practice-controls">
+                                <input type="number" min="0"
+                                       class="practice-input"
+                                       value="${practiceData.quantity || 0}"
+                                       onchange="updateQuantity('${dateKey}', ${practice.id}, this.value)">
+                                <span style="font-size: var(--font-size-xs); color: var(--text-light); min-width: 50px;">${practice.unit}</span>
+                                <button class="btn-increment" onclick="incrementPractice('${dateKey}', ${practice.id})">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function setYesNoValue(dateKey, practiceId, value) {
+            if (!practices[dateKey]) practices[dateKey] = {};
+            practices[dateKey][practiceId] = {
+                completed: true,
+                value: value
+            };
+            renderDays();
+        }
+
+        function incrementPractice(dateKey, practiceId) {
+            if (!practices[dateKey]) practices[dateKey] = {};
+            const current = practices[dateKey][practiceId]?.quantity || 0;
+            practices[dateKey][practiceId] = {
+                completed: true,
+                quantity: current + 1
+            };
+            renderDays();
+        }
+
+        function updateQuantity(dateKey, practiceId, newValue) {
+            if (!practices[dateKey]) practices[dateKey] = {};
+            const quantity = Math.max(0, parseInt(newValue) || 0);
+            practices[dateKey][practiceId] = {
+                completed: quantity > 0,
+                quantity: quantity
+            };
+            renderDays();
+        }
+
+        function updateDaysCount() {
+            const countEl = document.getElementById('days-count');
+            if (countEl) {
+                countEl.textContent = `${selectedDays.length} dias selecionados`;
+            }
+        }
+
+        // ===== FUNÇÕES DE MODAL =====
+        function openCalendar() {
+            document.getElementById('calendar-modal').classList.remove('hidden');
+        }
+
+        function closeCalendar() {
+            document.getElementById('calendar-modal').classList.add('hidden');
+        }
+
+        // ===== SISTEMA DE RELATÓRIOS =====
+        const reportMonthlyData = {
+            'setembro-2025': {
+                totalDays: 23,
+                completionRate: 76,
+                totalPractices: 189,
+                consistency: 18,
+                practices: {
+                    pessoas: { total: 67, media: 2.9, sequencia: 12, meta: 90 },
+                    outros: { total: 89, media: 3.9, sequencia: 18, meta: 120 },
+                    receber: { total: 16, frequencia: 70, sequencia: 7, meta: 80 }
+                },
+                dailyData: [15, 8, 12, 18, 22, 14, 19, 25, 16, 21, 11, 17, 24, 13, 20, 26, 9, 23, 15, 18, 12, 21, 16, 19, 14, 22, 17, 20, 13, 25]
+            },
+            'agosto-2025': {
+                totalDays: 18,
+                completionRate: 64,
+                totalPractices: 155,
+                consistency: 12,
+                practices: {
+                    pessoas: { total: 54, media: 2.4, sequencia: 8, meta: 90 },
+                    outros: { total: 72, media: 3.2, sequencia: 15, meta: 120 },
+                    receber: { total: 15, frequencia: 65, sequencia: 5, meta: 80 }
+                },
+                dailyData: [12, 6, 9, 15, 19, 11, 16, 22, 13, 18, 8, 14, 21, 10, 17, 23, 7, 20, 12, 15, 9, 18, 13, 16, 11, 19, 14, 17, 10, 22, 8]
+            }
+        };
+
+        let currentReportPeriod = 'setembro-2025';
+        let reportViewMode = 'month';
+
+        function initReports() {
+            updateReportDisplay();
+            generateReportChart();
+        }
+
+        function updateReportDisplay() {
+            const data = reportMonthlyData[currentReportPeriod];
+            const [mes, ano] = currentReportPeriod.split('-');
+            const mesCapitalized = mes.charAt(0).toUpperCase() + mes.slice(1);
+
+            document.getElementById('report-period-display').textContent = `${mesCapitalized} ${ano}`;
+            document.getElementById('report-detail-period').textContent = `${mesCapitalized} ${ano}`;
+
+            // Atualizar estatísticas
+            document.getElementById('report-total-days').textContent = data.totalDays;
+            document.getElementById('report-completion-rate').textContent = data.completionRate + '%';
+            document.getElementById('report-total-practices').textContent = data.totalPractices;
+            document.getElementById('report-consistency').textContent = data.consistency;
+
+            // Atualizar detalhes das práticas
+            document.getElementById('report-pessoas-total').textContent = data.practices.pessoas.total + ' pessoas';
+            document.getElementById('report-pessoas-media').textContent = data.practices.pessoas.media + ' pessoas/dia';
+            document.getElementById('report-pessoas-sequencia').textContent = data.practices.pessoas.sequencia + ' dias consecutivos';
+
+            document.getElementById('report-outros-total').textContent = data.practices.outros.total + ' okiyome';
+            document.getElementById('report-outros-media').textContent = data.practices.outros.media + ' okiyome/dia';
+            document.getElementById('report-outros-sequencia').textContent = data.practices.outros.sequencia + ' dias consecutivos';
+
+            document.getElementById('report-receber-total').textContent = data.practices.receber.total + ' dias';
+            document.getElementById('report-receber-frequencia').textContent = data.practices.receber.frequencia + '% dos dias';
+            document.getElementById('report-receber-sequencia').textContent = data.practices.receber.sequencia + ' dias consecutivos';
+        }
+
+        function generateReportChart() {
+            const data = reportMonthlyData[currentReportPeriod];
+            const chartContainer = document.getElementById('report-progress-chart');
+
+            const maxValue = Math.max(...data.dailyData);
+            const bars = data.dailyData.slice(0, 30).map((value, index) => {
+                const height = (value / maxValue) * 180;
+                const day = index + 1;
+
+                // Simular distribuição entre as práticas
+                const pessoas = Math.round(value * 0.4);
+                const outros = Math.round(value * 0.4);
+                const receber = value - pessoas - outros;
+
+                const pessoasHeight = (pessoas / value) * height;
+                const outrosHeight = (outros / value) * height;
+                const receberHeight = (receber / value) * height;
+
+                return `
+                    <div style="display: flex; flex-direction: column; align-items: center; min-width: 60px; flex: 1; max-width: 80px;">
+                        <div style="width: 100%; height: 180px; display: flex; flex-direction: column; justify-content: flex-end; position: relative;">
+                            <div style="position: absolute; top: -1.5rem; left: 50%; transform: translateX(-50%); font-size: var(--font-size-xs); font-weight: 600; color: var(--text);">${value}</div>
+                            <div style="width: 100%; height: ${pessoasHeight}px; background: var(--okiyome); border-radius: var(--radius-sm) var(--radius-sm) 0 0; margin-bottom: 1px; transition: var(--transition); cursor: pointer;" onmouseover="this.style.transform='scaleY(1.05)'" onmouseout="this.style.transform='scaleY(1)'"></div>
+                            <div style="width: 100%; height: ${outrosHeight}px; background: var(--estudo); margin-bottom: 1px; transition: var(--transition); cursor: pointer;" onmouseover="this.style.transform='scaleY(1.05)'" onmouseout="this.style.transform='scaleY(1)'"></div>
+                            <div style="width: 100%; height: ${receberHeight}px; background: var(--success); border-radius: 0 0 var(--radius-sm) var(--radius-sm); transition: var(--transition); cursor: pointer;" onmouseover="this.style.transform='scaleY(1.05)'" onmouseout="this.style.transform='scaleY(1)'"></div>
+                        </div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-light); margin-top: var(--spacing-sm); text-align: center; font-weight: 500;">${day}</div>
+                    </div>
+                `;
+            }).join('');
+
+            chartContainer.innerHTML = bars;
+        }
+
+        function previousReportPeriod() {
+            if (currentReportPeriod === 'setembro-2025') {
+                currentReportPeriod = 'agosto-2025';
+                updateReportDisplay();
+                generateReportChart();
+            }
+        }
+
+        function nextReportPeriod() {
+            if (currentReportPeriod === 'agosto-2025') {
+                currentReportPeriod = 'setembro-2025';
+                updateReportDisplay();
+                generateReportChart();
+            }
+        }
+
+        function setReportViewMode(mode) {
+            reportViewMode = mode;
+
+            // Atualizar botões
+            document.getElementById('btn-report-month').className = mode === 'month' ? 'btn btn-primary' : 'btn btn-outline';
+            document.getElementById('btn-report-comparison').className = mode === 'comparison' ? 'btn btn-primary' : 'btn btn-outline';
+
+            // Mostrar/ocultar seções
+            if (mode === 'month') {
+                document.getElementById('report-chart-section').style.display = 'block';
+                document.getElementById('report-practices-section').style.display = 'block';
+                document.getElementById('report-comparison-section').style.display = 'none';
+            } else {
+                document.getElementById('report-chart-section').style.display = 'none';
+                document.getElementById('report-practices-section').style.display = 'none';
+                document.getElementById('report-comparison-section').style.display = 'block';
+            }
+        }
+
+        // ===== SISTEMA DE ATIVIDADES =====
+        function initActivities() {
+            console.log('🚀 Inicializando atividades no protótipo migrado');
+
+            // Configurar filtros
+            setupActivityFilters();
+
+            // Carregar atividades
+            loadActivities();
+
+            // Configurar botão Nova Atividade
+            const btnNova = document.getElementById('btn-nova-atividade');
+            if (btnNova) {
+                btnNova.addEventListener('click', function() {
+                    alert('Funcionalidade de Nova Atividade será implementada');
+                });
+            }
+        }
+
+        function setupActivityFilters() {
+            const categoryFilter = document.getElementById('activities-category-filter');
+            const statusFilter = document.getElementById('activities-status-filter');
+            const periodFilter = document.getElementById('activities-period-filter');
+
+            if (categoryFilter) {
+                categoryFilter.addEventListener('change', function() {
+                    loadActivities();
+                });
+            }
+
+            if (statusFilter) {
+                statusFilter.addEventListener('change', function() {
+                    loadActivities();
+                });
+            }
+
+            if (periodFilter) {
+                periodFilter.addEventListener('change', function() {
+                    loadActivities();
+                });
+            }
+        }
+
+        function loadActivities() {
+            const grid = document.getElementById('activities-grid');
+            if (!grid) return;
+
+            // Mostrar estado de carregamento
+            grid.innerHTML = `
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Carregando atividades...</p>
+                </div>
+            `;
+
+            // Tentar usar API real se disponível, senão usar dados simulados
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                // Conectar com API real
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        if (result && result.ok && result.items) {
+                            const activitiesWithCategory = result.items.map(activity => ({
+                                ...activity,
+                                categoria: getCategoryFromId(activity.categoria_atividade_id) || 'Geral'
+                            }));
+                            renderActivities(activitiesWithCategory);
+                        } else {
+                            console.error('Erro ao carregar atividades:', result);
+                            loadActivitiesFallback();
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('Erro na API de atividades:', error);
+                        loadActivitiesFallback();
+                    })
+                    .listActivitiesApi();
+            } else {
+                // Fallback para desenvolvimento/teste
+                loadActivitiesFallback();
+            }
+        }
+
+        function loadActivitiesFallback() {
+            // Dados simulados para desenvolvimento
+            setTimeout(function() {
+                const activities = [
+                    {
+                        id: '1',
+                        titulo: 'Okiyome Coletivo Mensal',
+                        descricao: 'Prática mensal de purificação',
+                        data: '2024-09-15T19:00:00', // Data passada para testar ATRASADO
+                        status: 'Pendente',
+                        categoria: 'Okiyome'
+                    },
+                    {
+                        id: '2',
+                        titulo: 'Estudo dos Ensinamentos',
+                        descricao: 'Sessão semanal de estudo',
+                        data: new Date().toISOString(), // Data de hoje para testar HOJE
+                        status: 'Pendente',
+                        categoria: 'Estudo'
+                    },
+                    {
+                        id: '3',
+                        titulo: 'Cerimônia de Gratidão',
+                        descricao: 'Cerimônia especial mensal',
+                        data: '2025-10-05T09:00:00',
+                        status: 'Realizada',
+                        categoria: 'Cerimônia'
+                    },
+                    {
+                        id: '4',
+                        titulo: 'Reunião Mensal',
+                        descricao: 'Reunião administrativa',
+                        data: '2025-11-15T14:00:00', // Data futura para testar PENDENTE
+                        status: 'Pendente',
+                        categoria: 'Reunião'
+                    }
+                ];
+
+                renderActivities(activities);
+            }, 1000);
+        }
+
+        function getCategoryFromId(categoryId) {
+            const categories = {
+                '1': 'Okiyome',
+                '2': 'Estudo',
+                '3': 'Cerimônia',
+                '4': 'Reunião',
+                '5': 'Evento'
+            };
+            return categories[categoryId] || 'Geral';
+        }
+
+        function getSmartStatus(status, dateString) {
+            // Data atual no Brasil (assumindo que o servidor já está configurado para UTC-3)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Zerar horas para comparação apenas da data
+
+            // Data da atividade (assumindo que já vem no fuso correto do Brasil)
+            const activityDate = new Date(dateString);
+            activityDate.setHours(0, 0, 0, 0); // Zerar horas para comparação apenas da data
+
+            const timeDiff = activityDate.getTime() - today.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+            // Se já foi concluída/realizada - verde
+            if (status && (status.toLowerCase() === 'realizada' || status.toLowerCase() === 'concluida')) {
+                return {
+                    text: 'Concluída',
+                    class: 'badge-success'
+                };
+            }
+
+            // Se status é pendente, verificar datas
+            if (status && status.toLowerCase() === 'pendente') {
+                if (daysDiff < 0) {
+                    // Data passou - ATRASADO com cor vermelha (danger)
+                    return {
+                        text: 'Atrasado',
+                        class: 'badge-danger'
+                    };
+                } else if (daysDiff === 0) {
+                    // É hoje - HOJE com cor de pendente (amarelo)
+                    return {
+                        text: 'Hoje',
+                        class: 'badge-warning'
+                    };
+                } else {
+                    // Data futura - PENDENTE com cor pendente (amarelo)
+                    return {
+                        text: 'Pendente',
+                        class: 'badge-warning'
+                    };
+                }
+            }
+
+            // Fallback para outros status
+            return {
+                text: status || 'Indefinido',
+                class: 'badge-secondary'
+            };
+        }
+
+        function renderActivities(activities) {
+            const grid = document.getElementById('activities-grid');
+            if (!grid || !activities) return;
+
+            const html = activities.map(activity => {
+                // Lógica inteligente de status baseada na data
+                const statusInfo = getSmartStatus(activity.status, activity.data);
+
+                const categoryClass = activity.categoria.toLowerCase();
+
+                const icon = activity.categoria === 'Okiyome' ? '🤲' :
+                           activity.categoria === 'Estudo' ? '📚' :
+                           activity.categoria === 'Cerimônia' ? '🏛️' : '📋';
+
+                const formattedDate = formatDate(activity.data);
+
+                return `
+                    <div class="card activity-card ${categoryClass}" style="display: flex; flex-direction: column; min-height: 280px;">
+                        <div style="padding: var(--spacing-md); flex: 1; display: flex; flex-direction: column;">
+                            <!-- Parte Superior: Conteúdo principal -->
+                            <div style="flex: 1;">
+                                <!-- Linha 1: Ícone + Título -->
+                                <div style="display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-xs);">
+                                    <div class="card-icon">${icon}</div>
+                                    <div class="card-title" style="flex: 1; margin: 0; font-size: var(--font-size-md); line-height: 1.3;">${activity.titulo}</div>
+                                </div>
+
+                                <!-- Linha 2: Tags horizontais -->
+                                <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-xs); margin-bottom: var(--spacing-xs);">
+                                    <div class="badge badge-info" style="font-size: var(--font-size-xs);">${activity.categoria}</div>
+                                </div>
+
+                                <!-- Linha 3: Data/hora + Status -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
+                                    <div class="activity-date" style="font-size: var(--font-size-xs); color: var(--text-light);">${formattedDate}</div>
+                                    <div class="badge ${statusInfo.class}" style="font-size: var(--font-size-xs);">${statusInfo.text}</div>
+                                </div>
+
+                                <!-- Linha 4: Descrição -->
+                                <div style="color: var(--text-light); font-size: var(--font-size-xs); line-height: 1.4;">
+                                    ${activity.descricao}
+                                </div>
+                            </div>
+
+                            <!-- Parte Inferior: Contagens + Botões (sempre alinhados no bottom) -->
+                            <div style="margin-top: auto; padding-top: var(--spacing-sm);">
+                                <!-- Sistema de Participação Unificado -->
+                                <div class="participation-summary" style="margin-bottom: var(--spacing-sm);">
+                                    <div class="participation-row" style="margin-bottom: var(--spacing-xs);">
+                                        <span class="participation-label" style="font-size: var(--font-size-xs);">Alvo:</span>
+                                        <span class="participation-count total" style="font-size: var(--font-size-xs);">${Math.floor(Math.random() * 30) + 15}</span>
+                                    </div>
+                                    <div class="participation-row" style="margin-bottom: var(--spacing-xs);">
+                                        <span class="participation-label" style="font-size: var(--font-size-xs);">Previsão:</span>
+                                        <div class="participation-values">
+                                            <span class="participation-count confirmed" style="font-size: var(--font-size-xs);">${Math.floor(Math.random() * 20) + 10} confirmados</span>
+                                            <span class="participation-count rejected" style="font-size: var(--font-size-xs);">${Math.floor(Math.random() * 5) + 1} rejeitados</span>
+                                        </div>
+                                    </div>
+                                    <div class="participation-row">
+                                        <span class="participation-label" style="font-size: var(--font-size-xs);">Participação:</span>
+                                        <div class="participation-values">
+                                            <span class="participation-count present" style="font-size: var(--font-size-xs);">${activity.status === 'Realizada' ? Math.floor(Math.random() * 25) + 15 : 0} presentes</span>
+                                            <span class="participation-count absent" style="font-size: var(--font-size-xs);">${activity.status === 'Realizada' ? Math.floor(Math.random() * 5) : 0} ausentes</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Botões de ação -->
+                                <div class="activity-actions" style="display: flex; gap: var(--spacing-xs);">
+                                    <button class="btn btn-primary" onclick="openParticipants('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">👥 Participantes</button>
+                                    <button class="btn btn-outline" onclick="editActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">${activity.status === 'Realizada' ? '📊 Relatório' : '✏️ Editar'}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            grid.innerHTML = html;
+        }
+
+        function formatDate(dateString) {
+            // Data já vem no fuso horário correto do Brasil
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+
+            return `${day}/${month}/${year} - ${hours}:${minutes}`;
+        }
+
+        function openParticipants(activityId) {
+            alert(`Abrir participantes da atividade ${activityId}`);
+        }
+
+        function editActivity(activityId) {
+            alert(`Editar atividade ${activityId}`);
+        }
+
+        // ===== INICIALIZAÇÃO =====
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTheme();
+            initNavigation();
+            initPractices();
+
+            // Verificar se há sessão ativa, senão mostrar login
+            checkAuthAndInit();
+        });
+
+        // ===== SISTEMA DE LOGIN/LOGOUT =====
+        function checkAuthAndInit() {
+            const sessionId = localStorage.getItem('sessionId');
+            const uid = localStorage.getItem('uid');
+
+            if (sessionId && uid) {
+                // Usuário já logado, mostrar app
+                showApp();
+            } else {
+                // Mostrar tela de login
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            // Esconder todo o conteúdo da aplicação
+            const appContent = document.querySelector('.app-container');
+            const header = document.querySelector('.app-header');
+            const navTabs = document.querySelector('.nav-tabs');
+            const mobileNav = document.querySelector('.mobile-nav');
+            const pageContents = document.querySelectorAll('.page-content');
+
+            if (appContent) appContent.style.display = 'none';
+            if (header) header.style.display = 'none';
+            if (navTabs) navTabs.style.display = 'none';
+            if (mobileNav) mobileNav.style.display = 'none';
+            pageContents.forEach(page => page.style.display = 'none');
+
+            // Criar tela de login completa
+            const loginScreen = document.createElement('div');
+            loginScreen.id = 'login-screen';
+            loginScreen.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 0; left: 0; right: 0; bottom: 0;
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    min-height: 100vh;
+                ">
+                    <div style="
+                        background: white;
+                        padding: 3rem;
+                        border-radius: 16px;
+                        min-width: 400px;
+                        max-width: 90vw;
+                        text-align: center;
+                        box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+                    ">
+                        <!-- Logo/Título -->
+                        <div style="margin-bottom: 2rem;">
+                            <div style="
+                                width: 80px; height: 80px;
+                                background: var(--gradient-primary);
+                                border-radius: 50%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 2rem;
+                                margin: 0 auto 1rem;
+                                color: white;
+                            ">🏯</div>
+                            <h1 style="margin: 0 0 0.5rem; color: var(--text); font-size: 1.75rem; font-weight: 700;">Sistema Dojotai</h1>
+                            <p style="margin: 0; color: var(--text-light); font-size: 1rem;">Acesse sua conta para continuar</p>
+                        </div>
+
+                        <!-- Formulário de Login -->
+                        <form onsubmit="doLogin(event)" style="margin-bottom: 2rem;">
+                            <div style="margin-bottom: 1rem; text-align: left;">
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text); font-weight: 600; font-size: 0.875rem;">Usuário</label>
+                                <input type="text" id="login-usuario" required style="
+                                    width: 100%; padding: 14px 16px; border: 2px solid var(--gray-light);
+                                    border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+                                    transition: border-color 0.2s;
+                                " onchange="this.style.borderColor = this.value ? 'var(--primary)' : 'var(--gray-light)';" placeholder="Seu nome de usuário">
+                            </div>
+
+                            <div style="margin-bottom: 1.5rem; text-align: left;">
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text); font-weight: 600; font-size: 0.875rem;">Senha</label>
+                                <input type="password" id="login-password" required style="
+                                    width: 100%; padding: 14px 16px; border: 2px solid var(--gray-light);
+                                    border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+                                    transition: border-color 0.2s;
+                                " onchange="this.style.borderColor = this.value ? 'var(--primary)' : 'var(--gray-light)';">
+                            </div>
+
+                            <button type="submit" id="login-btn" style="
+                                width: 100%; padding: 14px;
+                                background: var(--gradient-primary);
+                                color: white; border: none; border-radius: 8px;
+                                cursor: pointer; font-weight: 600; font-size: 1rem;
+                                transition: all 0.2s;
+                            " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                Entrar no Sistema
+                            </button>
+                        </form>
+
+                        <!-- Loading State (hidden inicialmente) -->
+                        <div id="login-loading" style="display: none; margin-top: 1rem;">
+                            <div style="
+                                width: 20px; height: 20px; border: 2px solid var(--gray-light);
+                                border-top: 2px solid var(--primary); border-radius: 50%;
+                                animation: spin 1s linear infinite; margin: 0 auto 0.5rem;
+                            "></div>
+                            <p style="color: var(--text-light); font-size: 0.875rem;">Validando credenciais...</p>
+                        </div>
+
+                        <!-- Erro (hidden inicialmente) -->
+                        <div id="login-error" style="display: none; margin-top: 1rem; padding: 12px; background: #fee; border: 1px solid #fcc; border-radius: 6px;">
+                            <p style="color: #c33; font-size: 0.875rem; margin: 0;"></p>
+                        </div>
+
+                        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--gray-light);">
+                            <p style="margin: 0; font-size: 0.875rem; color: var(--text-light);">
+                                Sistema migrado - Versão Protótipo<br>
+                                <small style="opacity: 0.7;">© 2025 Sistema Dojotai</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
+            document.body.appendChild(loginScreen);
+
+            // Focus no campo de usuário
+            setTimeout(() => {
+                const usuarioInput = document.getElementById('login-usuario');
+                if (usuarioInput) usuarioInput.focus();
+            }, 100);
+        }
+
+        function doLogin(event) {
+            if (event) event.preventDefault();
+
+            const usuario = document.getElementById('login-usuario').value;
+            const password = document.getElementById('login-password').value;
+            const loginBtn = document.getElementById('login-btn');
+            const loginLoading = document.getElementById('login-loading');
+            const loginError = document.getElementById('login-error');
+
+            // Resetar estados
+            loginError.style.display = 'none';
+
+            if (!usuario || !password) {
+                showLoginError('Por favor, preencha todos os campos');
+                return;
+            }
+
+            // Mostrar loading
+            loginBtn.style.display = 'none';
+            loginLoading.style.display = 'block';
+
+            // Simular validação (será conectado com API real)
+            setTimeout(() => {
+                // Por enquanto simular login bem sucedido
+                // Aqui seria conectado com os includes da API real
+                if (usuario && password) {
+                    localStorage.setItem('sessionId', 'sim_session_' + Date.now());
+                    localStorage.setItem('uid', 'user_' + Date.now());
+
+                    // Sucesso - remover tela de login e mostrar app
+                    const loginScreen = document.getElementById('login-screen');
+                    if (loginScreen) {
+                        loginScreen.remove();
+                    }
+                    showApp();
+                } else {
+                    showLoginError('Credenciais inválidas. Tente novamente.');
+                    loginBtn.style.display = 'block';
+                    loginLoading.style.display = 'none';
+                }
+            }, 1500);
+        }
+
+        function showLoginError(message) {
+            const loginError = document.getElementById('login-error');
+            const errorText = loginError.querySelector('p');
+
+            if (errorText) errorText.textContent = message;
+            loginError.style.display = 'block';
+
+            // Auto-hide após 5 segundos
+            setTimeout(() => {
+                loginError.style.display = 'none';
+            }, 5000);
+        }
+
+        function showApp() {
+            console.log('🚀 Mostrando aplicação após login válido');
+
+            // Mostrar todo o conteúdo da aplicação
+            const appContent = document.querySelector('.app-container');
+            const header = document.querySelector('.app-header');
+            const navTabs = document.querySelector('.nav-tabs');
+            const mobileNav = document.querySelector('.mobile-nav');
+            const pageContents = document.querySelectorAll('.page-content');
+
+            if (appContent) appContent.style.display = '';
+            if (header) header.style.display = '';
+            if (navTabs) navTabs.style.display = '';
+            if (mobileNav) mobileNav.style.display = '';
+            pageContents.forEach(page => {
+                page.style.display = '';
+                // Manter apenas o dashboard visível inicialmente
+                if (page.id !== 'dashboard') {
+                    page.classList.add('hidden');
+                }
+            });
+
+            // Garantir que dashboard esteja ativo e visível
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard) {
+                dashboard.classList.remove('hidden');
+            }
+
+            // Marcar tab do dashboard como ativa
+            const dashboardTab = document.querySelector('[data-page="dashboard"]');
+            if (dashboardTab) {
+                dashboardTab.classList.add('active');
+            }
+
+            console.log('✅ Aplicação carregada e pronta para uso!');
+        }
+
+        // Função de logout
+        function logout() {
+            if (confirm('Deseja realmente sair do sistema?')) {
+                // Limpar dados de sessão
+                localStorage.removeItem('sessionId');
+                localStorage.removeItem('uid');
+
+                // Esconder todo o conteúdo da aplicação
+                const appContent = document.querySelector('.app-container');
+                const header = document.querySelector('.app-header');
+                const navTabs = document.querySelector('.nav-tabs');
+                const mobileNav = document.querySelector('.mobile-nav');
+                const pageContents = document.querySelectorAll('.page-content');
+
+                if (appContent) appContent.style.display = 'none';
+                if (header) header.style.display = 'none';
+                if (navTabs) navTabs.style.display = 'none';
+                if (mobileNav) mobileNav.style.display = 'none';
+                pageContents.forEach(page => page.style.display = 'none');
+
+                // Mostrar tela de login novamente
+                showLogin();
+            }
+        }
+    </script>
+
+    <!-- Includes do JavaScript atual -->
+    <script>
+        <?= HtmlService.createHtmlOutputFromFile('app_api').getContent() ?>
+    </script>
+
+    <script>
+        <?= HtmlService.createHtmlOutputFromFile('app_router').getContent() ?>
+    </script>
+
+    <script>
+        <?= HtmlService.createHtmlOutputFromFile('app_state').getContent() ?>
+    </script>
+
+</body>
+</html>

@@ -1,39 +1,12 @@
-<div class="container" data-view="reports">
-  <div class="dash-header">
-    <h2>📊 Relatórios</h2>
-    <div class="dash-actions">
-      <button class="btn" id="btn-reports-menu">
-        <span>☰</span>
-        <span>Menu</span>
-      </button>
-      <!-- User Menu Component -->
-      <div id="user-menu-container"></div>
-    </div>
-  </div>
+<div class="container" data-view="reports" data-page-icon="📊" data-page-title="Relatórios">
+  <!-- Header componente reutilizável -->
+  <div id="dash-header-container"></div>
 
-  <!-- Navegação Horizontal Unificada -->
-  <nav class="nav-tabs">
-    <button class="nav-tab" data-page="dashboard">
-      <span>🏠</span>
-      <span>Dashboard</span>
-    </button>
-    <button class="nav-tab" data-page="activities">
-      <span>📅</span>
-      <span>Atividades</span>
-    </button>
-    <button class="nav-tab" data-page="members">
-      <span>👥</span>
-      <span>Membros</span>
-    </button>
-    <button class="nav-tab" data-page="practices">
-      <span>🎯</span>
-      <span>Práticas</span>
-    </button>
-    <button class="nav-tab active" data-page="reports">
-      <span>📊</span>
-      <span>Relatórios</span>
-    </button>
-  </nav>
+  <!-- Navigation componente reutilizável -->
+  <div id="nav-tabs-container"></div>
+
+  <!-- Page Actions (tema + botões específicos) -->
+  <div id="page-actions-container"></div>
 
   <!-- Conteúdo Em Desenvolvimento -->
   <div class="empty-state">

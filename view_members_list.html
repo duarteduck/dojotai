@@ -1,40 +1,12 @@
-<div class="container" data-view="members">
-  <div class="dash-header">
-    <h2>👥 Membros</h2>
-    <div class="dash-actions">
-      <button class="btn" id="btn-members-menu">
-        <span>☰</span>
-        <span>Menu</span>
-      </button>
-      <button class="btn" id="btn-members-stats">📊 Stats</button>
-      <button class="btn" id="btn-members-link">🔗 Vincular</button>
-      <button class="btn" id="btn-members-new">+ Novo</button>
-    </div>
-  </div>
+<div class="container" data-view="members" data-page-icon="👥" data-page-title="Membros">
+  <!-- Header componente reutilizável -->
+  <div id="dash-header-container"></div>
 
-  <!-- Navegação Horizontal Unificada -->
-  <nav class="nav-tabs">
-    <button class="nav-tab" data-page="dashboard">
-      <span>🏠</span>
-      <span>Dashboard</span>
-    </button>
-    <button class="nav-tab" data-page="activities">
-      <span>📅</span>
-      <span>Atividades</span>
-    </button>
-    <button class="nav-tab active" data-page="members">
-      <span>👥</span>
-      <span>Membros</span>
-    </button>
-    <button class="nav-tab" data-page="practices">
-      <span>🎯</span>
-      <span>Práticas</span>
-    </button>
-    <button class="nav-tab" data-page="reports">
-      <span>📊</span>
-      <span>Relatórios</span>
-    </button>
-  </nav>
+  <!-- Navigation componente reutilizável -->
+  <div id="nav-tabs-container"></div>
+
+  <!-- Page Actions (tema + botões específicos) -->
+  <div id="page-actions-container"></div>
 
   <!-- Filtros principais (sempre visíveis) -->
   <div class="chips" id="members-main-filters">

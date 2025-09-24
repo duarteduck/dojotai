@@ -1,4 +1,4 @@
-// main.gs — ponto de entrada web para aplicação migrada
+// main_migrated.gs — ponto de entrada web para aplicação migrada
 function doGet(e) {
   const tmpl = HtmlService.createTemplateFromFile('app_migrated');
   return tmpl.evaluate()

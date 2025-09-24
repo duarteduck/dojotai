@@ -421,6 +421,9 @@ var Views = {
   },
 
   initAtividades: function(){
+    // Carregar header padronizado
+    Views.loadBasicComponents('activities');
+
     // Bootstrap do State
     if(!window.State){
       window.State={
@@ -462,15 +465,10 @@ var Views = {
     State.ui.nomeFiltro='';
     State.ui.categoriaAtividadeFiltro='todas';
 
-    // Load User Menu Component
-    Views.loadUserMenuComponent();
-
     // Configurar menu de navegação
     Views.setupNavTabs();
 
-    // Botão Nova Atividade
-    var btnNew = document.getElementById('btn-new');
-    if(btnNew) btnNew.addEventListener('click', function(){ Router.go('#/new'); });
+    // Event listeners dos botões específicos são configurados em setupPageSpecificButtons
 
     // Menu overlay
     var btnMenu=document.getElementById('btn-menu');
@@ -743,20 +741,302 @@ var Views = {
       UI.toast('Falha ao carregar dados','err');
       listEl.innerHTML='';
     });
+
+    // Carregar componente de page actions para telas legadas
+    var pageActionsContainer = document.getElementById('page-actions-container');
+    if (pageActionsContainer) {
+      var pageActionsTemplate = document.getElementById('tpl-page-actions');
+      if (pageActionsTemplate) {
+        pageActionsContainer.innerHTML = pageActionsTemplate.innerHTML;
+        Views.setupPageSpecificButtons('activities');
+      }
+    }
+  },
+
+  // Helper para carregar apenas header e navegação
+  loadBasicComponents: function(activePage) {
+    // Carregar header
+    var headerContainer = document.getElementById('dash-header-container');
+    if (headerContainer) {
+      var headerTemplate = document.getElementById('tpl-dash-header');
+      if (headerTemplate) {
+        headerContainer.innerHTML = headerTemplate.innerHTML;
+
+        // Configurar título e ícone da página
+        var container = document.querySelector('.container');
+        if (container) {
+          var icon = container.getAttribute('data-page-icon') || '📄';
+          var title = container.getAttribute('data-page-title') || 'Página';
+
+          var pageIcon = headerContainer.querySelector('.page-icon');
+          var pageTitle = headerContainer.querySelector('.page-title');
+          if (pageIcon) pageIcon.textContent = icon;
+          if (pageTitle) pageTitle.textContent = title;
+        }
+      }
+    }
+
+    // Carregar navegação
+    var navContainer = document.getElementById('nav-tabs-container');
+    if (navContainer) {
+      var navTemplate = document.getElementById('tpl-nav-tabs');
+      if (navTemplate) {
+        navContainer.innerHTML = navTemplate.innerHTML;
+
+        // Marcar página ativa
+        if (activePage) {
+          var activeTab = navContainer.querySelector(`[data-page="${activePage}"]`);
+          if (activeTab) activeTab.classList.add('active');
+        }
+      }
+    }
+
+    // Configurar navegação
+    Views.setupNavTabs();
+
+    // Configurar botão de tema no header
+    Views.setupThemeToggle();
+
+    // Configurar menu sanduíche no header
+    Views.setupHeaderMenu();
+
+    // Carregar menu de usuário no header
+    Views.loadUserMenuComponent();
+  },
+
+  // Helper para carregar componentes comuns com page actions
+  loadCommonComponents: function(activePage) {
+    // Carregar header
+    var headerContainer = document.getElementById('dash-header-container');
+    if (headerContainer) {
+      var headerTemplate = document.getElementById('tpl-dash-header');
+      if (headerTemplate) {
+        headerContainer.innerHTML = headerTemplate.innerHTML;
+
+        // Configurar título e ícone da página
+        var container = document.querySelector('.container');
+        if (container) {
+          var icon = container.getAttribute('data-page-icon') || '📄';
+          var title = container.getAttribute('data-page-title') || 'Página';
+
+          var pageIcon = headerContainer.querySelector('.page-icon');
+          var pageTitle = headerContainer.querySelector('.page-title');
+          if (pageIcon) pageIcon.textContent = icon;
+          if (pageTitle) pageTitle.textContent = title;
+        }
+      }
+    }
+
+    // Carregar navegação
+    var navContainer = document.getElementById('nav-tabs-container');
+    if (navContainer) {
+      var navTemplate = document.getElementById('tpl-nav-tabs');
+      if (navTemplate) {
+        navContainer.innerHTML = navTemplate.innerHTML;
+
+        // Marcar página ativa
+        if (activePage) {
+          var activeTab = navContainer.querySelector(`[data-page="${activePage}"]`);
+          if (activeTab) activeTab.classList.add('active');
+        }
+      }
+    }
+
+    // Carregar page actions
+    var pageActionsContainer = document.getElementById('page-actions-container');
+    if (pageActionsContainer) {
+      var pageActionsTemplate = document.getElementById('tpl-page-actions');
+      if (pageActionsTemplate) {
+        pageActionsContainer.innerHTML = pageActionsTemplate.innerHTML;
+
+        // Configurar botões específicos da página
+        Views.setupPageSpecificButtons(activePage);
+      }
+    }
+
+    // Configurar navegação
+    Views.setupNavTabs();
+
+    // Configurar botão de tema
+    Views.setupThemeToggle();
+
+    // Configurar menu sanduíche no header
+    Views.setupHeaderMenu();
+
+    // Carregar menu de usuário no header
+    Views.loadUserMenuComponent();
+  },
+
+  // Configurar sistema de temas
+  setupThemeToggle: function() {
+    var themeToggle = document.getElementById('theme-toggle');
+    if (!themeToggle) return;
+
+    // Carregrar tema salvo
+    var savedTheme = localStorage.getItem('theme') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+    // Configurar evento de clique
+    themeToggle.addEventListener('click', function() {
+      var currentTheme = document.body.getAttribute('data-theme');
+      var newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+      document.body.setAttribute('data-theme', newTheme);
+      themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('theme', newTheme);
+    });
+  },
+
+  // Configurar menu sanduíche no header
+  setupHeaderMenu: function() {
+    var btnHeaderMenu = document.getElementById('btn-header-menu');
+    if (!btnHeaderMenu) return;
+
+    btnHeaderMenu.addEventListener('click', function() {
+      console.log('🔄 Abrindo menu do header');
+      if(UI.MenuSystem && !UI.MenuSystem.overlay){ UI.MenuSystem.init(); }
+      if(UI.MenuSystem && UI.MenuSystem.open){ UI.MenuSystem.open(); }
+    });
+
+    // Configurar botão Sair no header
+    var btnHeaderLogout = document.getElementById('btn-header-logout');
+    if (btnHeaderLogout) {
+      btnHeaderLogout.addEventListener('click', function() {
+        console.log('🚪 Logout do header clicado');
+        Views.handleLogout();
+      });
+    }
+  },
+
+  // Configurar botões específicos de cada página
+  setupPageSpecificButtons: function(activePage) {
+    var pageSpecificContainer = document.getElementById('page-specific-buttons');
+    if (!pageSpecificContainer) return;
+
+    // Limpar conteúdo atual
+    pageSpecificContainer.innerHTML = '';
+
+    switch(activePage) {
+      case 'activities':
+        // Botão + Nova Atividade (seguindo protótipo)
+        var btnNova = document.createElement('button');
+        btnNova.className = 'btn btn-primary';
+        btnNova.id = 'btn-new';
+        btnNova.innerHTML = '<span>➕</span><span>Nova Atividade</span>';
+        pageSpecificContainer.appendChild(btnNova);
+
+        // Conectar event listener
+        setTimeout(function() {
+          var btnNew = document.getElementById('btn-new');
+          if (btnNew) {
+            btnNew.addEventListener('click', function() { Router.go('#/new'); });
+          }
+        }, 100);
+        break;
+
+      case 'members':
+        // Botão + Novo Membro
+        var btnNovo = document.createElement('button');
+        btnNovo.className = 'btn btn-primary';
+        btnNovo.id = 'btn-members-new';
+        btnNovo.innerHTML = '<span>➕</span><span>Novo Membro</span>';
+        pageSpecificContainer.appendChild(btnNovo);
+
+        // Conectar event listener
+        setTimeout(function() {
+          var btnNew = document.getElementById('btn-members-new');
+          if (btnNew) {
+            btnNew.addEventListener('click', function() {
+              console.log('➕ Novo membro clicado');
+              // TODO: implementar navegação para nova tela de membro
+            });
+          }
+        }, 100);
+        break;
+
+      default:
+        // Outras páginas não têm botões específicos ainda
+        break;
+    }
+  },
+
+  // Handler unificado de logout
+  handleLogout: function() {
+    console.log('🚪 Logout iniciado');
+
+    // Show logout overlay
+    try {
+      var overlay = document.getElementById('logout-loading-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.classList.remove('hidden');
+        console.log('📱 Overlay logout mostrado');
+      }
+    } catch (e) {
+      console.error('❌ Erro ao mostrar overlay logout:', e);
+    }
+
+    // Tentar fazer logout via API se possível
+    try {
+      var sessionId = localStorage.getItem('sessionId');
+
+      if (sessionId && window.API && API.logout) {
+        API.logout(sessionId).then(function(result) {
+          console.log('🚪 Logout response:', result);
+          Views.completeLogout();
+        }).catch(function(err) {
+          console.error('❌ Logout error:', err);
+          Views.completeLogout();
+        });
+      } else {
+        console.warn('⚠️ SessionId ou API.logout não disponível, fazendo logout local');
+        Views.completeLogout();
+      }
+    } catch (err) {
+      console.error('❌ Erro durante logout:', err);
+      Views.completeLogout();
+    }
+  },
+
+  // Finalizar logout (limpeza e redirecionamento)
+  completeLogout: function() {
+    setTimeout(function() {
+      try {
+        var overlay = document.getElementById('logout-loading-overlay');
+        if (overlay) {
+          overlay.style.display = 'none';
+          overlay.classList.add('hidden');
+        }
+      } catch (e) {
+        console.error('❌ Erro ao esconder overlay:', e);
+      }
+
+      // Limpar dados locais
+      try {
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('uid');
+        if (window.State) window.State.clear();
+      } catch (e) {
+        console.warn('Erro ao limpar sessão local:', e);
+      }
+
+      // Redirecionar para login
+      setTimeout(function() {
+        window.location.href = window.location.pathname;
+      }, 300);
+    }, 1500);
   },
 
   initDashboard: function(){
-    console.log('✅ Views.initDashboard called');
-
-    // Load User Menu Component
-    Views.loadUserMenuComponent();
+    // Carregar apenas header e navegação (dashboard não tem page actions)
+    Views.loadBasicComponents('dashboard');
 
     // Configurar menu de navegação
     var navTabs = document.querySelectorAll('.nav-tab');
     navTabs.forEach(function(tab) {
       tab.addEventListener('click', function() {
         var page = this.getAttribute('data-page');
-        console.log('📱 Navegando para:', page);
 
         // Remove active class from all tabs
         navTabs.forEach(function(t) { t.classList.remove('active'); });
@@ -774,23 +1054,16 @@ var Views = {
           Router.go('#/practices');
         } else if (page === 'reports') {
           Router.go('#/reports');
-        } else {
-          console.log('⚠️ Página não implementada:', page);
         }
       });
     });
 
+    // Carregar cards do dashboard
+    Views.loadDashboardCards();
+
     // Carregar dados do dashboard
     Views.loadDashboardData();
 
-    // Menu overlay (simples por enquanto)
-    var btnMenu = document.getElementById('btn-menu');
-    if (btnMenu) {
-      btnMenu.addEventListener('click', function() {
-        console.log('📱 Menu clicado');
-        // Por enquanto só um log, depois implementamos menu lateral
-      });
-    }
 
     // Initialize simple logout
     if (typeof Views.initSimpleLogout === 'function') {
@@ -798,9 +1071,109 @@ var Views = {
     }
   },
 
-  loadDashboardData: function() {
-    console.log('📊 Carregando dados do dashboard...');
+  loadDashboardCards: function() {
+    var dashboardGrid = document.getElementById('dashboard-grid');
+    if (!dashboardGrid) return;
 
+    // Cards padronizados com margens reduzidas
+    var cardsHTML = `
+      <!-- Card Atividades -->
+      <div class="card">
+        <div style="padding: var(--spacing-sm) var(--spacing-md);">
+          <div class="card-header">
+            <div class="card-icon">📋</div>
+            <div>
+              <div class="card-title">Atividades Ativas</div>
+              <div class="card-subtitle">Eventos e cerimônias programadas</div>
+            </div>
+          </div>
+          <div class="flex justify-between items-center" style="margin-bottom: var(--spacing-sm);">
+            <div style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--primary);" id="atividades-count">12</div>
+            <div style="color: var(--text-light); font-size: var(--font-size-sm);" id="atividades-period">Este mês</div>
+          </div>
+          <div style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-md);" id="atividades-status">
+            3 pendentes, 9 realizadas
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill success" style="width: 75%;" id="atividades-progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Membros -->
+      <div class="card">
+        <div style="padding: var(--spacing-sm) var(--spacing-md);">
+          <div class="card-header">
+            <div class="card-icon">👥</div>
+            <div>
+              <div class="card-title">Jovens Ativos</div>
+              <div class="card-subtitle">Membros participantes</div>
+            </div>
+          </div>
+          <div class="flex justify-between items-center" style="margin-bottom: var(--spacing-sm);">
+            <div style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--primary);" id="membros-count">47</div>
+            <div style="color: var(--success); font-size: var(--font-size-sm);" id="membros-variacao">+5 este mês</div>
+          </div>
+          <div style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-md);" id="membros-participacao">
+            85% de participação regular
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill success" style="width: 85%;" id="membros-progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Práticas -->
+      <div class="card">
+        <div style="padding: var(--spacing-sm) var(--spacing-md);">
+          <div class="card-header">
+            <div class="card-icon">🎯</div>
+            <div>
+              <div class="card-title">Práticas Diárias</div>
+              <div class="card-subtitle">Registro pessoal esta semana</div>
+            </div>
+          </div>
+          <div class="flex justify-between items-center" style="margin-bottom: var(--spacing-sm);">
+            <div style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--primary);" id="praticas-count">18</div>
+            <div style="color: var(--text-light); font-size: var(--font-size-sm);" id="praticas-total">de 21 práticas</div>
+          </div>
+          <div style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-md);" id="praticas-completude">
+            86% de completude
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill warning" style="width: 86%;" id="praticas-progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Estatísticas -->
+      <div class="card">
+        <div style="padding: var(--spacing-sm) var(--spacing-md);">
+          <div class="card-header">
+            <div class="card-icon">📊</div>
+            <div>
+              <div class="card-title">Estatísticas</div>
+              <div class="card-subtitle">Performance geral do sistema</div>
+            </div>
+          </div>
+          <div class="flex justify-between items-center" style="margin-bottom: var(--spacing-sm);">
+            <div style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--primary);" id="stats-percent">92%</div>
+            <div style="color: var(--success); font-size: var(--font-size-sm);" id="stats-variacao">↗ +3%</div>
+          </div>
+          <div style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-md);" id="stats-desc">
+            Engajamento médio dos jovens
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill success" style="width: 92%;" id="stats-progress"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    dashboardGrid.innerHTML = cardsHTML;
+  },
+
+  loadDashboardData: function() {
     // Carregar dados reais das APIs
     Views.loadAtividadesStats();
     Views.loadMembrosStats();
@@ -827,7 +1200,6 @@ var Views = {
         var progressPercent = total > 0 ? Math.round((concluidas / total) * 100) : 0;
         if (atividadesProgress) atividadesProgress.style.width = progressPercent + '%';
 
-        console.log('✅ Estatísticas de atividades carregadas:', { total, pendentes, concluidas, progressPercent });
       }
     }).catch(function(err) {
       console.error('❌ Erro ao carregar estatísticas de atividades:', err);
@@ -840,8 +1212,8 @@ var Views = {
   },
 
   loadMembrosStats: function() {
-    // Carregar estatísticas de membros
-    API.listMembros().then(function(res) {
+    // Carregar estatísticas de membros (usando API correta)
+    API.listMembersList().then(function(res) {
       if (res && res.ok && res.data) {
         var membros = res.data;
         var total = membros.length;
@@ -1192,7 +1564,10 @@ var Views = {
      =========================== */
   initMembers: function() {
     console.log('🎯 Views.initMembers executado!');
-    
+
+    // Carregar header padronizado
+    Views.loadBasicComponents('members');
+
     // Inicializa State se necessário
     if (!window.State) {
       window.State = { 
@@ -1974,6 +2349,16 @@ var Views = {
       if (sexoStr === 'f' || sexoStr === 'fem' || sexoStr === 'feminino') return 'feminino';
       return '';
     }
+
+    // Carregar componente de page actions para telas legadas
+    var pageActionsContainer = document.getElementById('page-actions-container');
+    if (pageActionsContainer) {
+      var pageActionsTemplate = document.getElementById('tpl-page-actions');
+      if (pageActionsTemplate) {
+        pageActionsContainer.innerHTML = pageActionsTemplate.innerHTML;
+        Views.setupPageSpecificButtons('members');
+      }
+    }
   },
 
   /* ===========================
@@ -2193,6 +2578,80 @@ var Views = {
     }
   },
 
+  initPractices: function() {
+    console.log('🎯 Views.initPractices chamado!');
+    // Carregar header e navegação padronizados
+    Views.loadBasicComponents('practices');
+
+    // Configurar menu de navegação
+    Views.setupNavTabs();
+
+    // DEBUG EXTREMO - Testar cliques diretamente
+    setTimeout(function() {
+      console.log('🔍 DEBUG EXTREMO - Testando elementos...');
+      var navTabs = document.querySelectorAll('.nav-tab');
+      console.log('Nav tabs encontradas:', navTabs.length);
+
+      navTabs.forEach(function(tab, index) {
+        console.log('Tab', index, ':', tab.getAttribute('data-page'), tab.textContent.trim());
+
+        // Adicionar onclick direto como teste
+        tab.onclick = function(e) {
+          console.log('🎯 ONCLICK DIRETO FUNCIONOU!', this.getAttribute('data-page'));
+          e.preventDefault();
+          var page = this.getAttribute('data-page');
+          if (page === 'dashboard') Router.go('#/dashboard');
+          else if (page === 'activities') Router.go('#/atividades');
+          else if (page === 'members') Router.go('#/members');
+          else if (page === 'practices') Router.go('#/practices');
+          else if (page === 'reports') Router.go('#/reports');
+        };
+      });
+    }, 1000);
+
+    // Initialize simple logout
+    if (typeof Views.initSimpleLogout === 'function') {
+      Views.initSimpleLogout();
+    }
+  },
+
+  initReports: function() {
+    console.log('🎯 Views.initReports chamado!');
+    // Carregar header e navegação padronizados
+    Views.loadBasicComponents('reports');
+
+    // Configurar menu de navegação
+    Views.setupNavTabs();
+
+    // DEBUG EXTREMO - Testar cliques diretamente
+    setTimeout(function() {
+      console.log('🔍 DEBUG EXTREMO - Testando elementos...');
+      var navTabs = document.querySelectorAll('.nav-tab');
+      console.log('Nav tabs encontradas:', navTabs.length);
+
+      navTabs.forEach(function(tab, index) {
+        console.log('Tab', index, ':', tab.getAttribute('data-page'), tab.textContent.trim());
+
+        // Adicionar onclick direto como teste
+        tab.onclick = function(e) {
+          console.log('🎯 ONCLICK DIRETO FUNCIONOU!', this.getAttribute('data-page'));
+          e.preventDefault();
+          var page = this.getAttribute('data-page');
+          if (page === 'dashboard') Router.go('#/dashboard');
+          else if (page === 'activities') Router.go('#/atividades');
+          else if (page === 'members') Router.go('#/members');
+          else if (page === 'practices') Router.go('#/practices');
+          else if (page === 'reports') Router.go('#/reports');
+        };
+      });
+    }, 1000);
+
+    // Initialize simple logout
+    if (typeof Views.initSimpleLogout === 'function') {
+      Views.initSimpleLogout();
+    }
+  },
+
   // Função auxiliar para extrair parâmetros da URL
   getUrlParams: function() {
     var params = {};
@@ -2295,82 +2754,91 @@ var MenuSystem = {
       console.warn('[Menu] Erro ao carregar, usando itens padrão');
       self.renderItems(self.getDefaultMenuItems());
     });
+  }
+};
+
+/* ===========================
+   Sistema de Menu (overlay)
+   =========================== */
+var MenuSystem = {
+  overlay: null,
+  content: null,
+  isOpen: false,
+  items: [],
+
+  init: function(){
+    if(this.overlay) return; // já inicializado
+    this.createOverlay();
+    this.loadMenuItems();
   },
+  createOverlay: function(){
+    var overlay=document.createElement('div');
+    overlay.className='menu-overlay';
+    overlay.innerHTML=`
+      <div class="menu-panel">
+        <div class="menu-header">
+          <h3 class="menu-title">Menu</h3>
+          <button class="menu-close" id="menu-close-btn">×</button>
+        </div>
+        <div class="menu-content">
+          <div class="menu-loading">Carregando...</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    this.overlay=overlay;
+    this.content=overlay.querySelector('.menu-content');
 
-  initPractices: function() {
-    console.log('✅ Views.initPractices called');
-
-    // Load User Menu Component
-    Views.loadUserMenuComponent();
-
-    // Configurar menu de navegação
-    Views.setupNavTabs();
-
-    // DEBUG EXTREMO - Testar cliques diretamente
-    setTimeout(function() {
-      console.log('🔍 DEBUG EXTREMO - Testando elementos...');
-      var navTabs = document.querySelectorAll('.nav-tab');
-      console.log('Nav tabs encontradas:', navTabs.length);
-
-      navTabs.forEach(function(tab, index) {
-        console.log('Tab', index, ':', tab.getAttribute('data-page'), tab.textContent.trim());
-
-        // Adicionar onclick direto como teste
-        tab.onclick = function(e) {
-          console.log('🎯 ONCLICK DIRETO FUNCIONOU!', this.getAttribute('data-page'));
-          e.preventDefault();
-          var page = this.getAttribute('data-page');
-          if (page === 'dashboard') Router.go('#/dashboard');
-          else if (page === 'activities') Router.go('#/atividades');
-          else if (page === 'members') Router.go('#/members');
-          else if (page === 'practices') Router.go('#/practices');
-          else if (page === 'reports') Router.go('#/reports');
-        };
+    // Configurar botão de fechar
+    var closeBtn = overlay.querySelector('#menu-close-btn');
+    if (closeBtn) {
+      var self = this;
+      closeBtn.addEventListener('click', function() {
+        self.close();
       });
-    }, 1000);
-
-    // Initialize simple logout
-    if (typeof Views.initSimpleLogout === 'function') {
-      Views.initSimpleLogout();
     }
+
+    // Fechar ao clicar no overlay (fora do painel)
+    var self = this;
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) {
+        self.close();
+      }
+    });
   },
-
-  initReports: function() {
-    console.log('✅ Views.initReports called');
-
-    // Load User Menu Component
-    Views.loadUserMenuComponent();
-
-    // Configurar menu de navegação
-    Views.setupNavTabs();
-
-    // DEBUG EXTREMO - Testar cliques diretamente
-    setTimeout(function() {
-      console.log('🔍 DEBUG EXTREMO - Testando elementos...');
-      var navTabs = document.querySelectorAll('.nav-tab');
-      console.log('Nav tabs encontradas:', navTabs.length);
-
-      navTabs.forEach(function(tab, index) {
-        console.log('Tab', index, ':', tab.getAttribute('data-page'), tab.textContent.trim());
-
-        // Adicionar onclick direto como teste
-        tab.onclick = function(e) {
-          console.log('🎯 ONCLICK DIRETO FUNCIONOU!', this.getAttribute('data-page'));
-          e.preventDefault();
-          var page = this.getAttribute('data-page');
-          if (page === 'dashboard') Router.go('#/dashboard');
-          else if (page === 'activities') Router.go('#/atividades');
-          else if (page === 'members') Router.go('#/members');
-          else if (page === 'practices') Router.go('#/practices');
-          else if (page === 'reports') Router.go('#/reports');
-        };
-      });
-    }, 1000);
-
-    // Initialize simple logout
-    if (typeof Views.initSimpleLogout === 'function') {
-      Views.initSimpleLogout();
+  open: function(){
+    if(!this.overlay) this.init();
+    this.isOpen=true;
+    this.overlay.classList.add('is-open');
+    document.body.style.overflow='hidden';
+  },
+  close: function(){
+    if(!this.isOpen) return;
+    this.isOpen=false;
+    if(this.overlay) this.overlay.classList.remove('is-open');
+    document.body.style.overflow='';
+  },
+  loadMenuItems: function(){
+    var self=this;
+    if(!this.content) return;
+    if(typeof API==='undefined' || !API.listMenu){
+      console.warn('[Menu] API não disponível, usando itens padrão');
+      self.renderItems(self.getDefaultMenuItems());
+      return;
     }
+    this.content.innerHTML='<div class="menu-loading">Carregando...</div>';
+    API.listMenu().then(function(items){
+      // Se não há itens da planilha, usa itens padrão
+      if(!items || items.length === 0) {
+        console.warn('[Menu] Nenhum item na planilha, usando itens padrão');
+        items = self.getDefaultMenuItems();
+      }
+      self.renderItems(items);
+    }).catch(function(err){
+      console.error('[Menu] erro:',err);
+      console.warn('[Menu] Erro ao carregar, usando itens padrão');
+      self.renderItems(self.getDefaultMenuItems());
+    });
   },
 
   getDefaultMenuItems: function(){
@@ -2657,85 +3125,18 @@ adjustForMobile() {
    State exports
    =========================== */
 
-// Adicionar funções que podem ter sido perdidas no objeto Views
-Views.initPractices = function() {
-  console.log('✅ Views.initPractices called (adicionada manualmente)');
-
-  // Load User Menu Component
-  Views.loadUserMenuComponent();
-
-  // Configurar menu de navegação
-  Views.setupNavTabs();
-
-  // DEBUG EXTREMO - Testar cliques diretamente
-  setTimeout(function() {
-    console.log('🔍 DEBUG EXTREMO - Testando elementos...');
-    var navTabs = document.querySelectorAll('.nav-tab');
-    console.log('Nav tabs encontradas:', navTabs.length);
-
-    navTabs.forEach(function(tab, index) {
-      console.log('Tab', index, ':', tab.getAttribute('data-page'), tab.textContent.trim());
-
-      // Adicionar onclick direto como teste
-      tab.onclick = function(e) {
-        console.log('🎯 ONCLICK DIRETO FUNCIONOU!', this.getAttribute('data-page'));
-        e.preventDefault();
-        var page = this.getAttribute('data-page');
-        if (page === 'dashboard') Router.go('#/dashboard');
-        else if (page === 'activities') Router.go('#/atividades');
-        else if (page === 'members') Router.go('#/members');
-        else if (page === 'practices') Router.go('#/practices');
-        else if (page === 'reports') Router.go('#/reports');
-      };
-    });
-  }, 1000);
-
-  // Initialize simple logout
-  if (typeof Views.initSimpleLogout === 'function') {
-    Views.initSimpleLogout();
-  }
-};
-
-Views.initReports = function() {
-  console.log('✅ Views.initReports called (adicionada manualmente)');
-
-  // Load User Menu Component
-  Views.loadUserMenuComponent();
-
-  // Configurar menu de navegação
-  Views.setupNavTabs();
-
-  // DEBUG EXTREMO - Testar cliques diretamente
-  setTimeout(function() {
-    console.log('🔍 DEBUG EXTREMO - Testando elementos...');
-    var navTabs = document.querySelectorAll('.nav-tab');
-    console.log('Nav tabs encontradas:', navTabs.length);
-
-    navTabs.forEach(function(tab, index) {
-      console.log('Tab', index, ':', tab.getAttribute('data-page'), tab.textContent.trim());
-
-      // Adicionar onclick direto como teste
-      tab.onclick = function(e) {
-        console.log('🎯 ONCLICK DIRETO FUNCIONOU!', this.getAttribute('data-page'));
-        e.preventDefault();
-        var page = this.getAttribute('data-page');
-        if (page === 'dashboard') Router.go('#/dashboard');
-        else if (page === 'activities') Router.go('#/atividades');
-        else if (page === 'members') Router.go('#/members');
-        else if (page === 'practices') Router.go('#/practices');
-        else if (page === 'reports') Router.go('#/reports');
-      };
-    });
-  }, 1000);
-
-  // Initialize simple logout
-  if (typeof Views.initSimpleLogout === 'function') {
-    Views.initSimpleLogout();
-  }
-};
+// Funções duplicadas removidas - usando as do objeto Views
 
 window.UI = UI;
 window.Views = Views;
+
+// Debug: Verificar se as funções existem
+console.log('🔍 DEBUG Views export:');
+console.log('- initDashboard:', typeof Views.initDashboard);
+console.log('- initAtividades:', typeof Views.initAtividades);
+console.log('- initMembers:', typeof Views.initMembers);
+console.log('- initPractices:', typeof Views.initPractices);
+console.log('- initReports:', typeof Views.initReports);
 
 // Adiciona filtro por data no State (garantia)
 if(!window.State) window.State={};
@@ -4229,13 +4630,13 @@ window.debugParticipacaoSystem = function() {
 
 // Inicializa o sistema quando a página carrega
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🔄 DOMContentLoaded - Inicializando ParticipacaoSystem');
+  // Carregar tema salvo imediatamente
+  var savedTheme = localStorage.getItem('theme') || 'light';
+  document.body.setAttribute('data-theme', savedTheme);
+
   setTimeout(function() {
     if (window.ParticipacaoSystem) {
-      console.log('✅ ParticipacaoSystem encontrado, inicializando...');
       ParticipacaoSystem.init();
-    } else {
-      console.error('❌ ParticipacaoSystem não encontrado!');
     }
   }, 100);
 });
