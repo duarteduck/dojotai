@@ -614,13 +614,7 @@ async function handleLoginSubmit(e) {
       showLoginMessage('Login realizado com sucesso!', 'success');
 
       // Navigate immediately - no delay needed
-      if (typeof Router !== 'undefined' && Router.go) {
-        Router.go('#/dash');
-      } else if (typeof navigateTo === 'function') {
-        navigateTo('dash');
-      } else {
-        window.location.hash = '#/dash';
-      }
+      window.location.hash = '#/dashboard';
 
       // Hide overlay after navigation
       showLoadingOverlay(false);

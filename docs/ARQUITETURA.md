@@ -83,8 +83,22 @@ src/
 ├── app_api.html           # Cliente API
 ├── app_ui.html            # Sistema de UI
 ├── app_router.html        # Roteamento SPA
-├── view_*.html            # Telas do sistema
-└── view_component_*.html  # Componentes reutilizáveis
+├── styles_base.html       # Estilos CSS base
+├── src/                   # Código fonte organizado
+│   ├── 03-shared/         # Recursos compartilhados
+│   │   └── components.html         # Estilos de componentes
+│   ├── 04-views/          # Telas do sistema
+│   │   ├── dashboard.html          # Dashboard principal
+│   │   ├── practices.html          # Práticas diárias
+│   │   └── reports.html            # Relatórios
+│   └── 05-components/     # Componentes reutilizáveis
+│       ├── userMenu.html           # Menu de usuário
+│       ├── memberCard.html         # Card de membro
+│       ├── activityCard.html       # Card de atividade
+│       ├── emptyState.html         # Estado vazio
+│       ├── toast.html              # Notificações
+│       └── calendarModal.html      # Modal de calendário
+└── view_*.html            # Views antigas (sendo migradas)
 ```
 
 ---

@@ -3,11 +3,13 @@
  * Router simples por hash:
  * - #/login
  * - #/dashboard
- * - #/dash
+ * - #/atividades
  * - #/new
  * - #/edit?id={ID}
- * - #/members (NOVO)
- * - #/member?id={ID} (NOVO)
+ * - #/members
+ * - #/member?id={ID}
+ * - #/practices
+ * - #/reports
  */
 var Router = {
   start: function(){
@@ -30,10 +32,12 @@ var Router = {
       var init = null;
       if (view === 'login')  init = Views.initLogin;
       if (view === 'dashboard') init = Views.initDashboard;
-      if (view === 'dash')   init = Views.initDash;
+      if (view === 'atividades') init = Views.initAtividades;
       if (view === 'new')    init = Views.initNew;
-      if (view === 'members') init = Views.initMembers;  // ← ESTA LINHA É CRUCIAL
-      if (view === 'member') init = Views.initMember;   // ← NOVA LINHA PARA MEMBRO INDIVIDUAL
+      if (view === 'members') init = Views.initMembers;
+      if (view === 'member') init = Views.initMember;
+      if (view === 'practices') init = Views.initPractices;
+      if (view === 'reports') init = Views.initReports;
       
       console.log('🎯 Inicializador encontrado para', view, ':', typeof init);
       
@@ -52,28 +56,34 @@ var Router = {
     var authed = !!(window.localStorage && localStorage.getItem('uid'));
 
     console.log('🗺️ Router.resolve - Rota:', route, 'Autenticado:', authed);
+    console.log('🔍 DEBUG: location.hash =', location.hash);
 
-    // Proteção de rotas autenticadas
+    // Proteção de rotas autenticadas (ordem importa - mais específico primeiro)
     if (route.indexOf('#/dashboard') === 0 && !authed) { return this.go('#/login'); }
-    if (route.indexOf('#/dash') === 0 && !authed) { return this.go('#/login'); }
+    else if (route.indexOf('#/atividades') === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/new')  === 0 && !authed) { return this.go('#/login'); }
     if (route.indexOf('#/edit') === 0 && !authed) { return this.go('#/login'); }
-    if (route.indexOf('#/members') === 0 && !authed) { return this.go('#/login'); } // ← PROTEÇÃO MEMBERS
-    if (route.indexOf('#/member') === 0 && !authed) { return this.go('#/login'); } // ← PROTEÇÃO MEMBER
+    if (route.indexOf('#/members') === 0 && !authed) { return this.go('#/login'); }
+    if (route.indexOf('#/member') === 0 && !authed) { return this.go('#/login'); }
+    if (route.indexOf('#/practices') === 0 && !authed) { return this.go('#/login'); }
+    if (route.indexOf('#/reports') === 0 && !authed) { return this.go('#/login'); }
 
     // Redirecionamento se já logado
     if (route.indexOf('#/login') === 0 && authed) { return this.go('#/dashboard'); }
 
-    // Determinação da view
+    // Determinação da view (ordem importa - mais específico primeiro)
     var view = 'login';
     if (route.indexOf('#/dashboard') === 0) view = 'dashboard';
-    if (route.indexOf('#/dash') === 0) view = 'dash';
+    else if (route.indexOf('#/atividades') === 0) view = 'atividades';
     if (route.indexOf('#/new')  === 0) view = 'new';
     if (route.indexOf('#/edit') === 0) view = 'new';
     if (route.indexOf('#/member?') === 0) view = 'member'; // ← MEMBRO INDIVIDUAL (deve vir antes de members!)
     if (route.indexOf('#/members') === 0) view = 'members'; // ← LISTA DE MEMBROS
+    if (route.indexOf('#/practices') === 0) view = 'practices';
+    if (route.indexOf('#/reports') === 0) view = 'reports';
 
     console.log('✅ View determinada:', view);
+    console.log('🔍 DEBUG: Montando view:', view, 'para rota:', route);
     this.mount(view);
   },
 

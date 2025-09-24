@@ -1,0 +1,54 @@
+<div class="container" data-view="practices">
+  <div class="dash-header">
+    <h2>🎯 Práticas Diárias</h2>
+    <div class="dash-actions">
+      <button class="btn" id="btn-practices-menu">
+        <span>☰</span>
+        <span>Menu</span>
+      </button>
+      <!-- User Menu Component -->
+      <div id="user-menu-container"></div>
+    </div>
+  </div>
+
+  <!-- Navegação Horizontal Unificada -->
+  <nav class="nav-tabs">
+    <button class="nav-tab" data-page="dashboard">
+      <span>🏠</span>
+      <span>Dashboard</span>
+    </button>
+    <button class="nav-tab" data-page="activities">
+      <span>📅</span>
+      <span>Atividades</span>
+    </button>
+    <button class="nav-tab" data-page="members">
+      <span>👥</span>
+      <span>Membros</span>
+    </button>
+    <button class="nav-tab active" data-page="practices">
+      <span>🎯</span>
+      <span>Práticas</span>
+    </button>
+    <button class="nav-tab" data-page="reports">
+      <span>📊</span>
+      <span>Relatórios</span>
+    </button>
+  </nav>
+
+  <!-- Conteúdo Em Desenvolvimento -->
+  <div class="empty-state">
+    <div class="empty-state-icon">🎯</div>
+    <div class="empty-state-title">Sistema de Práticas</div>
+    <div class="empty-state-description">
+      Em Desenvolvimento
+    </div>
+  </div>
+
+  <!-- Logout Loading Overlay -->
+  <div id="logout-loading-overlay" class="logout-loading-overlay hidden">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Encerrando sessão...</p>
+    </div>
+  </div>
+</div>

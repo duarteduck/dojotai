@@ -6,7 +6,7 @@
   <title>Dojotai</title>
   <style>
     <?!= include('styles_base'); ?>
-    <?!= include('styles_components'); ?>
+    <?!= include('src/03-shared/components'); ?>
   </style>
 </head>
 <body>
@@ -14,17 +14,19 @@
 
   <!-- Templates (views & components) -->
   <template id="tpl-login"><?!= include('view_login'); ?></template>
-  <template id="tpl-dashboard"><?!= include('view_dashboard'); ?></template>
-  <template id="tpl-dash"><?!= include('view_dash'); ?></template>
+  <template id="tpl-dashboard"><?!= include('src/04-views/dashboard'); ?></template>
+  <template id="tpl-atividades"><?!= include('view_dash'); ?></template>
   <template id="tpl-new"><?!= include('view_activity_new'); ?></template>
-  <template id="tpl-activity-card"><?!= include('view_component_activityCard'); ?></template>
-  <template id="tpl-empty"><?!= include('view_component_emptyState'); ?></template>
-  <template id="tpl-toast"><?!= include('view_component_toast'); ?></template>
+  <template id="tpl-activity-card"><?!= include('src/05-components/activityCard'); ?></template>
+  <template id="tpl-empty"><?!= include('src/05-components/emptyState'); ?></template>
+  <template id="tpl-toast"><?!= include('src/05-components/toast'); ?></template>
   <template id="tpl-members"><?!= include('view_members_list'); ?></template>
-  <template id="tpl-member-card"><?!= include('view_component_memberCard'); ?></template>
+  <template id="tpl-member-card"><?!= include('src/05-components/memberCard'); ?></template>
   <template id="tpl-member"><?!= include('view_member_detail'); ?></template>
   <template id="tpl-participacoes-modal"><?!= include('view_participacoes_modal'); ?></template>
-  <template id="tpl-user-menu"><?!= include('view_component_userMenu'); ?></template>
+  <template id="tpl-practices"><?!= include('src/04-views/practices'); ?></template>
+  <template id="tpl-reports"><?!= include('src/04-views/reports'); ?></template>
+  <template id="tpl-user-menu"><?!= include('src/05-components/userMenu'); ?></template>
 
   <!-- Scripts (estado, api, ui, router) -->
   <?!= include('app_state'); ?>
