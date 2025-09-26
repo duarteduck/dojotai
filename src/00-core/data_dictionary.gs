@@ -384,7 +384,7 @@ const DATA_DICTIONARY = {
         pattern: 'ACT-{counter}',
         description: 'ID único da atividade (gerado automaticamente)',
         generated: true,
-        example: 'ACT-001'
+        example: 'ACT-0001'
       },
 
       // Título da atividade
@@ -407,20 +407,20 @@ const DATA_DICTIONARY = {
 
       // Data de realização da atividade
       data: {
-        type: 'DATE',
+        type: 'DATETIME',
         required: false,
-        format: 'yyyy-MM-dd',
+        format: 'yyyy-MM-dd HH:mm:ss',
         timezone: 'America/Sao_Paulo',
-        description: 'Data de realização da atividade',
-        example: '2025-09-20'
+        description: 'Data e hora de realização da atividade',
+        example: '2025-09-20 14:30:00'
       },
 
       // Status da atividade
       status: {
         type: 'TEXT',
         required: true,
-        enum: ['Planejada', 'Em Andamento', 'Concluída', 'Cancelada'],
-        default: 'Planejada',
+        enum: ['Pendente', 'Concluída'],
+        default: 'Pendente',
         description: 'Status da atividade'
       },
 
@@ -518,7 +518,7 @@ const DATA_DICTIONARY = {
         pattern: 'CAT-{counter}',
         description: 'ID único da categoria (gerado automaticamente)',
         generated: true,
-        example: 'CAT-001'
+        example: 'CAT-0001'
       },
 
       // Nome da categoria

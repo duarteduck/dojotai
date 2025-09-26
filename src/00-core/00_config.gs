@@ -59,6 +59,15 @@ const APP_CONFIG = {
   },
 
   /**
+   * Configuração de debug temporário
+   * @type {Object}
+   */
+  DEBUG: {
+    /** @type {boolean} Desabilitar todo o sistema de performance temporariamente */
+    DISABLE_PERFORMANCE_SYSTEM: true
+  },
+
+  /**
    * Configuração de sessões
    * @type {Object}
    */

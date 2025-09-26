@@ -485,7 +485,9 @@ class ValidationEngine {
     const timeMs = new Date() - startTime;
     const isValid = errors.length === 0;
 
-    PerformanceMonitor.integrateWithExisting('FK_VALIDATION', tableName, timeMs, false);
+    if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+      PerformanceMonitor.integrateWithExisting('FK_VALIDATION', tableName, timeMs, false);
+    }
 
     Logger.info('ValidationEngine', 'FK validation completed', {
       tableName,
@@ -528,7 +530,9 @@ class ValidationEngine {
       const timeMs = new Date() - startTime;
       const isValid = errors.length === 0;
 
-      PerformanceMonitor.integrateWithExisting('BUSINESS_RULES', tableName, timeMs, false);
+      if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+        PerformanceMonitor.integrateWithExisting('BUSINESS_RULES', tableName, timeMs, false);
+      }
 
       Logger.info('ValidationEngine', 'Business rules validation completed', {
         tableName,
@@ -554,10 +558,7 @@ class ValidationEngine {
   static _validateAtividadesRules(data) {
     const errors = [];
 
-    // Regra 1: Se status é "Concluída", data_fim deve estar preenchida
-    if (data.status === 'Concluída' && (!data.data_fim || data.data_fim.trim() === '')) {
-      errors.push('Atividades concluídas devem ter data_fim preenchida');
-    }
+    // Regra 1: Removida - data_fim não existe na tabela atividades
 
     // Regra 2: Se status é "Planejada", data_inicio deve ser futura
     if (data.status === 'Planejada' && data.data_inicio) {
@@ -570,15 +571,7 @@ class ValidationEngine {
       }
     }
 
-    // Regra 3: data_fim deve ser >= data_inicio
-    if (data.data_inicio && data.data_fim) {
-      const dataInicio = new Date(data.data_inicio);
-      const dataFim = new Date(data.data_fim);
-
-      if (dataFim < dataInicio) {
-        errors.push('data_fim deve ser maior ou igual a data_inicio');
-      }
-    }
+    // Regra 3: Removida - data_fim não existe na tabela atividades
 
     return errors;
   }
@@ -663,17 +656,27 @@ class ValidationEngine {
           return; // Pular campos não configurados ou vazios
         }
 
-        // 1. Pattern validation
-        if (fieldConfig.pattern && fieldValue.toString().trim() !== '') {
+        // 1. Pattern validation (pular campos gerados automaticamente)
+        if (fieldConfig.pattern && fieldValue.toString().trim() !== '' && !fieldConfig.generated) {
           try {
-            const regex = new RegExp(fieldConfig.pattern);
+            let regexPattern = fieldConfig.pattern;
+
+            // Converter templates {counter} para regex
+            if (regexPattern.includes('{counter}')) {
+              regexPattern = regexPattern.replace('{counter}', '\\d+');
+              if (!regexPattern.startsWith('^')) regexPattern = '^' + regexPattern;
+              if (!regexPattern.endsWith('$')) regexPattern = regexPattern + '$';
+            }
+
+            const regex = new RegExp(regexPattern);
             if (!regex.test(fieldValue.toString())) {
               errors.push(`${fieldName}: Formato inválido. ${fieldConfig.description || 'Verifique o padrão esperado'}`);
             }
           } catch (e) {
             Logger.warn('ValidationEngine', 'Pattern inválido no dicionário', {
               field: fieldName,
-              pattern: fieldConfig.pattern
+              pattern: fieldConfig.pattern,
+              error: e.message
             });
           }
         }
@@ -738,7 +741,9 @@ class ValidationEngine {
       const timeMs = new Date() - startTime;
       const isValid = errors.length === 0;
 
-      PerformanceMonitor.integrateWithExisting('ADVANCED_VALIDATION', tableName, timeMs, false);
+      if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+        PerformanceMonitor.integrateWithExisting('ADVANCED_VALIDATION', tableName, timeMs, false);
+      }
 
       Logger.info('ValidationEngine', 'Advanced validation completed', {
         tableName,
@@ -816,7 +821,9 @@ class ValidationEngine {
       const timeMs = new Date() - startTime;
       const isValid = errors.length === 0;
 
-      PerformanceMonitor.integrateWithExisting('UNIQUE_VALIDATION', tableName, timeMs, false);
+      if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+        PerformanceMonitor.integrateWithExisting('UNIQUE_VALIDATION', tableName, timeMs, false);
+      }
 
       Logger.info('ValidationEngine', 'Unique validation completed', {
         tableName,
@@ -868,7 +875,9 @@ class ValidationEngine {
     const timeMs = new Date() - startTime;
     const isValid = allErrors.length === 0;
 
-    PerformanceMonitor.integrateWithExisting('FULL_VALIDATION', tableName, timeMs, false);
+    if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+      PerformanceMonitor.integrateWithExisting('FULL_VALIDATION', tableName, timeMs, false);
+    }
 
     Logger.info('ValidationEngine', 'Validação completa finalizada', {
       tableName,
@@ -1205,7 +1214,9 @@ const DatabaseManager = {
         const cached = CacheManager.get(tableName, cacheKey);
         if (cached) {
           const timeMs = new Date() - startTime;
-          PerformanceMonitor.integrateWithExisting('QUERY', tableName, timeMs, true);
+          if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+            PerformanceMonitor.integrateWithExisting('QUERY', tableName, timeMs, true);
+          }
           // Logger.info('DatabaseManager', 'Cache hit', { tableName, filters, pagination: paginationOptions, time: timeMs });
           return cached;
         }
@@ -1271,7 +1282,9 @@ const DatabaseManager = {
       }
 
       const timeMs = new Date() - startTime;
-      PerformanceMonitor.integrateWithExisting('QUERY', tableName, timeMs, false);
+      if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+        PerformanceMonitor.integrateWithExisting('QUERY', tableName, timeMs, false);
+      }
       return finalResult;
 
     } catch (error) {
@@ -1347,6 +1360,13 @@ const DatabaseManager = {
       } else {
         // Gerar novo ID
         finalId = this._generateId(tableName);
+        console.log('🆔 DatabaseManager - ID GERADO:', {
+          tableName: tableName,
+          primaryKey: primaryKey,
+          generatedId: finalId,
+          idType: typeof finalId,
+          idLength: finalId ? finalId.length : 'null'
+        });
         if (!silent) Logger.debug('DatabaseManager', 'Generated new ID', { tableName, primaryKey, generatedId: finalId });
       }
 
@@ -1355,6 +1375,14 @@ const DatabaseManager = {
         [primaryKey]: finalId, // Usar ID correto (fornecido ou gerado)
         ...data
       };
+
+      console.log('📋 DatabaseManager - DADOS COMPLETOS PARA VALIDAÇÃO:', {
+        tableName: tableName,
+        primaryKey: primaryKey,
+        finalId: finalId,
+        baseDataKeys: Object.keys(baseData),
+        idFieldValue: baseData[primaryKey]
+      });
 
       // Sanitizar dados de entrada para segurança
       const sanitizedData = this._sanitizeDataForTable(tableName, baseData);
@@ -1434,7 +1462,9 @@ const DatabaseManager = {
       }
 
       const timeMs = new Date() - startTime;
-      PerformanceMonitor.integrateWithExisting('INSERT', tableName, timeMs, false);
+      if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+        PerformanceMonitor.integrateWithExisting('INSERT', tableName, timeMs, false);
+      }
       if (!silent) Logger.info('DatabaseManager', 'Insert completed', { tableName, id: finalId, time: timeMs });
 
       // Invalidar cache para forçar reload na próxima query
@@ -1526,7 +1556,9 @@ const DatabaseManager = {
       CacheManager.invalidate(tableName);
 
       const timeMs = new Date() - startTime;
-      PerformanceMonitor.integrateWithExisting('UPDATE', tableName, timeMs, false);
+      if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+        PerformanceMonitor.integrateWithExisting('UPDATE', tableName, timeMs, false);
+      }
       Logger.info('DatabaseManager', 'Update completed', { tableName, id, time: timeMs });
       return { success: true };
 
@@ -1557,7 +1589,9 @@ const DatabaseManager = {
 
       if (result.success) {
         const timeMs = new Date() - startTime;
-        PerformanceMonitor.integrateWithExisting('DELETE', tableName, timeMs, false);
+        if (!APP_CONFIG.DEBUG?.DISABLE_PERFORMANCE_SYSTEM) {
+          PerformanceMonitor.integrateWithExisting('DELETE', tableName, timeMs, false);
+        }
         Logger.info('DatabaseManager', 'Delete completed', { tableName, id, time: timeMs });
       }
 
@@ -1784,47 +1818,85 @@ const DatabaseManager = {
    * Gerar ID único baseado nos padrões reais do sistema
    */
   _generateId(tableName) {
+    console.log('🔧 _generateId INICIADO para tabela:', tableName);
+
     // Usar dicionário de dados ao invés de padrões manuais
     const table = getTableDictionary(tableName);
 
+    console.log('📖 Dicionário da tabela:', {
+      tableName: tableName,
+      hasTable: !!table,
+      hasFields: !!(table && table.fields),
+      hasIdField: !!(table && table.fields && table.fields.id),
+      idField: table?.fields?.id
+    });
+
     if (!table || !table.fields || !table.fields.id) {
+      const fallbackId = tableName.toUpperCase() + '-' + Date.now();
+      console.log('⚠️ FALLBACK ID usado:', fallbackId);
       Logger.error('DatabaseManager', 'Tabela ou campo ID não encontrado no dicionário', {
         tableName,
         hasTable: !!table,
         hasFields: !!(table && table.fields),
         hasIdField: !!(table && table.fields && table.fields.id)
       });
-      // Fallback seguro
-      return tableName.toUpperCase() + '-' + Date.now();
+      return fallbackId;
     }
 
     const idField = table.fields.id;
 
-    // Extrair padrão do campo pattern (ex: '^PERF-\\d+$' → 'PERF')
+    console.log('🎯 Campo ID encontrado:', {
+      pattern: idField.pattern,
+      generated: idField.generated,
+      required: idField.required,
+      example: idField.example
+    });
+
+    // Extrair padrão do campo pattern (ex: 'ACT-{counter}' → 'ACT')
     let prefix = tableName.toUpperCase();
     if (idField.pattern) {
-      const match = idField.pattern.match(/^\^?([A-Z]+)/);
-      if (match) {
-        prefix = match[1];
+      // Tentar extrair prefixo de padrões como 'ACT-{counter}' ou '^ACT-\\d+$'
+      const counterMatch = idField.pattern.match(/([A-Z]+)-\{counter\}/);
+      const regexMatch = idField.pattern.match(/^\^?([A-Z]+)/);
+
+      if (counterMatch) {
+        prefix = counterMatch[1];
+        console.log('📝 Prefixo extraído de {counter}:', prefix);
+      } else if (regexMatch) {
+        prefix = regexMatch[1];
+        console.log('📝 Prefixo extraído de regex:', prefix);
       }
     }
 
     // Verificar se é formato contador ou timestamp
-    if (idField.pattern && idField.pattern.includes('\\d+')) {
-      // Formato contador (ex: PERF-001, CAT-001)
-      if (idField.pattern.includes('-')) {
+    if (idField.pattern && (idField.pattern.includes('\\d+') || idField.pattern.includes('{counter}'))) {
+      console.log('🔢 Detectado padrão contador:', idField.pattern);
+
+      // Formato contador (ex: PERF-001, CAT-001, ACT-{counter})
+      if (idField.pattern.includes('-') || idField.pattern.includes('{counter}')) {
         const lastCounter = this._getLastCounter(tableName, prefix);
-        const nextCounter = (lastCounter + 1).toString().padStart(3, '0');
-        return `${prefix}-${nextCounter}`;
+        const nextCounter = (lastCounter + 1).toString().padStart(4, '0');
+        const generatedId = `${prefix}-${nextCounter}`;
+        console.log('✅ ID gerado com contador:', {
+          prefix: prefix,
+          lastCounter: lastCounter,
+          nextCounter: nextCounter,
+          generatedId: generatedId
+        });
+        return generatedId;
       } else {
         // Formato timestamp direto (ex: U1234567890, M1234567890)
         const timestamp = Date.now().toString();
-        return `${prefix}${timestamp}`;
+        const generatedId = `${prefix}${timestamp}`;
+        console.log('✅ ID gerado com timestamp direto:', generatedId);
+        return generatedId;
       }
     }
 
     // Fallback para formato timestamp
-    return `${prefix}-${Date.now()}`;
+    const fallbackId = `${prefix}-${Date.now()}`;
+    console.log('⚠️ ID gerado com fallback timestamp:', fallbackId);
+    return fallbackId;
   },
 
   /**
@@ -2065,7 +2137,12 @@ const DatabaseManager = {
             schema[fieldName] = 'string'; // Datas como string
             break;
           default:
-            schema[fieldName] = fieldName.includes('id') ? 'id' : 'string';
+            // Campos especiais que contém 'id' mas precisam de múltiplos valores
+            if (fieldName === 'categorias_ids') {
+              schema[fieldName] = 'string'; // Permitir vírgulas para múltiplos IDs
+            } else {
+              schema[fieldName] = fieldName.includes('id') ? 'id' : 'string';
+            }
         }
       });
 
