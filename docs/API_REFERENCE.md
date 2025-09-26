@@ -591,6 +591,54 @@ X-RateLimit-Reset: 1640995200
 
 ---
 
+## 👤 **User Management APIs**
+
+APIs para gerenciamento e obtenção de dados do usuário logado.
+
+### **getCurrentLoggedUser()**
+Retorna dados do usuário logado atualmente (versão robusta para menu dinâmico).
+
+**Método:** 3 camadas de verificação para máxima confiabilidade
+1. **Sessão ativa armazenada** - Via `currentSessionId` nas propriedades
+2. **Sessão ativa mais recente** - Busca na tabela `sessoes`
+3. **Fallback seguro** - Retorna `null` se não encontrar usuário válido
+
+**Retorno:**
+```javascript
+{
+  uid: string,              // ID único do usuário
+  nome: string,             // Nome completo do usuário
+  metodo: string           // Método usado ('sessao_ativa', 'sessao_ativa_recente')
+} | null                   // null se não encontrar usuário logado
+```
+
+**Exemplo:**
+```javascript
+const user = getCurrentLoggedUser();
+if (user) {
+  console.log(`Usuário logado: ${user.nome} (${user.uid})`);
+  console.log(`Método de obtenção: ${user.metodo}`);
+}
+```
+
+**Logs detalhados:**
+- `🔍 SessionId recuperado das propriedades`
+- `✅ Usuário encontrado via sessão ativa`
+- `❌ Nenhum usuário logado encontrado`
+
+### **getCurrentUserForFilter()**
+Versão simplificada para filtros (compatibilidade com código existente).
+
+**Retorno:**
+```javascript
+{
+  uid: string,              // ID único do usuário
+  nome: string              // Nome completo do usuário
+} | null                    // null se não encontrar usuário
+```
+
+---
+
 ## 🔒 **Security**
 
 ### **Autenticação Requerida**

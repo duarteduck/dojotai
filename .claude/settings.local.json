@@ -1,8 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nSistema de conclusão de atividades + filtro ''Minhas Tarefas'' completo\n\n✅ IMPLEMENTAÇÕES CONCLUÍDAS:\n- Botão \"Concluir\" em cada card de atividade com estilo consistente (borda verde, hover effects)\n- API completeActivity() para marcar atividades como concluídas usando sessão real\n- Filtro \"Minhas Tarefas\" ativo por padrão na área de ações\n- Sistema de autenticação integrado usando SecurityManager.secureLogin()\n- Gestão de sessões unificada com validateSession() do session_manager.gs\n\n🔧 CORREÇÕES TÉCNICAS:\n- Unificação do sistema de sessões: funções agora usam validateSession() do session_manager.gs\n- Correção estrutura de sessão: acesso correto a sessionData.session.user_id\n- Integração SecurityManager: Login usando SecurityManager.secureLogin() + createSession()\n- Eliminação de dados simulados: todas operações usam dados reais do usuário autenticado\n\n📊 FUNCIONALIDADES ATIVAS:\n- Interface com 3 botões por card: Editar, Excluir, Concluir\n- completeActivity(activityId) marca atividade como concluída\n- getCurrentUserForFilter() retorna usuário autenticado para filtros\n- authenticateUser(login, password) integração completa auth + sessão\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(clasp push:*)"
     ],
     "deny": [],
     "ask": []

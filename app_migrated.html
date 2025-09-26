@@ -1421,10 +1421,10 @@
                     <span id="theme-icon">🌙</span>
                 </button>
                 <div class="user-info">
-                    <div class="user-avatar">DG</div>
+                    <div class="user-avatar" id="userMenuAvatar">DG</div>
                     <div>
-                        <div style="font-weight: 600; font-size: 0.875rem;">Diogo</div>
-                        <div style="font-size: 0.75rem; color: var(--text-light);">Administrador</div>
+                        <div style="font-weight: 600; font-size: 0.875rem;" id="userMenuName">Diogo</div>
+                        <div style="font-size: 0.75rem; color: var(--text-light);" id="userMenuRole">--</div>
                     </div>
                 </div>
                 <button class="btn logout-btn" onclick="logout()" title="Sair do sistema">
@@ -3663,10 +3663,98 @@
             }
         });
 
+        // ===== CARREGAMENTO DINÂMICO DO USUÁRIO =====
+        function loadCurrentUser() {
+            console.log('👤 Carregando dados do usuário atual...');
+
+            // Método 1: Tentar primeiro do localStorage (dados reais do login)
+            try {
+                const uid = localStorage.getItem('uid');
+                const userName = localStorage.getItem('userName');
+
+                if (uid && userName) {
+                    console.log('✅ Usuário encontrado no localStorage:', { uid, userName });
+                    updateUserMenuInfo({ uid, nome: userName });
+                    return;
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao ler localStorage:', error);
+            }
+
+            // Método 2: Tentar via app_state (backup)
+            try {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    if (user && user.nome) {
+                        console.log('✅ Usuário encontrado no app_state:', user);
+                        updateUserMenuInfo(user);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao ler app_state:', error);
+            }
+
+            // Método 3: Fallback para API apenas se necessário
+            console.log('🔄 Tentando obter usuário via API...');
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(user) {
+                        if (user && user.nome) {
+                            console.log('✅ Usuário carregado via API:', user);
+                            updateUserMenuInfo(user);
+                        } else {
+                            console.log('⚠️ Usuário não encontrado via API, mantendo valores padrão');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('❌ Erro ao carregar usuário via API:', error);
+                        // Manter valores padrão em caso de erro
+                    })
+                    .getCurrentLoggedUser(); // Usar a nova função mais robusta
+            } else {
+                console.log('⚠️ Google Script não disponível, mantendo valores padrão');
+            }
+        }
+
+        function updateUserMenuInfo(user) {
+            try {
+                const userNameEl = document.getElementById('userMenuName');
+                const userAvatarEl = document.getElementById('userMenuAvatar');
+                const userRoleEl = document.getElementById('userMenuRole');
+
+                if (userNameEl && user.nome) {
+                    userNameEl.textContent = user.nome;
+                    console.log('✅ Nome do usuário atualizado:', user.nome);
+                }
+
+                if (userAvatarEl && user.nome) {
+                    // Gerar iniciais a partir do nome
+                    const initials = user.nome
+                        .split(' ')
+                        .slice(0, 2)
+                        .map(n => n.charAt(0).toUpperCase())
+                        .join('');
+                    userAvatarEl.textContent = initials;
+                    console.log('✅ Avatar atualizado com iniciais:', initials);
+                }
+
+                if (userRoleEl) {
+                    // Manter "--" como especificado
+                    userRoleEl.textContent = '--';
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao atualizar informações do usuário:', error);
+            }
+        }
+
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function() {
             loadTheme();
             initNavigation();
+            loadCurrentUser(); // Carregar dados do usuário
 
             // DEBUG: Verificar modais após carregamento
             setTimeout(() => {
@@ -3953,17 +4041,78 @@
                 dashboardTab.classList.add('active');
             }
 
+            // Atualizar informações do usuário no menu após login
+            console.log('👤 Atualizando dados do usuário no menu...');
+            loadCurrentUser();
+
             console.log('✅ Aplicação carregada e pronta para uso!');
         }
 
-        // Função de logout
-        function logout() {
+        // Função para mostrar/esconder loading de logout
+        function showLogoutLoading(show) {
+            const overlay = document.getElementById('logoutLoadingOverlay');
+            if (overlay) {
+                overlay.style.display = show ? 'flex' : 'none';
+            }
+        }
+
+        // Função de logout com destruição de sessão
+        async function logout() {
             if (confirm('Deseja realmente sair do sistema?')) {
-                // Limpar dados de sessão
+                console.log('🚪 Iniciando processo de logout...');
+
+                // Mostrar loading overlay
+                showLogoutLoading(true);
+
+                try {
+                    // Obter sessionId atual
+                    const sessionId = localStorage.getItem('sessionId');
+                    console.log('🔍 SessionId para logout:', sessionId);
+
+                    // Destruir sessão no servidor se existe sessionId
+                    if (sessionId && typeof google !== 'undefined' && google.script && google.script.run) {
+                        console.log('🔄 Destruindo sessão no servidor...');
+
+                        try {
+                            await new Promise((resolve, reject) => {
+                                google.script.run
+                                    .withSuccessHandler((result) => {
+                                        console.log('✅ Resultado do logout no servidor:', result);
+                                        if (result && result.ok) {
+                                            console.log('✅ Sessão destruída com sucesso no servidor');
+                                        } else {
+                                            console.warn('⚠️ Logout no servidor retornou erro:', result?.error);
+                                        }
+                                        resolve(result);
+                                    })
+                                    .withFailureHandler((error) => {
+                                        console.error('❌ Erro ao destruir sessão no servidor:', error);
+                                        // Continuar com logout local mesmo se falhar no servidor
+                                        resolve(null);
+                                    })
+                                    .logoutUser(sessionId);
+                            });
+                        } catch (serverError) {
+                            console.warn('⚠️ Erro na chamada do servidor, continuando com logout local:', serverError);
+                        }
+                    } else {
+                        console.log('📝 Sem sessionId ou Google Script indisponível, fazendo logout local apenas');
+                    }
+
+                } catch (error) {
+                    console.warn('⚠️ Erro durante logout no servidor, continuando com limpeza local:', error);
+                }
+
+                // Limpar TODOS os dados de sessão local
+                console.log('🧹 Limpando dados locais...');
                 localStorage.removeItem('sessionId');
                 localStorage.removeItem('uid');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('user');
+                sessionStorage.clear();
 
                 // Esconder todo o conteúdo da aplicação
+                console.log('🔄 Ocultando interface da aplicação...');
                 const appContent = document.querySelector('.app-container');
                 const header = document.querySelector('.app-header');
                 const navTabs = document.querySelector('.nav-tabs');
@@ -3977,10 +4126,55 @@
                 pageContents.forEach(page => page.style.display = 'none');
 
                 // Mostrar tela de login novamente
+                console.log('🔄 Redirecionando para tela de login...');
                 showLogin();
+
+                // Esconder loading overlay
+                showLogoutLoading(false);
+
+                console.log('✅ Logout completo realizado com sucesso!');
             }
         }
     </script>
+
+    <!-- Loading Overlay Global para Logout -->
+    <div id="logoutLoadingOverlay" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        color: white;
+        font-family: var(--font-family);
+    ">
+        <div style="
+            width: 64px;
+            height: 64px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 24px;
+        "></div>
+        <h3 style="
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            text-align: center;
+        ">Desconectando...</h3>
+        <p style="
+            font-size: 0.875rem;
+            opacity: 0.8;
+            margin: 0;
+            text-align: center;
+        ">Finalizando sessão e limpando dados</p>
+    </div>
 
     <!-- Includes do JavaScript atual -->
     <script>

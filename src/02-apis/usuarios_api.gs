@@ -744,6 +744,89 @@ async function authenticateUser(login, password) {
 }
 
 /**
+ * Retorna dados do usuário logado atualmente (para menu dinâmico)
+ * @returns {Object} Dados do usuário logado
+ */
+function getCurrentLoggedUser() {
+  try {
+    console.log('👤 Buscando usuário logado atual...');
+
+    // Método 1: Tentar via sessão atual armazenada
+    let sessionId = PropertiesService.getScriptProperties().getProperty('currentSessionId');
+    console.log('🔍 SessionId recuperado das propriedades:', sessionId);
+
+    if (sessionId) {
+      const sessionData = validateSession(sessionId);
+      console.log('🔍 Dados da sessão validada:', sessionData);
+
+      if (sessionData && sessionData.ok && sessionData.session) {
+        const userId = sessionData.session.user_id;
+        console.log('🔍 UserId da sessão:', userId);
+
+        const usuario = DatabaseManager.findById('usuarios', userId);
+        if (usuario) {
+          console.log('✅ Usuário encontrado via sessão:', usuario.uid, usuario.nome);
+          return {
+            uid: usuario.uid,
+            nome: usuario.nome,
+            metodo: 'sessao_ativa'
+          };
+        }
+      }
+    }
+
+    // Método 2: Tentar buscar sessão ativa mais recente
+    console.log('🔄 Tentando método 2: sessão ativa mais recente...');
+    try {
+      const sessionsData = readTableByNome_('sessoes');
+      if (sessionsData && sessionsData.values && sessionsData.values.length > 1) {
+        const headers = sessionsData.values[0];
+        const rows = sessionsData.values.slice(1);
+
+        // Buscar sessões ativas ordenadas por data
+        const sessionsAtivas = rows
+          .map(row => {
+            const session = {};
+            headers.forEach((header, index) => {
+              session[header] = row[index];
+            });
+            return session;
+          })
+          .filter(s => s.active === 'true' || s.active === true)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        if (sessionsAtivas.length > 0) {
+          const sessionAtiva = sessionsAtivas[0];
+          console.log('🔍 Sessão ativa mais recente encontrada:', sessionAtiva.session_id);
+
+          const usuario = DatabaseManager.findById('usuarios', sessionAtiva.user_id);
+          if (usuario) {
+            console.log('✅ Usuário encontrado via sessão ativa:', usuario.uid, usuario.nome);
+            return {
+              uid: usuario.uid,
+              nome: usuario.nome,
+              metodo: 'sessao_ativa_recente'
+            };
+          }
+        }
+      }
+    } catch (sessionError) {
+      console.warn('⚠️ Erro ao buscar sessões ativas:', sessionError.message);
+    }
+
+    // Método 3: Log para debug - NÃO retornar usuário aleatório
+    console.log('❌ Nenhum usuário logado encontrado pelos métodos disponíveis');
+    console.log('💡 Isso pode indicar que o usuário precisa fazer login novamente');
+
+    return null;
+
+  } catch (error) {
+    console.error('❌ Erro ao obter usuário logado:', error);
+    return null;
+  }
+}
+
+/**
  * Retorna o primeiro usuário da tabela para desenvolvimento
  * @returns {Object} Dados do usuário para desenvolvimento
  */

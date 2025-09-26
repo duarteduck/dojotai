@@ -1,8 +1,8 @@
 # 📋 PENDÊNCIAS E ROADMAP - Sistema Dojotai V2.0
 
-**Última atualização:** 26/09/2025 - 14:30h
-**Status do projeto:** Nova Atividade + Sistema de Conclusão COMPLETO ✅
-**Sessão atual:** Interface de atividades com botão "Concluir" e filtro "Minhas Tarefas" funcionais
+**Última atualização:** 26/09/2025 - 18:45h
+**Status do projeto:** Menu Dinâmico + Logout Aprimorado COMPLETO ✅
+**Sessão atual:** Sistema de autenticação com menu dinâmico e feedback visual completo
 
 ---
 
@@ -75,6 +75,37 @@
 - ✅ **Botão "Concluir"**: Atualiza status da atividade para "Concluída"
 - ✅ **Interface**: Botões com hover effects e layout centralizado
 - ✅ **Session Management**: Validação de sessão consistente em todas as operações
+
+### Menu Dinâmico e Logout Aprimorado - **FINALIZADO COM SUCESSO** ✅
+
+**Status:** ✅ **SISTEMA COMPLETO E FUNCIONAL**
+**Data conclusão:** 26/09/2025
+**Arquivo principal:** `app_migrated.html` + `usuarios_api.gs`
+
+#### ✅ IMPLEMENTAÇÕES CONCLUÍDAS
+- ✅ **Menu de Usuário Dinâmico**: Botão do menu exibe nome real do usuário logado
+- ✅ **Geração Automática de Iniciais**: Avatar criado dinamicamente (ex: "João Silva" → "JS")
+- ✅ **Loading Overlay de Logout**: Feedback visual elegante durante desconexão
+- ✅ **Atualização Automática**: Dados do usuário recarregados após cada login
+- ✅ **Sistema de Logout Robusto**: Destruição de sessão no servidor + limpeza local
+
+#### 🔧 ARQUITETURA IMPLEMENTADA
+- ✅ **Função `loadCurrentUser()`**: Carregamento em 3 camadas (localStorage → app_state → API)
+- ✅ **Função `showLogoutLoading()`**: Gerenciamento centralizado do overlay
+- ✅ **API `getCurrentLoggedUser()`**: Backend robusto para obtenção do usuário ativo
+- ✅ **Integração com `showApp()`**: Recarga automática após login bem-sucedido
+
+#### 🔧 CORREÇÕES REALIZADAS
+- ✅ **Persistência de Nome**: Menu não mantinha nome do usuário anterior após troca
+- ✅ **Dados Estáticos**: Remoção de "Diogo" e "Administrador" fixos
+- ✅ **Feedback de Logout**: Adicionado loading overlay durante processo de saída
+- ✅ **Troca sem Refresh**: Possível alternar usuários sem recarregar página
+
+#### 📊 FUNCIONALIDADES VALIDADAS
+- ✅ **Login com Usuário A**: Nome e iniciais aparecem corretamente no menu
+- ✅ **Logout**: Loading overlay + destruição de sessão + limpeza completa
+- ✅ **Login com Usuário B**: Menu atualiza automaticamente sem refresh
+- ✅ **Consistência Visual**: Loading segue padrão das outras telas
 
 ### SessionManager V4.0 - **FINALIZADO COM SUCESSO** ✅
 

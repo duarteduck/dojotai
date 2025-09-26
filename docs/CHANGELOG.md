@@ -20,6 +20,43 @@ Seguimos [Semantic Versioning](https://semver.org/):
 
 ---
 
+## 🚀 **V2.0.0-alpha.2** - 2025-09-26
+
+### 🎯 **MENU DINÂMICO E LOGOUT APRIMORADO**
+
+#### ✅ **Adicionado**
+- **Menu de Usuário Dinâmico** - Botão do menu agora exibe nome real do usuário logado
+- **Geração Automática de Iniciais** - Avatar gerado dinamicamente a partir do nome (ex: "João Silva" → "JS")
+- **Loading Overlay de Logout** - Feedback visual elegante durante processo de desconexão
+- **Atualização Automática de Sessão** - Dados do usuário atualizados automaticamente após login
+- **Sistema de Logout Robusto** - Destruição de sessão no servidor + limpeza local completa
+
+#### 🔧 **Melhorado**
+- **Troca de Usuários sem Refresh** - Possível alternar entre usuários sem recarregar página
+- **Gestão de localStorage** - Limpeza completa de todos os dados de sessão (`uid`, `userName`, `user`, `sessionId`)
+- **Feedback Visual Consistente** - Loading overlay seguindo padrão das outras telas do sistema
+- **Logs Estruturados** - Console detalhado para debugging de sessões e logout
+
+#### 🔧 **Corrigido**
+- **Persistência de Nome de Usuário** - Menu não mantinha nome do usuário anterior após troca
+- **Ausência de Feedback de Logout** - Usuário não tinha feedback visual durante processo de saída
+- **Dados Estáticos no Menu** - Nome "Diogo" e papel "Administrador" eram fixos
+- **Falta de Integração com Sessões** - Menu não estava conectado ao sistema de autenticação
+
+#### 🏗️ **Arquitetura**
+- **Função `loadCurrentUser()`** - Carregamento em camadas (localStorage → app_state → API)
+- **Função `showLogoutLoading()`** - Gerenciamento centralizado do overlay de loading
+- **Integração com `showApp()`** - Recarga automática de dados do usuário após login
+- **API `getCurrentLoggedUser()`** - Backend robusto para obtenção do usuário ativo
+
+#### 📱 **Interface**
+- **Menu Responsivo** - Iniciais e nome se adaptam ao tamanho da tela
+- **Loading Overlay Global** - Z-index 10000, design consistente com spinner animado
+- **Papel Padronizado** - Campo "papel" fixo como "--" conforme especificação
+- **Integração Seamless** - Transições suaves entre estados de login/logout
+
+---
+
 ## 🚀 **V2.0.0-alpha.1** - 2025-09-23
 
 ### 🎯 **VERSÃO ATUAL - SISTEMA DE LOGS V2.0 COMPLETO**
