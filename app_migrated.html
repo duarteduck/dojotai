@@ -2942,19 +2942,32 @@
                                     <p style="color: var(--text-light); margin: 0;">Buscando membros...</p>
                                 </div>
 
-                                <!-- Lista de membros encontrados -->
+                                <!-- Sistema de Lista Dupla -->
                                 <div id="targetsResults" style="display: none;">
-                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <!-- Lista Superior: Resultados da Pesquisa -->
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
                                         <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                                            <span id="targetsCount" style="font-weight: 600; color: var(--text);">0 membros encontrados</span>
+                                            <span id="targetsCount" style="font-weight: 600; color: var(--text);">📋 Membros Encontrados (0)</span>
                                             <div style="display: flex; gap: 8px;">
-                                                <button class="btn btn-sm" onclick="selectAllTargets()" style="font-size: var(--font-size-xs);">Selecionar Todos</button>
-                                                <button class="btn btn-sm" onclick="unselectAllTargets()" style="font-size: var(--font-size-xs);">Desselecionar Todos</button>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="selectAllTargets()" style="font-size: var(--font-size-xs);">Selecionar Todos</button>
                                             </div>
                                         </div>
-                                        <div id="targetsList" style="max-height: 300px; overflow-y: auto; padding: 8px;"></div>
-                                        <div style="padding: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-start; align-items: center;">
-                                            <span id="targetsSelected" style="font-weight: 600; color: var(--primary);">0 selecionados</span>
+                                        <div id="targetsList" style="max-height: 250px; overflow-y: auto; padding: 8px;"></div>
+                                    </div>
+
+                                    <!-- Lista Inferior: Membros Selecionados -->
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--primary); border-width: 2px;">
+                                        <div style="padding: 16px; border-bottom: 1px solid var(--primary); display: flex; justify-content: space-between; align-items: center; background: var(--primary-light);">
+                                            <span id="targetsSelected" style="font-weight: 600; color: var(--primary);">🎯 Alvos Selecionados (0)</span>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="unselectAllTargets()" style="font-size: var(--font-size-xs);">Remover Todos</button>
+                                            </div>
+                                        </div>
+                                        <div id="targetsSelectedList" style="max-height: 200px; overflow-y: auto; padding: 8px; min-height: 60px;">
+                                            <div style="text-align: center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                                                Nenhum membro selecionado ainda.<br>
+                                                <small>Clique nos membros acima para adicioná-los como alvos.</small>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -3042,6 +3055,7 @@
             console.log('🧼 Limpando seleções de alvos ao fechar modal de criação');
             selectedTargets.clear();
             currentTargetsData = [];
+            window.allMembersCache = [];
 
             const modal = document.getElementById('activityModal');
             if (modal) {
@@ -3217,19 +3231,32 @@
                                     <p style="color: var(--text-light); margin: 0;">Buscando membros...</p>
                                 </div>
 
-                                <!-- Lista de membros encontrados -->
+                                <!-- Sistema de Lista Dupla -->
                                 <div id="editTargetsResults" style="display: none;">
-                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <!-- Lista Superior: Resultados da Pesquisa -->
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
                                         <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                                            <span id="editTargetsCount" style="font-weight: 600; color: var(--text);">0 membros encontrados</span>
+                                            <span id="editTargetsCount" style="font-weight: 600; color: var(--text);">📋 Membros Encontrados (0)</span>
                                             <div style="display: flex; gap: 8px;">
-                                                <button class="btn btn-sm" onclick="selectAllTargets('edit')" style="font-size: var(--font-size-xs);">Selecionar Todos</button>
-                                                <button class="btn btn-sm" onclick="unselectAllTargets('edit')" style="font-size: var(--font-size-xs);">Desselecionar Todos</button>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="selectAllTargets('edit')" style="font-size: var(--font-size-xs);">Selecionar Todos</button>
                                             </div>
                                         </div>
-                                        <div id="editTargetsList" style="max-height: 300px; overflow-y: auto; padding: 8px;"></div>
-                                        <div style="padding: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-start; align-items: center;">
-                                            <span id="editTargetsSelected" style="font-weight: 600; color: var(--primary);">0 selecionados</span>
+                                        <div id="editTargetsList" style="max-height: 250px; overflow-y: auto; padding: 8px;"></div>
+                                    </div>
+
+                                    <!-- Lista Inferior: Membros Selecionados -->
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--primary); border-width: 2px;">
+                                        <div style="padding: 16px; border-bottom: 1px solid var(--primary); display: flex; justify-content: space-between; align-items: center; background: var(--primary-light);">
+                                            <span id="editTargetsSelected" style="font-weight: 600; color: var(--primary);">🎯 Alvos Selecionados (0)</span>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="unselectAllTargets('edit')" style="font-size: var(--font-size-xs);">Remover Todos</button>
+                                            </div>
+                                        </div>
+                                        <div id="editTargetsSelectedList" style="max-height: 200px; overflow-y: auto; padding: 8px; min-height: 60px;">
+                                            <div style="text-align: center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                                                Nenhum membro selecionado ainda.<br>
+                                                <small>Clique nos membros acima para adicioná-los como alvos.</small>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -3321,6 +3348,7 @@
             console.log('🧼 Limpando seleções de alvos ao fechar modal de edição');
             selectedTargets.clear();
             currentTargetsData = [];
+            window.allMembersCache = [];
 
             const modal = document.getElementById('editActivityModal');
             if (modal) {
@@ -4232,6 +4260,8 @@
         let currentActivityId = null;
         let currentTargetsData = [];
         let selectedTargets = new Set();
+        // Cache global para manter dados de membros selecionados de buscas anteriores
+        window.allMembersCache = [];
 
         // Função para mostrar/esconder botão após salvar atividade
         function showTargetsButton(mode = 'create') {
@@ -4497,80 +4527,144 @@
             }
         }
 
-        // Exibir resultados da busca
-        function displayTargetsResults(members, mode = 'create') {
-            console.log('📋 Exibindo resultados:', members.length, 'membros');
-            console.log('🎯 Membros já selecionados:', selectedTargets.size);
+        // Criar item da lista de membro
+        function createMemberListItem(member, isSelected, mode) {
+            const bgStyle = isSelected ? 'background-color: var(--primary-light); border: 2px solid var(--primary);' : 'background-color: white; border: 1px solid var(--border-color);';
+            const textColor = isSelected ? 'var(--primary)' : 'var(--text)';
 
-            // Obter membros anteriormente selecionados que podem não estar nos novos resultados
-            const previouslySelected = currentTargetsData.filter(member =>
-                selectedTargets.has(member.codigo_sequencial)
-            );
+            return `<div style="
+                display: flex;
+                align-items: center;
+                padding: 8px 12px;
+                ${bgStyle}
+                border-radius: 6px;
+                margin-bottom: 4px;
+                cursor: pointer;
+                transition: all 0.2s;
+            " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'" onclick="toggleTargetSelection('${member.codigo_sequencial}', '${mode}')">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: var(--font-size-sm); color: ${textColor};">${member.nome}</div>
+                    <div style="font-size: var(--font-size-xs); color: var(--text-light);">
+                        #${member.codigo_sequencial} • ${member.dojo || 'N/A'} • ${member.status || 'N/A'}
+                    </div>
+                </div>
+                <div style="color: ${textColor}; font-size: 16px;">
+                    ${isSelected ? '❌' : '➕'}
+                </div>
+            </div>`;
+        }
 
-            // Criar conjunto de IDs dos novos resultados para evitar duplicatas
-            const newMemberIds = new Set(members.map(m => m.codigo_sequencial));
-
-            // Adicionar membros anteriormente selecionados que não estão nos novos resultados
-            const selectedNotInResults = previouslySelected.filter(member =>
-                !newMemberIds.has(member.codigo_sequencial)
-            );
-
-            // Combinar: membros selecionados primeiro + novos resultados
-            const allMembers = [...selectedNotInResults, ...members];
-
-            // Remover duplicatas baseado no codigo_sequencial
-            const uniqueMembers = allMembers.filter((member, index, arr) =>
-                arr.findIndex(m => m.codigo_sequencial === member.codigo_sequencial) === index
-            );
-
-            // Separar entre selecionados e não selecionados para organizar a lista
-            const selectedMembers = uniqueMembers.filter(member => selectedTargets.has(member.codigo_sequencial));
-            const unselectedMembers = uniqueMembers.filter(member => !selectedTargets.has(member.codigo_sequencial));
-
-            // Ordenar cada grupo alfabeticamente
-            selectedMembers.sort((a, b) => a.nome.localeCompare(b.nome));
-            unselectedMembers.sort((a, b) => a.nome.localeCompare(b.nome));
-
-            // Lista final: selecionados no topo + não selecionados
-            const sortedMembers = [...selectedMembers, ...unselectedMembers];
-
-            console.log('📋 Lista final:', {
-                total: sortedMembers.length,
-                selecionados: selectedMembers.length,
-                naoSelecionados: unselectedMembers.length,
-                mantidosDaSelecaoAnterior: selectedNotInResults.length
-            });
-
-            currentTargetsData = sortedMembers;
-            // NÃO limpar selectedTargets - manter seleções existentes
-
-            // Para nova atividade, os elementos não têm prefixo
-            // Para editar atividade, os elementos têm prefixo 'edit'
-            let prefix, countEl, listEl, resultsEl, emptyEl;
+        // Atualizar lista de membros selecionados
+        function updateSelectedMembersList(mode = 'create') {
+            let selectedListEl, selectedCountEl;
 
             if (mode === 'edit') {
-                prefix = 'edit';
+                selectedListEl = document.getElementById('editTargetsSelectedList');
+                selectedCountEl = document.getElementById('editTargetsSelected');
+            } else {
+                selectedListEl = document.getElementById('targetsSelectedList');
+                selectedCountEl = document.getElementById('targetsSelected');
+            }
+
+            if (!selectedListEl) return;
+
+            console.log('🎯 Atualizando lista de selecionados - INICIADO:', selectedTargets.size);
+
+            // Obter membros selecionados de currentTargetsData e adicionar outros já selecionados
+            const allSelectedMembers = [];
+
+            console.log('📊 Processando selectedTargets:', Array.from(selectedTargets));
+
+            // Adicionar da busca atual
+            currentTargetsData.forEach(member => {
+                if (selectedTargets.has(String(member.codigo_sequencial))) {
+                    allSelectedMembers.push(member);
+                    console.log('✅ Adicionado da busca atual:', member.nome);
+                }
+            });
+
+            // Buscar dados de membros selecionados que não estão na busca atual
+            selectedTargets.forEach(memberId => {
+                const memberInCurrent = currentTargetsData.find(m => String(m.codigo_sequencial) === memberId);
+                if (!memberInCurrent) {
+                    // Membro foi selecionado em busca anterior, precisamos dos dados
+                    const cachedMember = window.allMembersCache?.find(m => String(m.codigo_sequencial) === memberId);
+                    if (cachedMember) {
+                        allSelectedMembers.push(cachedMember);
+                        console.log('✅ Adicionado do cache:', cachedMember.nome);
+                    } else {
+                        console.warn('⚠️ Membro selecionado não encontrado no cache:', memberId);
+                    }
+                }
+            });
+
+            console.log('📊 Total de membros selecionados para renderizar:', allSelectedMembers.length);
+
+            // Ordenar alfabeticamente
+            allSelectedMembers.sort((a, b) => a.nome.localeCompare(b.nome));
+
+            // Atualizar contador
+            if (selectedCountEl) {
+                selectedCountEl.textContent = `🎯 Alvos Selecionados (${selectedTargets.size})`;
+                console.log('✅ Contador atualizado');
+            }
+
+            // Renderizar lista
+            if (allSelectedMembers.length === 0) {
+                selectedListEl.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                        Nenhum membro selecionado ainda.<br>
+                        <small>Clique nos membros acima para adicioná-los como alvos.</small>
+                    </div>`;
+                console.log('✅ Lista inferior: estado vazio definido');
+            } else {
+                selectedListEl.innerHTML = allSelectedMembers.map(member =>
+                    createMemberListItem(member, true, mode)
+                ).join('');
+                console.log('✅ Lista inferior: renderizada com', allSelectedMembers.length, 'membros');
+            }
+
+            console.log('✅ Lista de selecionados - CONCLUÍDA');
+        }
+
+        // Exibir resultados da busca
+        function displayTargetsResults(members, mode = 'create') {
+            console.log('📋 Exibindo resultados sistema de lista dupla:', members.length, 'membros');
+            console.log('🎯 Membros já selecionados:', selectedTargets.size);
+
+            // Ordenar membros alfabeticamente
+            const sortedMembers = [...members].sort((a, b) => a.nome.localeCompare(b.nome));
+
+            // Atualizar dados globais mantendo seleções existentes
+            currentTargetsData = sortedMembers;
+
+            // Elementos para lista dupla
+            let countEl, searchListEl, selectedListEl, resultsEl, emptyEl;
+
+            if (mode === 'edit') {
                 countEl = document.getElementById('editTargetsCount');
-                listEl = document.getElementById('editTargetsList');
+                searchListEl = document.getElementById('editTargetsList');
+                selectedListEl = document.getElementById('editTargetsSelectedList');
                 resultsEl = document.getElementById('editTargetsResults');
                 emptyEl = document.getElementById('editTargetsEmpty');
             } else {
-                prefix = '';
                 countEl = document.getElementById('targetsCount');
-                listEl = document.getElementById('targetsList');
+                searchListEl = document.getElementById('targetsList');
+                selectedListEl = document.getElementById('targetsSelectedList');
                 resultsEl = document.getElementById('targetsResults');
                 emptyEl = document.getElementById('targetsEmpty');
             }
 
-            console.log('🔍 Elementos encontrados:', {
+            console.log('🔍 Elementos de lista dupla encontrados:', {
                 countEl: !!countEl,
-                listEl: !!listEl,
+                searchListEl: !!searchListEl,
+                selectedListEl: !!selectedListEl,
                 resultsEl: !!resultsEl,
                 emptyEl: !!emptyEl,
                 mode: mode
             });
 
-            // Esconder outros estados
+            // Esconder estado vazio
             if (emptyEl) emptyEl.style.display = 'none';
 
             if (sortedMembers.length === 0) {
@@ -4579,84 +4673,138 @@
             }
 
             // Mostrar resultados
-            console.log('📋 Tentando mostrar resultados...');
             if (resultsEl) {
-                console.log('✅ Mostrando resultsEl');
                 resultsEl.style.display = 'block';
-            } else {
-                console.error('❌ resultsEl não encontrado!');
             }
 
+            // Atualizar contador de membros encontrados
             if (countEl) {
-                console.log('✅ Atualizando countEl');
-                const newResultsCount = members.length;
-                const selectedCount = selectedTargets.size;
-                const totalShown = sortedMembers.length;
-
-                countEl.textContent = `${totalShown} membros (${newResultsCount} encontrados${selectedCount > 0 ? `, ${selectedCount} selecionados mantidos` : ''})`;
-            } else {
-                console.error('❌ countEl não encontrado!');
+                countEl.textContent = `📋 Membros Encontrados (${sortedMembers.length})`;
             }
 
-            if (listEl) {
-                console.log('✅ Populando listEl com', sortedMembers.length, 'membros');
-                listEl.innerHTML = sortedMembers.map(member => {
-                    const isSelected = selectedTargets.has(member.codigo_sequencial);
-                    const borderStyle = isSelected ? 'border: 2px solid var(--primary);' : 'border: 1px solid var(--border-color);';
-                    const bgStyle = isSelected ? 'background-color: var(--primary-light);' : '';
+            // Lista superior: Apenas membros NÃO selecionados
+            if (searchListEl) {
+                const unselectedMembers = sortedMembers.filter(member =>
+                    !selectedTargets.has(member.codigo_sequencial)
+                );
 
-                    return `<div style="
-                        display: flex;
-                        align-items: center;
-                        padding: 8px 12px;
-                        ${borderStyle}
-                        ${bgStyle}
-                        border-radius: 6px;
-                        margin-bottom: 4px;
-                        cursor: pointer;
-                        transition: all 0.2s;
-                    " onmouseover="this.style.backgroundColor='var(--light)'" onmouseout="this.style.backgroundColor='${isSelected ? 'var(--primary-light)' : 'white'}'" onclick="toggleTargetSelection('${member.codigo_sequencial}', '${mode}')">
-                        <input
-                            type="checkbox"
-                            id="target-${member.codigo_sequencial}-${mode}"
-                            style="margin-right: 12px; transform: scale(1.2); pointer-events: none;"
-                            ${isSelected ? 'checked' : ''}
-                        >
-                        <div style="flex: 1;">
-                            <div style="font-weight: 600; font-size: var(--font-size-sm); ${isSelected ? 'color: var(--primary);' : ''}">${member.nome}</div>
-                            <div style="font-size: var(--font-size-xs); color: var(--text-light);">
-                                #${member.codigo_sequencial} • ${member.dojo || 'N/A'} • ${member.status || 'N/A'}
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('');
+                console.log('📋 Lista superior:', unselectedMembers.length, 'não selecionados');
+
+                if (unselectedMembers.length === 0) {
+                    searchListEl.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                            Todos os membros encontrados já foram selecionados.<br>
+                            <small>Use filtros diferentes para buscar outros membros.</small>
+                        </div>`;
+                } else {
+                    searchListEl.innerHTML = unselectedMembers.map(member =>
+                        createMemberListItem(member, false, mode)
+                    ).join('');
+                }
             }
 
-            updateTargetsSelected(mode);
+            // Lista inferior: Membros selecionados (de todas as buscas)
+            updateSelectedMembersList(mode);
         }
 
-        // Toggle seleção de membro
+        // Toggle seleção de membro (sistema de lista dupla)
         function toggleTargetSelection(memberId, mode = 'create') {
-            const checkbox = document.getElementById(`target-${memberId}-${mode}`);
+            console.log('🔄 Toggle seleção INICIADO:', memberId, 'Mode:', mode);
+            console.log('📊 Estado atual selectedTargets:', Array.from(selectedTargets));
+            console.log('📊 currentTargetsData:', currentTargetsData.length, 'membros');
 
-            if (!checkbox) {
-                console.error('Checkbox não encontrado:', `target-${memberId}-${mode}`);
-                return;
-            }
+            // Garantir que memberId seja string para consistência
+            const memberIdStr = String(memberId);
 
-            // Alternar o estado do checkbox
-            checkbox.checked = !checkbox.checked;
+            // Verificar se membro está selecionado
+            const isCurrentlySelected = selectedTargets.has(memberIdStr);
+            console.log('🔍 Membro atualmente selecionado?', isCurrentlySelected);
+            console.log('🔍 MemberId (convertido para string):', memberIdStr);
 
-            // Atualizar o Set baseado no novo estado
-            if (checkbox.checked) {
-                selectedTargets.add(memberId);
-                console.log('✅ Membro selecionado:', memberId);
+            if (isCurrentlySelected) {
+                // Remover da seleção
+                selectedTargets.delete(memberIdStr);
+                console.log('❌ Membro removido dos alvos:', memberIdStr);
             } else {
-                selectedTargets.delete(memberId);
-                console.log('❌ Membro desmarcado:', memberId);
+                // Adicionar à seleção
+                selectedTargets.add(memberIdStr);
+                console.log('✅ Membro adicionado aos alvos:', memberIdStr);
+
+                // Adicionar ao cache global se não estiver lá
+                const member = currentTargetsData.find(m => String(m.codigo_sequencial) === memberIdStr);
+                console.log('🔍 Membro encontrado nos dados atuais?', !!member);
+                console.log('🔍 Comparando IDs:', currentTargetsData.map(m => `${m.nome}: ${typeof m.codigo_sequencial} "${m.codigo_sequencial}"`));
+
+                if (member && !window.allMembersCache) {
+                    window.allMembersCache = [];
+                    console.log('🆕 Cache global criado');
+                }
+                if (member && window.allMembersCache && !window.allMembersCache.find(m => m.codigo_sequencial === memberId)) {
+                    window.allMembersCache.push(member);
+                    console.log('💾 Membro adicionado ao cache global');
+                }
             }
 
-            updateTargetsSelected(mode);
+            console.log('📊 Novo estado selectedTargets:', Array.from(selectedTargets));
+            console.log('🔄 Chamando updateDualListDisplay...');
+
+            // Atualizar ambas as listas
+            updateDualListDisplay(mode);
+
+            console.log('✅ Toggle seleção CONCLUÍDO');
+        }
+
+        // Atualizar display das duas listas
+        function updateDualListDisplay(mode = 'create') {
+            console.log('🔄 Atualizando display das listas duplas - INICIADO');
+            console.log('🎯 Mode:', mode);
+
+            let searchListEl, selectedListEl;
+
+            if (mode === 'edit') {
+                searchListEl = document.getElementById('editTargetsList');
+                selectedListEl = document.getElementById('editTargetsSelectedList');
+            } else {
+                searchListEl = document.getElementById('targetsList');
+                selectedListEl = document.getElementById('targetsSelectedList');
+            }
+
+            console.log('🔍 Elementos encontrados:', {
+                searchListEl: !!searchListEl,
+                selectedListEl: !!selectedListEl,
+                currentTargetsData: currentTargetsData.length
+            });
+
+            // Atualizar lista superior (membros disponíveis para seleção)
+            if (searchListEl && currentTargetsData) {
+                const unselectedMembers = currentTargetsData.filter(member =>
+                    !selectedTargets.has(String(member.codigo_sequencial))
+                );
+
+                console.log('📋 Lista superior: filtrando', currentTargetsData.length, '→', unselectedMembers.length, 'não selecionados');
+
+                if (unselectedMembers.length === 0) {
+                    searchListEl.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                            Todos os membros encontrados já foram selecionados.<br>
+                            <small>Use filtros diferentes para buscar outros membros.</small>
+                        </div>`;
+                    console.log('✅ Lista superior: estado vazio definido');
+                } else {
+                    searchListEl.innerHTML = unselectedMembers.map(member =>
+                        createMemberListItem(member, false, mode)
+                    ).join('');
+                    console.log('✅ Lista superior: renderizada com', unselectedMembers.length, 'membros');
+                }
+            } else {
+                console.error('❌ Lista superior: elementos não encontrados');
+            }
+
+            // Atualizar lista inferior (membros selecionados)
+            console.log('🎯 Chamando updateSelectedMembersList...');
+            updateSelectedMembersList(mode);
+
+            console.log('✅ Display das listas duplas - CONCLUÍDO');
         }
 
         // Atualizar contador de selecionados
@@ -4727,41 +4875,38 @@
             console.log('✅ Lista de selecionados atualizada:', selectedMembers.length, 'membros');
         }
 
-        // Selecionar todos os alvos
+        // Selecionar todos os alvos (sistema de lista dupla)
         function selectAllTargets(mode = 'create') {
-            console.log('✅ Selecionando todos os membros para:', mode);
+            console.log('✅ Selecionando todos os membros visíveis para:', mode);
             console.log('📊 Membros disponíveis:', currentTargetsData.length);
 
             currentTargetsData.forEach(member => {
-                const memberId = member.codigo_sequencial;
-                selectedTargets.add(memberId);
-                const checkbox = document.getElementById(`target-${memberId}-${mode}`);
-                if (checkbox) {
-                    checkbox.checked = true;
-                    console.log('✅ Checkbox marcado para:', memberId);
-                } else {
-                    console.warn('⚠️ Checkbox não encontrado para:', memberId);
+                const memberId = String(member.codigo_sequencial);
+                if (!selectedTargets.has(memberId)) {
+                    selectedTargets.add(memberId);
+
+                    // Adicionar ao cache global
+                    if (!window.allMembersCache) {
+                        window.allMembersCache = [];
+                    }
+                    if (!window.allMembersCache.find(m => String(m.codigo_sequencial) === memberId)) {
+                        window.allMembersCache.push(member);
+                    }
                 }
             });
-            updateTargetsSelected(mode);
+
+            // Atualizar display das listas
+            updateDualListDisplay(mode);
         }
 
-        // Desselecionar todos os alvos
+        // Desselecionar todos os alvos (sistema de lista dupla)
         function unselectAllTargets(mode = 'create') {
-            console.log('❌ Desmarcando todos os membros para:', mode);
+            console.log('❌ Removendo todos os alvos selecionados para:', mode);
 
             selectedTargets.clear();
-            currentTargetsData.forEach(member => {
-                const memberId = member.codigo_sequencial;
-                const checkbox = document.getElementById(`target-${memberId}-${mode}`);
-                if (checkbox) {
-                    checkbox.checked = false;
-                    console.log('❌ Checkbox desmarcado para:', memberId);
-                } else {
-                    console.warn('⚠️ Checkbox não encontrado para:', memberId);
-                }
-            });
-            updateTargetsSelected(mode);
+
+            // Atualizar display das listas
+            updateDualListDisplay(mode);
         }
 
         // Limpar filtros
@@ -4868,6 +5013,7 @@
         function resetTargetsSection(mode = 'create') {
             selectedTargets.clear();
             currentTargetsData = [];
+            window.allMembersCache = [];
             showTargetsEmpty(mode);
         }
 
