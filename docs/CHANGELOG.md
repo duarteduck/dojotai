@@ -1,7 +1,7 @@
 # 📅 CHANGELOG - Sistema Dojotai
 
-**Versão Atual:** 2.0.0-alpha.3
-**Atualizado:** 26/09/2025
+**Versão Atual:** 2.0.0-alpha.4
+**Atualizado:** 27/09/2025
 
 ---
 
@@ -17,6 +17,55 @@ Seguimos [Semantic Versioning](https://semver.org/):
 - `-alpha.X` - Versão em desenvolvimento inicial
 - `-beta.X` - Versão em testes avançados
 - `-rc.X` - Release candidate (candidata a lançamento)
+
+---
+
+## 🚀 **V2.0.0-alpha.4** - 2025-09-27
+
+### 🎯 **SISTEMA DE ALVOS - INTERFACE LISTA DUPLA REVOLUCIONÁRIA**
+
+#### ✅ **Adicionado**
+- **Sistema de Lista Dupla** - Interface revolucionária para gestão de alvos
+- **Lista Superior (Busca)** - Mostra apenas membros NÃO selecionados da busca atual
+- **Lista Inferior (Selecionados)** - Mostra TODOS os membros selecionados (sempre visível)
+- **Movimento Visual Inteligente** - Clique move membros entre listas instantaneamente
+- **Persistência Global Aprimorada** - Lista de selecionados nunca é ocultada por filtros ou loading
+- **Gravação Automática Robusta** - Alvos salvos na tabela participações com logs detalhados
+- **Sistema de Cache Otimizado** - `window.allMembersCache` mantém dados entre buscas
+- **Logs Estruturados Completos** - Debugging detalhado para troubleshooting
+- **Contadores Independentes** - "📋 Membros Encontrados (X)" + "🎯 Alvos Selecionados (X)"
+- **Estados Visuais Diferenciados** - Icons ➕ (adicionar) e ❌ (remover) para feedback
+
+#### 🔧 **Melhorado**
+- **UX Completamente Renovada** - Transição de lista única para lista dupla
+- **Visibilidade Permanente** - Lista de selecionados sempre visível quando há alvos
+- **Performance de Dados** - Mantém otimização de 4 campos essenciais
+- **Separação de Responsabilidades** - Containers HTML independentes para cada lista
+- **Error Handling Robusto** - Tratamento avançado de erros com feedback ao usuário
+- **Validação de Tipos** - Conversão consistente para string em todas as comparações
+- **Interface Mobile-Friendly** - Layout responsivo otimizado para lista dupla
+
+#### 🔧 **Corrigido**
+- **Lista oculta durante loading** - Lista de selecionados permanece visível durante buscas
+- **Gravação de alvos não funcionando** - Sistema robusto de gravação na tabela participações
+- **Feedback visual limitado** - Movimento claro entre listas com confirmação visual
+- **Perda de contexto** - Usuário nunca perde visão dos alvos já selecionados
+- **Performance de interface** - Loading não afeta lista de selecionados
+
+#### 🏗️ **Arquitetura**
+- **Containers Independentes** - `targetsSelectedContainer` separado de `targetsResults`
+- **Função `createMemberListItem()`** - Renderização com estados visuais diferenciados
+- **Função `updateSelectedMembersList()`** - Gestão exclusiva da lista de selecionados
+- **Função `updateDualListDisplay()`** - Coordenação entre as duas listas
+- **Variáveis Globais Otimizadas** - Cache inteligente para performance
+- **IDs Específicos** - Elementos HTML únicos para cada função
+
+#### 📊 **Estatísticas**
+- **Interface revolucionária** - Primeira implementação de lista dupla no sistema
+- **UX melhorada 100%** - Feedback visual imediato e persistência total
+- **8 problemas resolvidos** - Incluindo questões de UX e gravação
+- **2 listas independentes** - Superior (busca) + Inferior (selecionados)
+- **Logs estruturados** - 15+ pontos de debug para troubleshooting
 
 ---
 

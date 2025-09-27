@@ -1,7 +1,7 @@
 # 📚 API REFERENCE - Sistema Dojotai V2.0
 
-**Versão:** 2.0.0-alpha.1
-**Atualizado:** 23/09/2025
+**Versão:** 2.0.0-alpha.4
+**Atualizado:** 27/09/2025
 **Cobertura:** 100% dos módulos principais
 
 ---
@@ -259,7 +259,7 @@ Remove sessões expiradas (manutenção).
 
 ## 📝 **Logger**
 
-Sistema de logs estruturados com 4 níveis e anti-recursão.
+Sistema de logs estruturados com 4 níveis, anti-recursão e logging avançado para sistema de alvos.
 
 ### **Log Levels**
 
@@ -276,7 +276,7 @@ Avisos que requerem atenção (filtrados).
 Erros críticos (sempre persistidos).
 
 **Parâmetros Padrão:**
-- `context` (string) - Módulo/contexto (ex: 'SessionManager')
+- `context` (string) - Módulo/contexto (ex: 'SessionManager', 'TargetsSystem')
 - `message` (string) - Mensagem descritiva
 - `data` (Object, opcional) - Dados adicionais estruturados
 
@@ -285,16 +285,58 @@ Erros críticos (sempre persistidos).
 // APP_CONFIG.LOG_PERSISTENCE
 {
   ALWAYS_PERSIST: ['ERROR'],
-  IMPORTANT_CONTEXTS: ['SessionManager', 'AuthManager', 'UserAction'],
+  IMPORTANT_CONTEXTS: ['SessionManager', 'AuthManager', 'UserAction', 'TargetsSystem'],
   WARN_EXCLUDE_PATTERNS: ['FK validation failed', 'Cache'],
   WARN_EXCLUDE_CONTEXTS: ['ValidationEngine', 'PerformanceMonitor']
 }
 ```
 
-### **Anti-Recursão**
+### **Logs Específicos do Sistema de Alvos**
+
+#### **Frontend Console Logs (Sistema Lista Dupla)**
+```javascript
+// Logs de movimento entre listas
+console.log('🔄 Toggle seleção INICIADO:', memberId, 'Mode:', mode);
+console.log('📊 Estado atual selectedTargets:', Array.from(selectedTargets));
+console.log('✅ Membro adicionado aos alvos:', memberId);
+console.log('❌ Membro removido dos alvos:', memberId);
+
+// Logs de salvamento
+console.log('🚀 Chamando saveTargetsDirectly no backend...');
+console.log('✅ Sucesso! Alvos criados:', result.created);
+console.log('❌ Erro ao salvar alvos:', error);
+
+// Logs de cache e dados
+console.log('💾 Cache atualizado com:', members.length, 'membros');
+console.log('🔍 Buscando em cache para:', JSON.stringify(filters));
+```
+
+#### **Backend Logs (participacoes.gs)**
+```javascript
+// Sistema de logging estruturado
+Logger.info('TargetsSystem', 'Início salvamento de alvos', {
+  activityId: activityId,
+  memberCount: memberIds.length,
+  user: uid
+});
+
+Logger.info('TargetsSystem', 'Alvos salvos com sucesso', {
+  created: targetsSaved,
+  activityId: activityId
+});
+
+Logger.error('TargetsSystem', 'Erro ao salvar alvos', {
+  error: error.toString(),
+  activityId: activityId
+});
+```
+
+### **Anti-Recursão Melhorada**
 - Flag global `_LOGGER_IS_LOGGING` previne loops infinitos
 - Modo silencioso para operações em `system_logs`
 - Filtros específicos para PerformanceMonitor
+- **Novo**: Contexto 'TargetsSystem' para logs do sistema de alvos
+- **Melhorado**: Estrutura de dados mais rica para debugging
 
 ---
 
@@ -639,12 +681,12 @@ Versão simplificada para filtros (compatibilidade com código existente).
 
 ---
 
-## 🎯 **Sistema de Definição de Alvos**
+## 🎯 **Sistema de Definição de Alvos V2.0 - Lista Dupla**
 
-APIs específicas para o sistema de definição de alvos de atividades implementado na v2.0.0-alpha.3.
+APIs específicas para o sistema revolucionário de definição de alvos com interface de lista dupla implementado na v2.0.0-alpha.4.
 
 ### **searchMembersByCriteria(filters)**
-Busca membros com filtros avançados para definição de alvos.
+Busca membros com filtros avançados para definição de alvos com lista dupla.
 
 **Parâmetros:**
 - `filters` (Object) - Critérios de busca
@@ -667,7 +709,7 @@ Busca membros com filtros avançados para definição de alvos.
 }
 ```
 
-**items Structure (otimizado):**
+**items Structure (otimizado para lista dupla):**
 ```javascript
 {
   codigo_sequencial: string,  // ID único do membro
@@ -692,10 +734,12 @@ if (result.ok) {
 }
 ```
 
-**Otimizações:**
+**Otimizações para Lista Dupla (V2.0):**
 - **Performance**: Retorna apenas 4 campos essenciais (vs 15+ campos originais)
+- **Cache otimizado**: `window.allMembersCache` mantém dados entre buscas
 - **Filtros**: Suporte a busca parcial case-insensitive
 - **Backend**: Usa `DatabaseManager.query()` moderno em vez de legacy `_listMembersCore()`
+- **Movimento entre listas**: Otimizado para transferência instantânea de membros
 
 ### **saveTargetsDirectly(activityId, memberIds, uid)**
 Salva alvos selecionados para uma atividade específica.
@@ -724,46 +768,85 @@ if (result.ok) {
 }
 ```
 
-### **Frontend JavaScript APIs**
+### **Frontend JavaScript APIs - Sistema Lista Dupla V2.0**
 
 #### **displayTargetsResults(members, mode)**
-Renderiza lista de membros com persistência de seleções.
+Renderiza lista dupla de membros com persistência de seleções.
 
 **Parâmetros:**
 - `members` (Array) - Lista de membros retornados da API
 - `mode` (string) - 'create' ou 'edit'
 
-**Funcionalidades:**
-- **Persistência**: Mantém seleções entre diferentes buscas
+**Funcionalidades V2.0:**
+- **Lista dupla independente**: Superior (busca) + Inferior (selecionados)
+- **Persistência global**: Mantém seleções entre diferentes buscas
 - **Ordenação**: Alfabética automática por nome
 - **Estados visuais**: Destaque para membros selecionados
 - **Responsividade**: Layout adaptado para mobile/desktop
+- **Movimento visual**: Clique move membros entre listas instantaneamente
 
 #### **toggleTargetSelection(memberId, mode)**
-Alterna seleção de um membro específico.
+Alterna seleção de um membro específico com movimento entre listas.
 
 **Parâmetros:**
 - `memberId` (string) - Código sequencial do membro
 - `mode` (string) - 'create' ou 'edit'
 
-**Comportamento:**
+**Comportamento V2.0:**
+- **Movimento entre listas**: Remove da superior, adiciona na inferior (ou vice-versa)
+- **Consistência de tipos**: `String(member.codigo_sequencial)` para evitar bugs
 - **Estado toggle**: Checkbox e Set() sincronizados
 - **Feedback visual**: Bordas e cores em tempo real
-- **Logs**: Console detalhado para debugging
+- **Logs estruturados**: Console detalhado para debugging
 
-#### **Sistema de Loading**
+**Logs de Debug Disponíveis:**
 ```javascript
-// Mostrar loading
+🔄 Toggle seleção INICIADO: [ID] Mode: [create/edit]
+📊 Estado atual selectedTargets: [array]
+✅ Membro adicionado aos alvos: [ID]
+🚀 Chamando saveTargetsDirectly no backend...
+✅ Sucesso! Alvos criados: [número]
+```
+
+#### **updateDualListDisplay(mode)**
+Atualiza ambas as listas (superior e inferior) independentemente.
+
+**Parâmetros:**
+- `mode` (string) - 'create' ou 'edit'
+
+**Comportamento:**
+- **Lista superior**: Mostra apenas membros não selecionados da busca atual
+- **Lista inferior**: Mostra todos os membros selecionados (sempre visível)
+- **Cache global**: Usa `window.allMembersCache` para manter dados
+- **Estados visuais**: Loading e empty states independentes
+
+#### **Sistema de Loading V2.0**
+```javascript
+// Mostrar loading (só afeta lista superior)
 showTargetsLoading(mode);  // mode: 'create' ou 'edit'
 
 // Esconder loading
 hideTargetsLoading(mode);
 ```
 
-**Estados suportados:**
-- `targetsLoading` / `editTargetsLoading` - Spinner durante busca
-- `targetsResults` / `editTargetsResults` - Lista de resultados
+**Estados suportados V2.0:**
+- `targetsLoading` / `editTargetsLoading` - Spinner durante busca (só lista superior)
+- `targetsResults` / `editTargetsResults` - Lista de resultados (superior)
+- `targetsSelectedContainer` - Lista de selecionados (inferior, sempre visível)
 - `targetsEmpty` / `editTargetsEmpty` - Estado sem resultados
+
+**Estrutura HTML V2.0:**
+```html
+<!-- Lista Superior: Resultados da Pesquisa -->
+<div id="targetsResults">
+  <div id="targetsList"></div>
+</div>
+
+<!-- Lista Inferior: Membros Selecionados (sempre visível) -->
+<div id="targetsSelectedContainer">
+  <div id="targetsSelectedList"></div>
+</div>
+```
 
 ---
 

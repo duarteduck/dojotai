@@ -1,8 +1,8 @@
 # 🎯 Sistema de Definição de Alvos - Sistema Dojotai V2.0
 
-**Versão:** 2.0.0-alpha.3
-**Data de implementação:** 26/09/2025
-**Status:** ✅ FUNCIONAL E ESTÁVEL
+**Versão:** 2.0.0-alpha.4
+**Data de implementação:** 27/09/2025
+**Status:** ✅ FUNCIONAL E ESTÁVEL - LISTA DUPLA COMPLETA
 
 ---
 
@@ -10,12 +10,55 @@
 
 Esta documentação detalha a implementação e evolução do sistema de "Definir Alvos" para atividades no Sistema Dojotai, incluindo correções de bugs, melhorias de UX e otimizações técnicas realizadas em sessão intensiva de desenvolvimento.
 
-### **Funcionalidades Implementadas:**
-- ✅ Sistema de busca e seleção de membros para alvos de atividades
-- ✅ Persistência de seleções entre diferentes filtros de busca
-- ✅ Interface responsiva com feedback visual em tempo real
-- ✅ Integração completa com sistema de criação e edição de atividades
-- ✅ Limpeza automática de dados ao fechar modais
+### **Funcionalidades Implementadas (V2.0.0-alpha.4):**
+- ✅ **Sistema de Lista Dupla** - Interface revolucionária com duas listas independentes
+- ✅ **Lista Superior**: Membros encontrados na busca atual (não selecionados)
+- ✅ **Lista Inferior**: Todos os membros selecionados (sempre visível quando há seleções)
+- ✅ **Movimento Inteligente**: Clique move membros entre listas instantaneamente
+- ✅ **Persistência Global**: Seleções mantidas entre diferentes filtros e buscas
+- ✅ **Gravação Automática**: Alvos salvos na tabela de participações com tipo 'alvo'
+- ✅ **Interface Responsiva**: Design otimizado para mobile e desktop
+- ✅ **Logs Estruturados**: Sistema de debugging completo para troubleshooting
+- ✅ **Cache Inteligente**: Dados de membros mantidos para performance
+- ✅ **Limpeza Automática**: Reset completo ao fechar modais
+
+---
+
+## 🎯 **SISTEMA DE LISTA DUPLA (V2.0.0-alpha.4)**
+
+### **Conceito Revolucionário**
+O sistema evoluiu de uma lista única com checkboxes para uma interface de **lista dupla** que oferece:
+
+- **Lista Superior (Busca)**: Mostra apenas membros **NÃO selecionados** da busca atual
+- **Lista Inferior (Selecionados)**: Mostra **TODOS os membros selecionados** de qualquer busca
+- **Movimento Visual**: Clique em um membro move ele entre as listas instantaneamente
+- **Persistência Total**: Lista inferior não é afetada por filtros ou loading states
+
+### **Vantagens UX**
+1. **Visibilidade**: Usuario sempre vê quais membros já selecionou
+2. **Feedback Imediato**: Movimento visual confirma a ação
+3. **Gestão Simples**: Fácil remover alvos da lista de selecionados
+4. **Busca Eficiente**: Lista superior só mostra opções válidas para seleção
+
+### **Estrutura HTML Independente**
+```html
+<!-- Lista Superior: Resultados da Pesquisa -->
+<div id="targetsResults" style="display: none;">
+    <!-- Só membros NÃO selecionados -->
+</div>
+
+<!-- Lista Inferior: Sempre visível quando há seleções -->
+<div id="targetsSelectedContainer" style="display: none;">
+    <!-- TODOS os membros selecionados -->
+</div>
+```
+
+### **Fluxo de Interação**
+1. **Buscar membros** → Lista superior mostra não selecionados
+2. **Clicar em membro** → Remove da lista superior, aparece na inferior
+3. **Nova busca** → Lista superior atualiza, inferior permanece
+4. **Clicar em selecionado** → Remove da lista inferior
+5. **Próxima busca** → Membro volta a aparecer na lista superior
 
 ---
 
@@ -356,6 +399,24 @@ function closeActivityModal(event) {
 - **Solução**: Rollback completo para estado funcional anterior
 - **Status**: ✅ Resolvido
 
+### **Problema 6: Seleção individual não funcionando**
+- **Causa**: Inconsistência de tipos de dados (`codigo_sequencial` como number vs string)
+- **Sintoma**: `selectedTargets.has(19)` ≠ `selectedTargets.has("19")`
+- **Solução**: Conversão consistente para string em todas as comparações
+- **Status**: ✅ Resolvido
+
+### **Problema 7: Lista de selecionados oculta durante loading (V2.0.0-alpha.4)**
+- **Causa**: `showTargetsLoading()` ocultava todas as listas durante busca
+- **Sintoma**: Usuario perdia visão dos alvos já selecionados
+- **Solução**: Separação de containers independentes para cada lista
+- **Status**: ✅ Resolvido
+
+### **Problema 8: Gravação de alvos não funcionando (V2.0.0-alpha.4)**
+- **Causa**: Frontend não estava chamando corretamente `saveTargetsDirectly()`
+- **Sintoma**: Alvos não apareciam na tabela de participações
+- **Solução**: Logs estruturados e verificação da chamada backend
+- **Status**: ✅ Resolvido
+
 ---
 
 ## 🚀 **OTIMIZAÇÕES IMPLEMENTADAS**
@@ -376,6 +437,19 @@ function closeActivityModal(event) {
 - **Limpeza automática**: Dados limpos ao fechar modal
 - **Compatibilidade**: Mantém APIs existentes
 
+### **4. Sistema de Lista Dupla (V2.0.0-alpha.4)**
+- **Separação visual**: Duas listas independentes com funções específicas
+- **Persistência inteligente**: Lista de selecionados sempre visível quando há alvos
+- **Cache otimizado**: `window.allMembersCache` mantém dados entre buscas
+- **Movimento fluido**: Transições instantâneas entre listas
+- **Logs estruturados**: Sistema completo de debugging e troubleshooting
+
+### **5. Gravação Robusta (V2.0.0-alpha.4)**
+- **Validação de dados**: Verificação de tipos e consistência antes do salvamento
+- **Logs detalhados**: Rastreamento completo do processo de gravação
+- **Error handling**: Tratamento robusto de erros com feedback ao usuário
+- **Integração backend**: Comunicação confiável com `saveTargetsDirectly()`
+
 ---
 
 ## 📋 **ESPECIFICAÇÕES TÉCNICAS**
@@ -388,22 +462,26 @@ function closeActivityModal(event) {
   - `dojo` (dojo de origem)
   - `status` (status do membro)
 
-### **IDs de Elementos HTML**
+### **IDs de Elementos HTML (V2.0.0-alpha.4)**
 ```javascript
-// Modal de Criação
-'targetsSection'        // Seção principal
-'targetsLoading'        // Loading state
-'targetsResults'        // Container de resultados
-'targetsList'           // Lista de membros
-'targetsSelected'       // Contador
-'targetsEmpty'          // Estado vazio
-'targets-toggle-btn'    // Botão toggle
+// Modal de Criação - Lista Dupla
+'targetsSection'               // Seção principal
+'targetsLoading'              // Loading state
+'targetsResults'              // Container lista superior
+'targetsList'                 // Lista superior (busca)
+'targetsSelectedContainer'    // Container lista inferior
+'targetsSelectedList'         // Lista inferior (selecionados)
+'targetsSelected'             // Contador de selecionados
+'targetsEmpty'                // Estado vazio
+'targets-toggle-btn'          // Botão toggle
 
 // Modal de Edição (prefixo 'edit')
 'editTargetsSection'
 'editTargetsLoading'
 'editTargetsResults'
 'editTargetsList'
+'editTargetsSelectedContainer'
+'editTargetsSelectedList'
 'editTargetsSelected'
 'editTargetsEmpty'
 'edit-targets-toggle-btn'
@@ -440,7 +518,70 @@ function closeActivityModal(event) {
 
 ---
 
+## 📋 **ORIENTAÇÃO PARA USO DIÁRIO**
+
+### **🎯 Como Usar o Sistema de Lista Dupla**
+
+#### **1. Criando uma Nova Atividade com Alvos**
+1. **Criar atividade**: Preencha dados básicos (nome, data, descrição)
+2. **Definir alvos**: Clique no botão "🎯 Definir Alvos"
+3. **Configurar filtros**: Use dojo, status ou nome para filtrar membros
+4. **Buscar**: Clique "🔍 Buscar" - lista superior mostra membros disponíveis
+5. **Selecionar**: Clique em qualquer membro - ele move para lista inferior
+6. **Continuar buscando**: Faça novas buscas, lista inferior permanece
+7. **Salvar**: Clique "💾 Salvar Atividade" - alvos são gravados automaticamente
+
+#### **2. Editando Alvos de Atividade Existente**
+1. **Editar atividade**: Clique no botão de edição da atividade
+2. **Ver alvos atuais**: Clique "🎯 Definir Alvos" - lista inferior mostra alvos já definidos
+3. **Adicionar novos**: Use filtros e busque por mais membros
+4. **Remover alvos**: Clique em membros na lista inferior para removê-los
+5. **Salvar alterações**: Clique "💾 Salvar Alterações"
+
+#### **3. Dicas de Uso Eficiente**
+- ✅ **Lista inferior sempre visível**: Não se preocupe em perder seleções durante buscas
+- ✅ **Busque por partes**: Primeiro "Dojo Centro", depois "Dojo Norte", etc.
+- ✅ **Remova facilmente**: Clique em qualquer alvo na lista inferior para removê-lo
+- ✅ **Use "Selecionar Todos"**: Para incluir todos os membros de uma busca
+- ✅ **Filtre inteligente**: Use status "Ativo" para ver apenas membros ativos
+
+### **🔧 Troubleshooting Comum**
+
+#### **Problema: "Não consigo ver os alvos selecionados"**
+- ✅ **Solução**: A lista inferior só aparece quando há pelo menos 1 membro selecionado
+
+#### **Problema: "Membro não move entre listas"**
+- ✅ **Verificar**: Console do navegador (F12) deve mostrar logs detalhados
+- ✅ **Recarregar**: Atualize a página se houver erro JavaScript
+
+#### **Problema: "Alvos não foram salvos na tabela"**
+- ✅ **Console**: Verifique logs que devem mostrar "✅ X alvos definidos"
+- ✅ **Planilha**: Confira tabela "Participações" com tipo = 'alvo'
+
+#### **Problema: "Lista superior está vazia"**
+- ✅ **Normal**: Se todos os membros da busca já foram selecionados
+- ✅ **Solução**: Use filtros diferentes ou remova alguns alvos
+
+### **📊 Indicadores Visuais**
+
+| Visual | Significado |
+|--------|-------------|
+| 📋 Membros Encontrados (X) | Quantidade de membros na busca atual |
+| 🎯 Alvos Selecionados (X) | Quantidade total de alvos definidos |
+| ➕ | Clique para adicionar como alvo |
+| ❌ | Clique para remover dos alvos |
+| 🔄 Loading | Sistema buscando membros |
+
+### **⚡ Atalhos e Produtividade**
+
+- **Selecionar Todos**: Adiciona todos os membros da busca atual
+- **Remover Todos**: Remove todos os alvos selecionados
+- **Filtros Rápidos**: Combine dojo + status para resultados precisos
+- **Busca por Nome**: Digite parte do nome para localizar rapidamente
+
+---
+
 **📝 Documentação criada por:** Sistema Dojotai Development Team
-**🔄 Última atualização:** 26/09/2025 - 20:30h
-**📍 Versão do sistema:** 2.0.0-alpha.3
-**🎯 Status:** FUNCIONAL E ESTÁVEL
+**🔄 Última atualização:** 27/09/2025 - 16:00h
+**📍 Versão do sistema:** 2.0.0-alpha.4
+**🎯 Status:** FUNCIONAL E ESTÁVEL - LISTA DUPLA COMPLETA
