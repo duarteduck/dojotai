@@ -2889,9 +2889,88 @@
                                     <small class="form-help">Digite tags separadas por vírgula para facilitar a busca</small>
                                 </div>
                             </form>
-                            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
-                                <button type="button" onclick="closeActivityModal()" class="btn btn-secondary" id="cancel-activity-btn">Cancelar</button>
-                                <button type="button" onclick="submitActivity()" class="btn btn-primary" id="save-activity-btn">Salvar Atividade</button>
+
+                            <!-- Seção de Definir Alvos (retrátil) -->
+                            <div id="targetsSection" style="display: none; margin-top: 24px; padding: 20px; background: var(--light); border-radius: 8px; border: 1px solid var(--border-color); transition: all 0.3s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <h3 style="font-size: var(--font-size-lg); font-weight: 600; margin: 0; color: var(--text);">🎯 Definir Alvos da Atividade</h3>
+                                    <button onclick="toggleTargetsSection('create')" style="
+                                        background: none;
+                                        border: none;
+                                        font-size: 20px;
+                                        cursor: pointer;
+                                        padding: 8px;
+                                        border-radius: 50%;
+                                        width: 32px;
+                                        height: 32px;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        color: var(--text-light);
+                                    ">×</button>
+                                </div>
+
+                                <!-- Filtros para seleção de membros -->
+                                <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                                        <div>
+                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Dojo</label>
+                                            <select id="target-dojo-filter" class="form-input" style="font-size: var(--font-size-sm);">
+                                                <option value="">Todos os dojos</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Status</label>
+                                            <select id="target-status-filter" class="form-input" style="font-size: var(--font-size-sm);">
+                                                <option value="">Todos os status</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Busca por nome</label>
+                                            <input type="text" id="target-name-filter" class="form-input" placeholder="Digite o nome..." style="font-size: var(--font-size-sm);">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearTargetFilters()" style="font-size: 0.75rem; padding: 4px 8px;">Limpar</button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="searchMembersForTargets('create')" style="font-size: 0.75rem; padding: 4px 8px;">🔍 Buscar</button>
+                                    </div>
+                                </div>
+
+                                <!-- Loading para busca -->
+                                <div id="targetsLoading" style="display: none; text-align: center; padding: 40px;">
+                                    <div style="width: 32px; height: 32px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                                    <p style="color: var(--text-light); margin: 0;">Buscando membros...</p>
+                                </div>
+
+                                <!-- Lista de membros encontrados -->
+                                <div id="targetsResults" style="display: none;">
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--border-color);">
+                                        <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                            <span id="targetsCount" style="font-weight: 600; color: var(--text);">0 membros encontrados</span>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-sm" onclick="selectAllTargets()" style="font-size: var(--font-size-xs);">Selecionar Todos</button>
+                                                <button class="btn btn-sm" onclick="unselectAllTargets()" style="font-size: var(--font-size-xs);">Desselecionar Todos</button>
+                                            </div>
+                                        </div>
+                                        <div id="targetsList" style="max-height: 300px; overflow-y: auto; padding: 8px;"></div>
+                                        <div style="padding: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-start; align-items: center;">
+                                            <span id="targetsSelected" style="font-weight: 600; color: var(--primary);">0 selecionados</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Estado vazio -->
+                                <div id="targetsEmpty" style="display: none; text-align: center; padding: 40px; color: var(--text-light);">
+                                    <p style="margin: 0;">Use os filtros acima para buscar membros e defini-los como alvos da atividade.</p>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                                <button type="button" onclick="toggleTargetsSection('create')" class="btn btn-outline-primary" id="targets-toggle-btn" style="font-size: var(--font-size-sm);">🎯 Definir Alvos</button>
+                                <div style="display: flex; gap: 12px;">
+                                    <button type="button" onclick="closeActivityModal()" class="btn btn-secondary" id="cancel-activity-btn">Cancelar</button>
+                                    <button type="button" onclick="submitActivity()" class="btn btn-primary" id="save-activity-btn">Salvar Atividade</button>
+                                </div>
                             </div>
                         </div>
 
@@ -2958,6 +3037,11 @@
         function closeActivityModal(event) {
             // Se há event e não clicou no próprio modal (fundo), ignora
             if (event && event.target !== event.currentTarget) return;
+
+            // Limpar seleções de alvos não persistidas
+            console.log('🧼 Limpando seleções de alvos ao fechar modal de criação');
+            selectedTargets.clear();
+            currentTargetsData = [];
 
             const modal = document.getElementById('activityModal');
             if (modal) {
@@ -3086,9 +3170,82 @@
                                     <small class="form-help">Digite tags separadas por vírgula para facilitar a busca</small>
                                 </div>
                             </form>
-                            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
-                                <button type="button" onclick="closeEditActivityModal()" class="btn btn-secondary" id="edit-cancel-btn">Cancelar</button>
-                                <button type="button" onclick="updateActivity('${activityId}')" class="btn btn-primary" id="edit-save-btn">Salvar Alterações</button>
+
+                            <!-- Seção de Definir Alvos para Edição -->
+                            <div id="editTargetsSection" style="display: none; margin-top: 24px; padding: 20px; background: var(--light); border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <h3 style="font-size: var(--font-size-lg); font-weight: 600; margin: 0; color: var(--text);">🎯 Editar Alvos da Atividade</h3>
+                                    <button onclick="toggleTargetsSection('edit')" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; color: var(--text-light);">&times;</button>
+                                </div>
+
+                                <!-- Alvos atuais (se houver) -->
+                                <div id="editCurrentTargets" style="display: none; background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+                                    <h4 style="font-size: var(--font-size-md); font-weight: 600; margin: 0 0 12px 0; color: var(--text);">Alvos Atuais</h4>
+                                    <div id="editCurrentTargetsList" style="max-height: 200px; overflow-y: auto;"></div>
+                                </div>
+
+                                <!-- Filtros para adicionar novos membros -->
+                                <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+                                    <h4 style="font-size: var(--font-size-md); font-weight: 600; margin: 0 0 12px 0; color: var(--text);">Adicionar Novos Alvos</h4>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                                        <div>
+                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Dojo</label>
+                                            <select id="edit-target-dojo-filter" class="form-input" style="font-size: var(--font-size-sm);">
+                                                <option value="">Todos os dojos</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Status</label>
+                                            <select id="edit-target-status-filter" class="form-input" style="font-size: var(--font-size-sm);">
+                                                <option value="">Todos os status</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Busca por nome</label>
+                                            <input type="text" id="edit-target-name-filter" class="form-input" placeholder="Digite o nome..." style="font-size: var(--font-size-sm);">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearTargetFilters('edit')" style="font-size: 0.75rem; padding: 4px 8px;">Limpar</button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="searchMembersForTargets('edit')" style="font-size: 0.75rem; padding: 4px 8px;">🔍 Buscar</button>
+                                    </div>
+                                </div>
+
+                                <!-- Loading para busca -->
+                                <div id="editTargetsLoading" style="display: none; text-align: center; padding: 40px;">
+                                    <div style="width: 32px; height: 32px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                                    <p style="color: var(--text-light); margin: 0;">Buscando membros...</p>
+                                </div>
+
+                                <!-- Lista de membros encontrados -->
+                                <div id="editTargetsResults" style="display: none;">
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--border-color);">
+                                        <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                            <span id="editTargetsCount" style="font-weight: 600; color: var(--text);">0 membros encontrados</span>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-sm" onclick="selectAllTargets('edit')" style="font-size: var(--font-size-xs);">Selecionar Todos</button>
+                                                <button class="btn btn-sm" onclick="unselectAllTargets('edit')" style="font-size: var(--font-size-xs);">Desselecionar Todos</button>
+                                            </div>
+                                        </div>
+                                        <div id="editTargetsList" style="max-height: 300px; overflow-y: auto; padding: 8px;"></div>
+                                        <div style="padding: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-start; align-items: center;">
+                                            <span id="editTargetsSelected" style="font-weight: 600; color: var(--primary);">0 selecionados</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Estado vazio -->
+                                <div id="editTargetsEmpty" style="display: none; text-align: center; padding: 40px; color: var(--text-light);">
+                                    <p style="margin: 0;">Use os filtros acima para buscar membros e defini-los como alvos da atividade.</p>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                                <button type="button" onclick="toggleTargetsSection('edit', '${activityId}')" class="btn btn-outline-primary" id="edit-targets-toggle-btn" style="font-size: var(--font-size-sm);">🎯 Definir Alvos</button>
+                                <div style="display: flex; gap: 12px;">
+                                    <button type="button" onclick="closeEditActivityModal()" class="btn btn-secondary" id="edit-cancel-btn">Cancelar</button>
+                                    <button type="button" onclick="updateActivity('${activityId}')" class="btn btn-primary" id="edit-save-btn">Salvar Alterações</button>
+                                </div>
                             </div>
                         </div>
 
@@ -3159,6 +3316,11 @@
         function closeEditActivityModal(event) {
             // Se há event e não clicou no próprio modal (fundo), ignora
             if (event && event.target !== event.currentTarget) return;
+
+            // Limpar seleções de alvos não persistidas
+            console.log('🧼 Limpando seleções de alvos ao fechar modal de edição');
+            selectedTargets.clear();
+            currentTargetsData = [];
 
             const modal = document.getElementById('editActivityModal');
             if (modal) {
@@ -3595,14 +3757,22 @@
                 const uid = localStorage.getItem('uid') || 'U001';
                 google.script.run
                     .withSuccessHandler(function(result) {
-                        // Esconder loading
-                        showCreateActivityLoading(false);
-
                         if (result && result.ok) {
-                            alert('✅ Atividade criada com sucesso!');
-                            closeActivityModal();
-                            loadActivities(); // Recarregar lista
+                            console.log('✅ Atividade criada com sucesso, ID:', result.id);
+
+                            // Verificar se há alvos selecionados para salvar
+                            if (selectedTargets.size > 0) {
+                                console.log('💾 Salvando alvos da atividade...');
+                                saveTargetsAfterActivity(result.id);
+                            } else {
+                                // Sem alvos, finalizar processo
+                                showCreateActivityLoading(false);
+                                alert('✅ Atividade criada com sucesso!');
+                                closeActivityModal();
+                                loadActivities();
+                            }
                         } else {
+                            showCreateActivityLoading(false);
                             alert('❌ Erro ao criar atividade: ' + (result.error || 'Erro desconhecido'));
                         }
                     })
@@ -4055,6 +4225,694 @@
                 overlay.style.display = show ? 'flex' : 'none';
             }
         }
+
+        // ===== FUNÇÕES DE GESTÃO DE ALVOS =====
+
+        // Variáveis globais para gestão de alvos
+        let currentActivityId = null;
+        let currentTargetsData = [];
+        let selectedTargets = new Set();
+
+        // Função para mostrar/esconder botão após salvar atividade
+        function showTargetsButton(mode = 'create') {
+            const button = document.getElementById(mode === 'create' ? 'targets-toggle-btn' : 'edit-targets-toggle-btn');
+            if (button) {
+                button.style.display = 'inline-flex';
+            }
+        }
+
+        // Função principal para toggle da seção de alvos
+        function toggleTargetsSection(mode = 'create', activityId = null) {
+            console.log('🎯 Toggle targets section:', mode, activityId);
+
+            const sectionId = mode === 'create' ? 'targetsSection' : 'editTargetsSection';
+            const section = document.getElementById(sectionId);
+
+            if (!section) {
+                console.error('❌ Seção de alvos não encontrada:', sectionId);
+                return;
+            }
+
+            const isVisible = section.style.display !== 'none';
+
+            if (isVisible) {
+                // Esconder seção
+                console.log('🔽 Escondendo seção de alvos');
+                section.style.display = 'none';
+                resetTargetsSection(mode);
+            } else {
+                // Mostrar seção
+                console.log('🔼 Mostrando seção de alvos');
+                section.style.display = 'block';
+
+                // Debug CSS
+                console.log('🔍 Estado da seção após mostrar:');
+                console.log('- display:', section.style.display);
+                console.log('- offsetHeight:', section.offsetHeight);
+                console.log('- clientHeight:', section.clientHeight);
+                console.log('- visibility:', getComputedStyle(section).visibility);
+                console.log('- opacity:', getComputedStyle(section).opacity);
+
+                currentActivityId = activityId;
+
+                // Scroll suave para a seção
+                setTimeout(() => {
+                    console.log('🎯 Fazendo scroll para a seção');
+                    section.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 200);
+
+                // Inicializar dados da seção
+                initializeTargetsSection(mode, activityId);
+            }
+        }
+
+        // Inicializar seção de alvos
+        function initializeTargetsSection(mode = 'create', activityId = null) {
+            console.log('🔄 Inicializando seção de alvos:', mode, activityId);
+
+            // Carregar filtros
+            loadTargetFilters(mode);
+
+            // Se modo edição e há activityId, carregar alvos existentes
+            if (mode === 'edit' && activityId) {
+                loadExistingTargets(activityId);
+            }
+
+            // Mostrar estado inicial
+            if (mode === 'edit') {
+                showTargetsEmpty(mode);
+            } else {
+                // No modo create, mostrar apenas a mensagem explicativa (filtros ficam sempre visíveis)
+                const emptyEl = document.getElementById('targetsEmpty');
+                if (emptyEl) {
+                    emptyEl.style.display = 'block';
+                    console.log('✅ Mostrando mensagem explicativa no modo create');
+                }
+            }
+        }
+
+        // Carregar filtros para os selects
+        function loadTargetFilters(mode = 'create') {
+            console.log('📋 Carregando filtros para alvos...');
+
+            // Carregar dojos (reutilizar função existente)
+            if (typeof loadDojos === 'function') {
+                const prefix = mode === 'create' ? 'target' : 'edit-target';
+                loadDojos(prefix + '-dojo-filter');
+            }
+
+            // Carregar membros para popular filtros de status
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((result) => {
+                        if (result && result.ok && result.items) {
+                            populateTargetStatusFilter(result.items, mode);
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        console.warn('⚠️ Erro ao carregar membros para filtros:', error);
+                    })
+                    .listMembersApi();
+            }
+        }
+
+        // Popular filtro de status baseado nos membros
+        function populateTargetStatusFilter(members, mode = 'create') {
+            const prefix = mode === 'create' ? 'target' : 'edit-target';
+            const statusSelect = document.getElementById(prefix + '-status-filter');
+
+            if (!statusSelect) return;
+
+            // Obter status únicos
+            const statusSet = new Set();
+            members.forEach(member => {
+                if (member.status) statusSet.add(member.status);
+            });
+
+            // Limpar e popular select
+            statusSelect.innerHTML = '<option value="">Todos os status</option>';
+            Array.from(statusSet).sort().forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = status;
+                statusSelect.appendChild(option);
+            });
+        }
+
+        // Carregar alvos existentes (modo edição)
+        function loadExistingTargets(activityId) {
+            console.log('📋 Carregando alvos existentes para:', activityId);
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((result) => {
+                        if (result && result.ok) {
+                            displayExistingTargets(result.items || []);
+                        } else {
+                            console.warn('⚠️ Erro ao carregar alvos:', result?.error);
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        console.error('❌ Erro na API de alvos:', error);
+                    })
+                    .listParticipacoes(activityId);
+            }
+        }
+
+        // Exibir alvos existentes
+        function displayExistingTargets(targets) {
+            const currentSection = document.getElementById('editCurrentTargets');
+            const currentList = document.getElementById('editCurrentTargetsList');
+
+            if (!currentSection || !currentList) return;
+
+            if (targets.length === 0) {
+                currentSection.style.display = 'none';
+                return;
+            }
+
+            currentSection.style.display = 'block';
+
+            currentList.innerHTML = targets.map(target => `
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 12px;
+                    border: 1px solid var(--border-color);
+                    border-radius: 6px;
+                    margin-bottom: 4px;
+                    background: var(--light);
+                ">
+                    <span style="font-weight: 500;">${target.id_membro} - ${target.nome || 'Nome não encontrado'}</span>
+                    <button
+                        onclick="removeExistingTarget('${target.id}', '${target.id_membro}')"
+                        style="
+                            background: var(--danger);
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            padding: 4px 8px;
+                            font-size: var(--font-size-xs);
+                            cursor: pointer;
+                        "
+                    >Remover</button>
+                </div>
+            `).join('');
+        }
+
+        // Remover alvo existente
+        function removeExistingTarget(participacaoId, memberId) {
+            if (!confirm('Deseja remover este membro dos alvos da atividade?')) {
+                return;
+            }
+
+            console.log('🗑️ Removendo alvo:', participacaoId, memberId);
+
+            // Aqui implementaremos a remoção via API depois
+            alert('Funcionalidade de remoção será implementada em breve');
+        }
+
+        // Buscar membros com base nos filtros
+        function searchMembersForTargets(mode = 'create') {
+            console.log('🔍 Buscando membros para alvos...');
+
+            const prefix = mode === 'create' ? 'target' : 'edit-target';
+
+            // Obter valores dos filtros
+            const filters = {
+                dojo: document.getElementById(prefix + '-dojo-filter')?.value || '',
+                status: document.getElementById(prefix + '-status-filter')?.value || '',
+                nome: document.getElementById(prefix + '-name-filter')?.value || ''
+            };
+
+            console.log('🔍 Filtros aplicados:', filters);
+
+            // Mostrar loading
+            showTargetsLoading(mode);
+
+            // Chamar API de busca diretamente
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((result) => {
+                        hideTargetsLoading(mode);
+                        console.log('✅ Resposta da API:', result);
+                        console.log('🔍 Tipo do resultado:', typeof result);
+                        console.log('🔍 É array?', Array.isArray(result));
+                        if (result) {
+                            console.log('🔍 Propriedades:', Object.keys(result));
+                            console.log('🔍 result.ok:', result.ok);
+                            console.log('🔍 result.items:', result.items);
+                            console.log('🔍 Tamanho items:', result.items ? result.items.length : 'undefined');
+                        }
+
+                        // Verificar se o resultado é válido
+                        if (result && result.ok && result.items) {
+                            console.log('✅ Processando items:', result.items.length);
+                            displayTargetsResults(result.items, mode);
+                        } else if (result && result.ok && Array.isArray(result)) {
+                            // Fallback se retornar array direto
+                            console.log('✅ Processando array direto:', result.length);
+                            displayTargetsResults(result, mode);
+                        } else if (Array.isArray(result)) {
+                            // Fallback se retornar só array sem wrapper
+                            console.log('✅ Processando array sem wrapper:', result.length);
+                            displayTargetsResults(result, mode);
+                        } else {
+                            console.error('❌ Erro na busca:', result?.error || 'Resposta inválida');
+                            console.log('🔍 Resultado completo:', result);
+                            showTargetsEmpty(mode);
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        hideTargetsLoading(mode);
+                        console.error('❌ Erro na API de busca:', error);
+                        showTargetsEmpty(mode);
+                    })
+                    .searchMembersByCriteria(filters);
+            } else {
+                hideTargetsLoading(mode);
+                console.error('❌ Google Apps Script não disponível');
+                showTargetsEmpty(mode);
+            }
+        }
+
+        // Exibir resultados da busca
+        function displayTargetsResults(members, mode = 'create') {
+            console.log('📋 Exibindo resultados:', members.length, 'membros');
+            console.log('🎯 Membros já selecionados:', selectedTargets.size);
+
+            // Obter membros anteriormente selecionados que podem não estar nos novos resultados
+            const previouslySelected = currentTargetsData.filter(member =>
+                selectedTargets.has(member.codigo_sequencial)
+            );
+
+            // Criar conjunto de IDs dos novos resultados para evitar duplicatas
+            const newMemberIds = new Set(members.map(m => m.codigo_sequencial));
+
+            // Adicionar membros anteriormente selecionados que não estão nos novos resultados
+            const selectedNotInResults = previouslySelected.filter(member =>
+                !newMemberIds.has(member.codigo_sequencial)
+            );
+
+            // Combinar: membros selecionados primeiro + novos resultados
+            const allMembers = [...selectedNotInResults, ...members];
+
+            // Remover duplicatas baseado no codigo_sequencial
+            const uniqueMembers = allMembers.filter((member, index, arr) =>
+                arr.findIndex(m => m.codigo_sequencial === member.codigo_sequencial) === index
+            );
+
+            // Separar entre selecionados e não selecionados para organizar a lista
+            const selectedMembers = uniqueMembers.filter(member => selectedTargets.has(member.codigo_sequencial));
+            const unselectedMembers = uniqueMembers.filter(member => !selectedTargets.has(member.codigo_sequencial));
+
+            // Ordenar cada grupo alfabeticamente
+            selectedMembers.sort((a, b) => a.nome.localeCompare(b.nome));
+            unselectedMembers.sort((a, b) => a.nome.localeCompare(b.nome));
+
+            // Lista final: selecionados no topo + não selecionados
+            const sortedMembers = [...selectedMembers, ...unselectedMembers];
+
+            console.log('📋 Lista final:', {
+                total: sortedMembers.length,
+                selecionados: selectedMembers.length,
+                naoSelecionados: unselectedMembers.length,
+                mantidosDaSelecaoAnterior: selectedNotInResults.length
+            });
+
+            currentTargetsData = sortedMembers;
+            // NÃO limpar selectedTargets - manter seleções existentes
+
+            // Para nova atividade, os elementos não têm prefixo
+            // Para editar atividade, os elementos têm prefixo 'edit'
+            let prefix, countEl, listEl, resultsEl, emptyEl;
+
+            if (mode === 'edit') {
+                prefix = 'edit';
+                countEl = document.getElementById('editTargetsCount');
+                listEl = document.getElementById('editTargetsList');
+                resultsEl = document.getElementById('editTargetsResults');
+                emptyEl = document.getElementById('editTargetsEmpty');
+            } else {
+                prefix = '';
+                countEl = document.getElementById('targetsCount');
+                listEl = document.getElementById('targetsList');
+                resultsEl = document.getElementById('targetsResults');
+                emptyEl = document.getElementById('targetsEmpty');
+            }
+
+            console.log('🔍 Elementos encontrados:', {
+                countEl: !!countEl,
+                listEl: !!listEl,
+                resultsEl: !!resultsEl,
+                emptyEl: !!emptyEl,
+                mode: mode
+            });
+
+            // Esconder outros estados
+            if (emptyEl) emptyEl.style.display = 'none';
+
+            if (sortedMembers.length === 0) {
+                showTargetsEmpty(mode);
+                return;
+            }
+
+            // Mostrar resultados
+            console.log('📋 Tentando mostrar resultados...');
+            if (resultsEl) {
+                console.log('✅ Mostrando resultsEl');
+                resultsEl.style.display = 'block';
+            } else {
+                console.error('❌ resultsEl não encontrado!');
+            }
+
+            if (countEl) {
+                console.log('✅ Atualizando countEl');
+                const newResultsCount = members.length;
+                const selectedCount = selectedTargets.size;
+                const totalShown = sortedMembers.length;
+
+                countEl.textContent = `${totalShown} membros (${newResultsCount} encontrados${selectedCount > 0 ? `, ${selectedCount} selecionados mantidos` : ''})`;
+            } else {
+                console.error('❌ countEl não encontrado!');
+            }
+
+            if (listEl) {
+                console.log('✅ Populando listEl com', sortedMembers.length, 'membros');
+                listEl.innerHTML = sortedMembers.map(member => {
+                    const isSelected = selectedTargets.has(member.codigo_sequencial);
+                    const borderStyle = isSelected ? 'border: 2px solid var(--primary);' : 'border: 1px solid var(--border-color);';
+                    const bgStyle = isSelected ? 'background-color: var(--primary-light);' : '';
+
+                    return `<div style="
+                        display: flex;
+                        align-items: center;
+                        padding: 8px 12px;
+                        ${borderStyle}
+                        ${bgStyle}
+                        border-radius: 6px;
+                        margin-bottom: 4px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.backgroundColor='var(--light)'" onmouseout="this.style.backgroundColor='${isSelected ? 'var(--primary-light)' : 'white'}'" onclick="toggleTargetSelection('${member.codigo_sequencial}', '${mode}')">
+                        <input
+                            type="checkbox"
+                            id="target-${member.codigo_sequencial}-${mode}"
+                            style="margin-right: 12px; transform: scale(1.2); pointer-events: none;"
+                            ${isSelected ? 'checked' : ''}
+                        >
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; font-size: var(--font-size-sm); ${isSelected ? 'color: var(--primary);' : ''}">${member.nome}</div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-light);">
+                                #${member.codigo_sequencial} • ${member.dojo || 'N/A'} • ${member.status || 'N/A'}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            updateTargetsSelected(mode);
+        }
+
+        // Toggle seleção de membro
+        function toggleTargetSelection(memberId, mode = 'create') {
+            const checkbox = document.getElementById(`target-${memberId}-${mode}`);
+
+            if (!checkbox) {
+                console.error('Checkbox não encontrado:', `target-${memberId}-${mode}`);
+                return;
+            }
+
+            // Alternar o estado do checkbox
+            checkbox.checked = !checkbox.checked;
+
+            // Atualizar o Set baseado no novo estado
+            if (checkbox.checked) {
+                selectedTargets.add(memberId);
+                console.log('✅ Membro selecionado:', memberId);
+            } else {
+                selectedTargets.delete(memberId);
+                console.log('❌ Membro desmarcado:', memberId);
+            }
+
+            updateTargetsSelected(mode);
+        }
+
+        // Atualizar contador de selecionados
+        function updateTargetsSelected(mode = 'create') {
+            const selectedId = mode === 'create' ? 'targetsSelected' : 'editTargetsSelected';
+            const selectedEl = document.getElementById(selectedId);
+
+            if (selectedEl) {
+                selectedEl.textContent = `${selectedTargets.size} membros selecionados`;
+            }
+        }
+
+        // Atualizar lista de selecionados (nova função)
+        function updateSelectedTargetsList(mode = 'create') {
+            const selectedSectionId = mode === 'create' ? 'targetsSelectedSection' : 'editTargetsSelectedSection';
+            const selectedListId = mode === 'create' ? 'targetsSelectedList' : 'editTargetsSelectedList';
+
+            const selectedSection = document.getElementById(selectedSectionId);
+            const selectedList = document.getElementById(selectedListId);
+
+            if (!selectedSection || !selectedList) {
+                console.warn('⚠️ Elementos da lista de selecionados não encontrados');
+                return;
+            }
+
+            // Obter membros selecionados
+            const selectedMembers = currentTargetsData.filter(member => selectedTargets.has(member.codigo_sequencial));
+            selectedMembers.sort((a, b) => a.nome.localeCompare(b.nome));
+
+            if (selectedMembers.length === 0) {
+                selectedSection.style.display = 'none';
+                return;
+            }
+
+            // Mostrar seção e popular lista
+            selectedSection.style.display = 'block';
+            selectedList.innerHTML = selectedMembers.map(member => `
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    padding: 8px 12px;
+                    border: 1px solid var(--primary);
+                    background-color: var(--primary-light);
+                    border-radius: 6px;
+                    margin-bottom: 4px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                " onmouseover="this.style.backgroundColor='var(--light)'" onmouseout="this.style.backgroundColor='var(--primary-light)'" onclick="toggleTargetSelection('${member.codigo_sequencial}', '${mode}')">
+                    <span style="margin-right: 12px; font-size: 16px;">✅</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: var(--font-size-sm); color: var(--primary);">${member.nome}</div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-light);">
+                            #${member.codigo_sequencial} • ${member.dojo || 'N/A'} • ${member.status || 'N/A'}
+                        </div>
+                    </div>
+                    <button onclick="event.stopPropagation(); toggleTargetSelection('${member.codigo_sequencial}', '${mode}')" style="
+                        background: var(--danger);
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 4px 8px;
+                        font-size: var(--font-size-xs);
+                        cursor: pointer;
+                    ">× Remover</button>
+                </div>
+            `).join('');
+
+            console.log('✅ Lista de selecionados atualizada:', selectedMembers.length, 'membros');
+        }
+
+        // Selecionar todos os alvos
+        function selectAllTargets(mode = 'create') {
+            console.log('✅ Selecionando todos os membros para:', mode);
+            console.log('📊 Membros disponíveis:', currentTargetsData.length);
+
+            currentTargetsData.forEach(member => {
+                const memberId = member.codigo_sequencial;
+                selectedTargets.add(memberId);
+                const checkbox = document.getElementById(`target-${memberId}-${mode}`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                    console.log('✅ Checkbox marcado para:', memberId);
+                } else {
+                    console.warn('⚠️ Checkbox não encontrado para:', memberId);
+                }
+            });
+            updateTargetsSelected(mode);
+        }
+
+        // Desselecionar todos os alvos
+        function unselectAllTargets(mode = 'create') {
+            console.log('❌ Desmarcando todos os membros para:', mode);
+
+            selectedTargets.clear();
+            currentTargetsData.forEach(member => {
+                const memberId = member.codigo_sequencial;
+                const checkbox = document.getElementById(`target-${memberId}-${mode}`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                    console.log('❌ Checkbox desmarcado para:', memberId);
+                } else {
+                    console.warn('⚠️ Checkbox não encontrado para:', memberId);
+                }
+            });
+            updateTargetsSelected(mode);
+        }
+
+        // Limpar filtros
+        function clearTargetFilters(mode = 'create') {
+            const prefix = mode === 'create' ? 'target' : 'edit-target';
+
+            const dojoFilter = document.getElementById(prefix + '-dojo-filter');
+            const statusFilter = document.getElementById(prefix + '-status-filter');
+            const nameFilter = document.getElementById(prefix + '-name-filter');
+
+            if (dojoFilter) dojoFilter.value = '';
+            if (statusFilter) statusFilter.value = '';
+            if (nameFilter) nameFilter.value = '';
+
+            // Esconder resultados e mostrar estado vazio
+            showTargetsEmpty(mode);
+        }
+
+        // Salvar alvos selecionados
+        function saveTargets(mode = 'create', activityId = null) {
+            const targetActivityId = activityId || currentActivityId;
+
+            if (!targetActivityId) {
+                alert('ID da atividade não encontrado. Salve a atividade primeiro.');
+                return;
+            }
+
+            if (selectedTargets.size === 0) {
+                alert('Selecione pelo menos um membro como alvo.');
+                return;
+            }
+
+            console.log('💾 Salvando alvos:', Array.from(selectedTargets), 'para atividade:', targetActivityId);
+
+            // Obter UID do usuário atual
+            const uid = localStorage.getItem('uid') || 'U001';
+            const memberIds = Array.from(selectedTargets);
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((result) => {
+                        if (result && result.ok) {
+                            alert(`✅ ${result.created || 0} alvos salvos com sucesso!`);
+                            toggleTargetsSection(mode, targetActivityId); // Fechar seção
+
+                            // Se modo edição, recarregar alvos existentes
+                            if (mode === 'edit') {
+                                setTimeout(() => {
+                                    toggleTargetsSection(mode, targetActivityId);
+                                }, 500);
+                            }
+                        } else {
+                            alert('❌ Erro ao salvar alvos: ' + (result?.error || 'Erro desconhecido'));
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        console.error('❌ Erro na API de salvar alvos:', error);
+                        alert('❌ Erro ao conectar com o servidor: ' + error.message);
+                    })
+                    .saveTargetsDirectly(targetActivityId, memberIds, uid);
+            }
+        }
+
+        // Estados de loading e vazio
+        function showTargetsLoading(mode = 'create') {
+            const loadingId = mode === 'create' ? 'targetsLoading' : 'editTargetsLoading';
+            const resultsId = mode === 'create' ? 'targetsResults' : 'editTargetsResults';
+            const emptyId = mode === 'create' ? 'targetsEmpty' : 'editTargetsEmpty';
+
+            const loadingEl = document.getElementById(loadingId);
+            const resultsEl = document.getElementById(resultsId);
+            const emptyEl = document.getElementById(emptyId);
+
+            console.log('🔄 Mostrando loading para:', mode, 'ID:', loadingId, 'Elemento encontrado:', !!loadingEl);
+
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (resultsEl) resultsEl.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'none';
+        }
+
+        function hideTargetsLoading(mode = 'create') {
+            const loadingId = mode === 'create' ? 'targetsLoading' : 'editTargetsLoading';
+            const loadingEl = document.getElementById(loadingId);
+
+            console.log('✅ Escondendo loading para:', mode, 'ID:', loadingId, 'Elemento encontrado:', !!loadingEl);
+
+            if (loadingEl) loadingEl.style.display = 'none';
+        }
+
+        function showTargetsEmpty(mode = 'create') {
+            const loadingId = mode === 'create' ? 'targetsLoading' : 'editTargetsLoading';
+            const resultsId = mode === 'create' ? 'targetsResults' : 'editTargetsResults';
+            const emptyId = mode === 'create' ? 'targetsEmpty' : 'editTargetsEmpty';
+
+            const emptyEl = document.getElementById(emptyId);
+            const resultsEl = document.getElementById(resultsId);
+            const loadingEl = document.getElementById(loadingId);
+
+            if (emptyEl) emptyEl.style.display = 'block';
+            if (resultsEl) resultsEl.style.display = 'none';
+            if (loadingEl) loadingEl.style.display = 'none';
+        }
+
+        function resetTargetsSection(mode = 'create') {
+            selectedTargets.clear();
+            currentTargetsData = [];
+            showTargetsEmpty(mode);
+        }
+
+        // Salvar alvos após criar atividade (modo criação)
+        function saveTargetsAfterActivity(activityId) {
+            console.log('💾 Salvando alvos após criar atividade:', activityId);
+
+            if (selectedTargets.size === 0) {
+                // Sem alvos, finalizar processo
+                showCreateActivityLoading(false);
+                alert('✅ Atividade criada com sucesso!');
+                closeActivityModal();
+                loadActivities();
+                return;
+            }
+
+            // Obter UID do usuário atual
+            const uid = localStorage.getItem('uid') || 'U001';
+            const memberIds = Array.from(selectedTargets);
+
+            google.script.run
+                .withSuccessHandler((result) => {
+                    showCreateActivityLoading(false);
+
+                    if (result && result.ok) {
+                        const totalCreated = result.created || 0;
+                        alert(`✅ Atividade criada com sucesso!\n${totalCreated} alvos definidos.`);
+                    } else {
+                        alert(`✅ Atividade criada!\n⚠️ Erro ao salvar alvos: ${result?.error || 'Erro desconhecido'}`);
+                    }
+
+                    closeActivityModal();
+                    loadActivities();
+                })
+                .withFailureHandler((error) => {
+                    showCreateActivityLoading(false);
+                    console.error('❌ Erro ao salvar alvos:', error);
+                    alert(`✅ Atividade criada!\n❌ Erro ao salvar alvos: ${error.message}`);
+                    closeActivityModal();
+                    loadActivities();
+                })
+                .saveTargetsDirectly(activityId, memberIds, uid);
+        }
+
+        // ===== FIM DAS FUNÇÕES DE ALVOS =====
 
         // Função de logout com destruição de sessão
         async function logout() {

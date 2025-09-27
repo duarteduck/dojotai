@@ -310,45 +310,74 @@ function confirmarParticipacao(activityId, memberId, confirmou, uid) {
 }
 
 /**
- * Busca membros por critérios para definição de alvos
+ * Busca membros por critérios para definição de alvos - VERSÃO V2 (DatabaseManager)
  * @param {Object} filters - Filtros aplicados
  * @returns {Object} { ok: boolean, items: Array }
  */
 function searchMembersByCriteria(filters) {
   try {
-    const membersResult = _listMembersCore();
-    if (!membersResult.ok) return membersResult;
+    console.log('🔍 searchMembersByCriteria V2 - Filtros:', filters);
 
-    let items = membersResult.items;
+    // Usar DatabaseManager para buscar membros
+    console.log('🔍 Chamando DatabaseManager.query...');
+    const members = DatabaseManager.query('membros', {}, false);
+    console.log('🔍 Resposta do DatabaseManager:', typeof members, members ? members.length : 'null/undefined');
 
-    // Aplica filtros
-    if (filters.dojo && filters.dojo.length > 0) {
-      items = items.filter(m => filters.dojo.includes(m.dojo));
+    if (!members || members.length === 0) {
+      console.log('⚠️ Nenhum membro encontrado na tabela');
+      return { ok: true, items: [] };
     }
 
-    if (filters.cargo && filters.cargo.length > 0) {
-      items = items.filter(m => filters.cargo.includes(m.cargo));
+    console.log('📋 Total de membros carregados:', members.length);
+
+    // Aplicar filtros se fornecidos
+    let filteredMembers = members;
+
+    // Filtro por dojo
+    if (filters.dojo && filters.dojo.trim()) {
+      filteredMembers = filteredMembers.filter(member => {
+        const memberDojo = (member.dojo || '').toString().toLowerCase();
+        const filterDojo = filters.dojo.toLowerCase();
+        return memberDojo.includes(filterDojo) || memberDojo === filterDojo;
+      });
+      console.log('🔍 Após filtro dojo:', filteredMembers.length);
     }
 
-    if (filters.categoria_grupo && filters.categoria_grupo.length > 0) {
-      items = items.filter(m => filters.categoria_grupo.includes(m.categoria_grupo));
+    // Filtro por status
+    if (filters.status && filters.status.trim()) {
+      filteredMembers = filteredMembers.filter(member => {
+        const memberStatus = (member.status || '').toString().toLowerCase();
+        const filterStatus = filters.status.toLowerCase();
+        return memberStatus === filterStatus;
+      });
+      console.log('🔍 Após filtro status:', filteredMembers.length);
     }
 
-    if (filters.buntai && filters.buntai.length > 0) {
-      items = items.filter(m => filters.buntai.includes(m.buntai));
-    }
-
-    if (filters.status && filters.status.length > 0) {
-      items = items.filter(m => filters.status.includes(m.status));
-    }
-
+    // Filtro por nome
     if (filters.nome && filters.nome.trim()) {
-      const nome = filters.nome.toLowerCase().trim();
-      items = items.filter(m => m.nome.toLowerCase().includes(nome));
+      const nomeFiltro = filters.nome.toLowerCase().trim();
+      filteredMembers = filteredMembers.filter(member => {
+        const memberNome = (member.nome || '').toString().toLowerCase();
+        return memberNome.includes(nomeFiltro);
+      });
+      console.log('🔍 Após filtro nome:', filteredMembers.length);
     }
 
-    return { ok: true, items };
+    console.log('✅ Membros filtrados retornados:', filteredMembers.length);
+
+    // Otimizar dados: retornar apenas campos necessários
+    const optimizedMembers = filteredMembers.map(member => ({
+      codigo_sequencial: member.codigo_sequencial,
+      nome: member.nome,
+      dojo: member.dojo,
+      status: member.status
+    }));
+
+    const result = { ok: true, items: optimizedMembers };
+    console.log('🔄 Retornando resultado otimizado com', optimizedMembers.length, 'membros');
+    return result;
   } catch (err) {
+    console.error('❌ Erro em searchMembersByCriteria V2:', err);
     return { ok: false, error: 'Erro searchMembersByCriteria: ' + (err && err.message ? err.message : err) };
   }
 }

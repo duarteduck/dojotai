@@ -19,9 +19,9 @@
 ## Pendências imediatas (Etapa 1.2 – Bloqueadores)
 - [x] Integrar **Tabela Planilhas** no código (remover SSIDs fixos)
 - [x] Tipos de atividade com cores distintas
-- [ ] Seleção de participantes por atividade
+- [x] **Sistema de Definição de Alvos** - Seleção de membros para atividades ✅ **CONCLUÍDO v2.0.0-alpha.3**
 - [x] Calendário com marcações das atividades do usuário
-- [x] Filtro **“Minhas tarefas”**
+- [x] Filtro **"Minhas tarefas"**
 
 ## Refino / Melhorias
 - [ ] Responsividade mobile (limpeza e padronização)
@@ -74,10 +74,10 @@
 ## Status Atual do Projeto
 
 ### 📊 **Indicadores Gerais**
-- **Versão Atual**: v0.1.5 (MVP estável)
-- **Próxima Release**: v0.2 (Sistema de Participação)
-- **Previsão v1.0**: Q2 2025
-- **Ambiente**: Produção estável
+- **Versão Atual**: v2.0.0-alpha.3 (Sistema de Alvos implementado)
+- **Próxima Release**: v2.0.0-alpha.4 (Lista dupla de alvos)
+- **Previsão v2.0.0**: Q4 2025
+- **Ambiente**: Desenvolvimento ativo
 - **Coverage**: ~70% das funcionalidades planejadas para v1.0
 
 ### 🎯 **Marcos Importantes**

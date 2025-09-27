@@ -639,6 +639,134 @@ Versão simplificada para filtros (compatibilidade com código existente).
 
 ---
 
+## 🎯 **Sistema de Definição de Alvos**
+
+APIs específicas para o sistema de definição de alvos de atividades implementado na v2.0.0-alpha.3.
+
+### **searchMembersByCriteria(filters)**
+Busca membros com filtros avançados para definição de alvos.
+
+**Parâmetros:**
+- `filters` (Object) - Critérios de busca
+
+**filters Structure:**
+```javascript
+{
+  dojo: string,         // Filtro por dojo (opcional)
+  status: string,       // Filtro por status (opcional)
+  nome: string          // Filtro por nome (opcional)
+}
+```
+
+**Retorno:**
+```javascript
+{
+  ok: boolean,
+  items?: Array<Object>, // Lista de membros encontrados
+  error?: string
+}
+```
+
+**items Structure (otimizado):**
+```javascript
+{
+  codigo_sequencial: string,  // ID único do membro
+  nome: string,              // Nome completo
+  dojo: string,              // Dojo de origem
+  status: string             // Status do membro
+}
+```
+
+**Exemplo:**
+```javascript
+const result = await searchMembersByCriteria({
+  dojo: 'Centro',
+  status: 'Ativo'
+});
+
+if (result.ok) {
+  console.log(`${result.items.length} membros encontrados`);
+  result.items.forEach(member => {
+    console.log(`${member.nome} (${member.codigo_sequencial})`);
+  });
+}
+```
+
+**Otimizações:**
+- **Performance**: Retorna apenas 4 campos essenciais (vs 15+ campos originais)
+- **Filtros**: Suporte a busca parcial case-insensitive
+- **Backend**: Usa `DatabaseManager.query()` moderno em vez de legacy `_listMembersCore()`
+
+### **saveTargetsDirectly(activityId, memberIds, uid)**
+Salva alvos selecionados para uma atividade específica.
+
+**Parâmetros:**
+- `activityId` (string) - ID da atividade
+- `memberIds` (Array<string>) - Lista de códigos sequenciais dos membros
+- `uid` (string) - ID do usuário executando a operação
+
+**Retorno:**
+```javascript
+{
+  ok: boolean,
+  created?: number,      // Quantidade de alvos criados
+  error?: string
+}
+```
+
+**Exemplo:**
+```javascript
+const memberIds = ['M001', 'M003', 'M015'];
+const result = await saveTargetsDirectly('ACT-123', memberIds, 'U001');
+
+if (result.ok) {
+  console.log(`${result.created} alvos definidos para a atividade`);
+}
+```
+
+### **Frontend JavaScript APIs**
+
+#### **displayTargetsResults(members, mode)**
+Renderiza lista de membros com persistência de seleções.
+
+**Parâmetros:**
+- `members` (Array) - Lista de membros retornados da API
+- `mode` (string) - 'create' ou 'edit'
+
+**Funcionalidades:**
+- **Persistência**: Mantém seleções entre diferentes buscas
+- **Ordenação**: Alfabética automática por nome
+- **Estados visuais**: Destaque para membros selecionados
+- **Responsividade**: Layout adaptado para mobile/desktop
+
+#### **toggleTargetSelection(memberId, mode)**
+Alterna seleção de um membro específico.
+
+**Parâmetros:**
+- `memberId` (string) - Código sequencial do membro
+- `mode` (string) - 'create' ou 'edit'
+
+**Comportamento:**
+- **Estado toggle**: Checkbox e Set() sincronizados
+- **Feedback visual**: Bordas e cores em tempo real
+- **Logs**: Console detalhado para debugging
+
+#### **Sistema de Loading**
+```javascript
+// Mostrar loading
+showTargetsLoading(mode);  // mode: 'create' ou 'edit'
+
+// Esconder loading
+hideTargetsLoading(mode);
+```
+
+**Estados suportados:**
+- `targetsLoading` / `editTargetsLoading` - Spinner durante busca
+- `targetsResults` / `editTargetsResults` - Lista de resultados
+- `targetsEmpty` / `editTargetsEmpty` - Estado sem resultados
+
+---
+
 ## 🔒 **Security**
 
 ### **Autenticação Requerida**

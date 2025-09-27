@@ -1,7 +1,7 @@
 # 📅 CHANGELOG - Sistema Dojotai
 
-**Versão Atual:** 2.0.0-alpha.1
-**Atualizado:** 23/09/2025
+**Versão Atual:** 2.0.0-alpha.3
+**Atualizado:** 26/09/2025
 
 ---
 
@@ -17,6 +17,53 @@ Seguimos [Semantic Versioning](https://semver.org/):
 - `-alpha.X` - Versão em desenvolvimento inicial
 - `-beta.X` - Versão em testes avançados
 - `-rc.X` - Release candidate (candidata a lançamento)
+
+---
+
+## 🚀 **V2.0.0-alpha.3** - 2025-09-26
+
+### 🎯 **SISTEMA DE DEFINIÇÃO DE ALVOS PARA ATIVIDADES**
+
+#### ✅ **Adicionado**
+- **Sistema Completo de Definição de Alvos** - Interface para selecionar membros como alvos de atividades
+- **Busca Avançada de Membros** - Filtros por dojo, status e nome com resultados em tempo real
+- **Persistência de Seleções** - Seleções mantidas entre diferentes buscas e filtros
+- **Interface Intuitiva de Seleção** - Clique em qualquer lugar da linha do membro para selecionar
+- **Loading States Responsivos** - Feedback visual durante busca de membros
+- **Botões de Seleção em Massa** - "Selecionar Todos" e "Deselecionar Todos" funcionais
+- **Toggle Show/Hide** - Seção de alvos escondida por padrão com botão para exibir
+- **Integração com Criação de Atividades** - Salvamento automático de alvos junto com atividade
+- **Integração com Edição de Atividades** - Modificação de alvos em atividades existentes
+- **Limpeza Automática** - Dados de seleção limpos ao fechar modais
+
+#### 🔧 **Melhorado**
+- **Performance de Dados** - Otimização de 15+ campos para 4 campos essenciais por membro
+- **UX de Seleção** - Área clicável ampliada e feedback visual em tempo real
+- **API Backend Modernizada** - Migração de `_listMembersCore()` para `DatabaseManager.query()`
+- **Interface Mobile-Friendly** - Layout responsivo para tablets e smartphones
+- **Botões Discretos** - Filtros com design menos intrusivo ("Limpar", "Buscar")
+
+#### 🔧 **Corrigido**
+- **"❌ Erro na busca: undefined"** - Problema de API legacy resolvido
+- **Loading não aparecendo** - Correção de IDs de elementos no modal de criação
+- **Contador não funcionando** - Padronização de nomenclatura de IDs
+- **Botões Select/Deselect All** - Correção de mapeamento `uid` vs `codigo_sequencial`
+- **Layout de Modais Quebrado** - Estrutura HTML restaurada após tentativa de lista dupla
+- **Elementos Órfãos** - Remoção de divs extras que quebravam layout
+
+#### 🏗️ **Arquitetura**
+- **Variáveis Globais de Estado** - `selectedTargets`, `currentTargetsData`, `currentActivityId`
+- **Função `displayTargetsResults()`** - Renderização com persistência de seleções
+- **Função `toggleTargetSelection()`** - Alternância inteligente de seleção
+- **Funções de Loading** - `showTargetsLoading()`, `hideTargetsLoading()` com IDs específicos
+- **API `searchMembersByCriteria()`** - Backend otimizado com filtros avançados
+- **Sistema de Limpeza** - Integração com `closeActivityModal()` e `closeEditActivityModal()`
+
+#### 📊 **Estatísticas**
+- **5 problemas críticos** resolvidos em sessão intensiva
+- **4 campos de dados** otimizados (era 15+ campos)
+- **11 funcionalidades** implementadas e testadas
+- **2 modais** (criação e edição) totalmente integrados
 
 ---
 
