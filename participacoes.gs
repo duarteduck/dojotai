@@ -1,68 +1,7 @@
 // participacoes.gs - Sistema de Gestão de Participações em Atividades
 
 /**
- * Lista participações diretamente da planilha (bypass de contexto)
- * @param {string} activityId - ID da atividade
- * @returns {Object} { ok: boolean, items: Array }
- */
-function listParticipacoesDirectly(activityId) {
-  try {
-    if (!activityId) {
-      return { ok: false, error: 'ID da atividade não informado.' };
-    }
-
-    const { values, headerIndex } = readTableByNome_('participacoes');
-
-    if (!values || values.length < 2) {
-      return { ok: true, items: [] };
-    }
-
-    // Campos obrigatórios
-    const required = ['id', 'id_atividade', 'id_membro', 'tipo'];
-    const missing = required.filter(k => headerIndex[k] === undefined);
-    if (missing.length) {
-      return { ok: false, error: 'Colunas faltando na tabela Participacoes: ' + missing.join(', ') };
-    }
-
-    const items = [];
-
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r] || [];
-
-      // Filtra apenas as participações da atividade específica
-      const rowActivityId = String(row[headerIndex['id_atividade']] || '').trim();
-      if (rowActivityId !== activityId.toString().trim()) continue;
-
-      const participacao = {
-        id: String(row[headerIndex['id']] || '').trim(),
-        id_atividade: rowActivityId,
-        id_membro: String(row[headerIndex['id_membro']] || '').trim(),
-        tipo: String(row[headerIndex['tipo']] || 'alvo').trim(),
-        confirmou: String(row[headerIndex['confirmou']] || '').trim(),
-        confirmado_em: row[headerIndex['confirmado_em']] || null,
-        participou: String(row[headerIndex['participou']] || '').trim(),
-        chegou_tarde: String(row[headerIndex['chegou_tarde']] || '').trim(),
-        saiu_cedo: String(row[headerIndex['saiu_cedo']] || '').trim(),
-        justificativa: String(row[headerIndex['justificativa']] || '').trim(),
-        observacoes: String(row[headerIndex['observacoes']] || '').trim(),
-        marcado_em: row[headerIndex['marcado_em']] || null,
-        marcado_por: String(row[headerIndex['marcado_por']] || '').trim()
-      };
-
-      // Calcula status_participacao
-      participacao.status_participacao = calculateStatusParticipacao(participacao);
-
-      items.push(participacao);
-    }
-
-    return { ok: true, items };
-  } catch (err) {
-    return { ok: false, error: 'Erro listParticipacoesDirectly: ' + (err && err.message ? err.message : err) };
-  }
-}
-
-/**
- * IMPLEMENTAÇÃO MÍNIMA - Lista participações usando acesso direto
+ * Lista participações usando acesso direto à planilha
  */
 function listParticipacoes(activityId) {
   // ACESSO DIRETO - SEM CONFIGURAÇÃO DINÂMICA
@@ -318,19 +257,12 @@ function confirmarParticipacao(activityId, memberId, confirmou, uid) {
  */
 function searchMembersByCriteria(filters) {
   try {
-    console.log('🔍 searchMembersByCriteria V2 - Filtros:', filters);
-
     // Usar DatabaseManager para buscar membros
-    console.log('🔍 Chamando DatabaseManager.query...');
     const members = DatabaseManager.query('membros', {}, false);
-    console.log('🔍 Resposta do DatabaseManager:', typeof members, members ? members.length : 'null/undefined');
 
     if (!members || members.length === 0) {
-      console.log('⚠️ Nenhum membro encontrado na tabela');
       return { ok: true, items: [] };
     }
-
-    console.log('📋 Total de membros carregados:', members.length);
 
     // Aplicar filtros se fornecidos
     let filteredMembers = members;
@@ -342,7 +274,6 @@ function searchMembersByCriteria(filters) {
         const filterDojo = filters.dojo.toLowerCase();
         return memberDojo.includes(filterDojo) || memberDojo === filterDojo;
       });
-      console.log('🔍 Após filtro dojo:', filteredMembers.length);
     }
 
     // Filtro por status
@@ -352,7 +283,6 @@ function searchMembersByCriteria(filters) {
         const filterStatus = filters.status.toLowerCase();
         return memberStatus === filterStatus;
       });
-      console.log('🔍 Após filtro status:', filteredMembers.length);
     }
 
     // Filtro por nome
@@ -362,10 +292,7 @@ function searchMembersByCriteria(filters) {
         const memberNome = (member.nome || '').toString().toLowerCase();
         return memberNome.includes(nomeFiltro);
       });
-      console.log('🔍 Após filtro nome:', filteredMembers.length);
     }
-
-    console.log('✅ Membros filtrados retornados:', filteredMembers.length);
 
     // Otimizar dados: retornar apenas campos necessários
     const optimizedMembers = filteredMembers.map(member => ({
@@ -376,7 +303,6 @@ function searchMembersByCriteria(filters) {
     }));
 
     const result = { ok: true, items: optimizedMembers };
-    console.log('🔄 Retornando resultado otimizado com', optimizedMembers.length, 'membros');
     return result;
   } catch (err) {
     console.error('❌ Erro em searchMembersByCriteria V2:', err);
@@ -391,12 +317,9 @@ function searchMembersByCriteria(filters) {
  */
 function getParticipacaoStats(activityId) {
   try {
-    console.log('📊 getParticipacaoStats chamada para:', activityId);
     const participacoes = listParticipacoes(activityId);
-    console.log('📋 listParticipacoes resultado:', participacoes?.ok ? 'OK' : participacoes?.error, '- Items:', participacoes?.items?.length || 0);
 
     if (!participacoes.ok) {
-      console.log('❌ listParticipacoes falhou:', participacoes.error);
       return participacoes;
     }
 
@@ -418,8 +341,6 @@ function getParticipacaoStats(activityId) {
       pendentes,
       percentualParticipacao
     };
-
-    console.log('✅ Stats calculadas:', JSON.stringify(stats));
 
     return {
       ok: true,
@@ -512,14 +433,8 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
       }
     }
 
-    console.log('🔍 Alvos existentes:', existingMemberIds);
-    console.log('🔍 Novos alvos solicitados:', memberIds);
-
     const newMemberIds = memberIds.filter(id => !existingMemberIds.includes(id.toString()));
     const removedTargets = existingTargets.filter(target => !memberIds.includes(target.memberId));
-
-    console.log('➕ Alvos a adicionar:', newMemberIds);
-    console.log('🗑️ Alvos a remover:', removedTargets.map(t => t.memberId));
 
     // Se não há mudanças, retornar
     if (newMemberIds.length === 0 && removedTargets.length === 0) {
@@ -528,8 +443,6 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
 
     // Marcar alvos removidos como 'deleted'
     if (removedTargets.length > 0) {
-      console.log('🗑️ Marcando alvos removidos como deleted...');
-
       // Usar o contexto já obtido de readTableByNome_
       const sheet = ctx.sheet;
 
@@ -548,17 +461,13 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
         const startRow = ctx.range.getRow();
         const sheetRowNumber = startRow + target.rowIndex;
 
-        console.log(`🔍 DEBUG: target.rowIndex=${target.rowIndex}, startRow=${startRow}, sheetRowNumber=${sheetRowNumber}, deletedColIndex=${deletedColIndex}`);
-
         if (target.rowIndex > 0 && sheetRowNumber > startRow) { // Garantir que não é o cabeçalho
           sheet.getRange(sheetRowNumber, deletedColIndex).setValue('x');
-          console.log(`🗑️ Alvo ${target.memberId} marcado como deleted (x) na linha ${sheetRowNumber}`);
         } else {
-          console.error(`❌ Linha inválida para target ${target.memberId}: rowIndex=${target.rowIndex}, startRow=${startRow}`);
+          console.error(`❌ Linha inválida para target ${target.memberId}: rowIndex=${target.rowIndex}`);
         }
       });
 
-      console.log(`✅ ${removedTargets.length} alvos marcados como deleted`);
     }
 
     // Gera novos IDs seguindo o padrão
