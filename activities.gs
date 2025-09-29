@@ -390,7 +390,7 @@ function getUsersMapReadOnly_() {
 /**
  * Atualiza atividade por ID (PATCH parcial baseado em cabeçalho).
  */
-function updateActivity(input, uidEditor) {
+function updateActivityWithTargets(input, uidEditor) {
   try {
     if (!input || !input.id) return { ok:false, error:'ID não informado.' };
     var patch = input.patch || {};
@@ -440,6 +440,22 @@ function updateActivity(input, uidEditor) {
     var now = nowString_ ? nowString_() : (new Date()).toISOString();
     setIfPresent('atualizado_em', now);
     if (uidEditor) setIfPresent('atualizado_uid', uidEditor);
+
+    // Salvar alvos se fornecidos
+    if (input.alvos && Array.isArray(input.alvos)) {
+      console.log('🎯 Salvando alvos para atividade:', input.id, 'Alvos:', input.alvos);
+      try {
+        var resultAlvos = saveTargetsDirectly(input.id, input.alvos, uidEditor);
+        if (!resultAlvos.ok) {
+          console.error('❌ Erro ao salvar alvos:', resultAlvos.error);
+          return { ok:false, error:'Erro ao salvar alvos: ' + resultAlvos.error };
+        }
+        console.log('✅ Alvos salvos com sucesso');
+      } catch(e) {
+        console.error('❌ Exceção ao salvar alvos:', e);
+        return { ok:false, error:'Exceção ao salvar alvos: ' + e.toString() };
+      }
+    }
 
     // retorna nome de quem atualizou (se possível)
     var atualizadoPorNome = '';

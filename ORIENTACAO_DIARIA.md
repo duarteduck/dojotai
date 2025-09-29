@@ -2,8 +2,10 @@
 
 > **🎯 LEIA ESTE ARQUIVO TODO DIA ANTES DE COMEÇAR O DESENVOLVIMENTO**
 >
-> **Última atualização:** 27/09/2025
-> **Status do projeto:** V2.0.0-alpha.4 - Sistema de Alvos Lista Dupla Implementado
+> **Última atualização:** 29/09/2025
+> **Status do projeto:** V2.0.0-alpha.5 - Sistema de Alvos Completo com Soft Delete
+> **Sempre responder em PT-BR**
+> **Ler também os arquivos docs/API_REFERENCE.md, docs/ARQUITETURA.md e o data_dictionary.gs**
 
 ---
 
@@ -37,15 +39,15 @@
 
 ---
 
-## 📋 **STATUS ATUAL (27/09/2025)**
+## 📋 **STATUS ATUAL (29/09/2025)**
 
 ### ✅ **CONCLUÍDO RECENTEMENTE**
-- ✅ **Sistema de Alvos V2.0** - ✅ **REVOLUCIONÁRIO! Lista Dupla Implementada**
-- ✅ **Interface Lista Dupla** - Superior (busca) + Inferior (selecionados)
-- ✅ **Persistência Global** - Seleções mantidas entre filtros
-- ✅ **Gravação Automática** - Alvos salvos na tabela participações
-- ✅ **Logs Estruturados** - Sistema completo de debugging
-- ✅ **Otimização de Dados** - 4 campos vs 15+ (75% menos tráfego)
+- ✅ **Sistema de Alvos V2.0 - FINALIZADO COMPLETAMENTE!**
+- ✅ **Soft Delete Implementado** - Campo 'deleted' com valor 'x' conforme dicionário
+- ✅ **Filtros Corretos** - Lista selecionados vs pesquisa funcionando adequadamente
+- ✅ **Re-seleção de Deletados** - Alvos removidos disponíveis na pesquisa
+- ✅ **Persistência 100%** - Todas alterações salvas corretamente
+- ✅ **Correção de Bugs Críticos** - Erro de linha na planilha resolvido
 
 ### ✅ **FUNCIONALIDADES ESTÁVEIS**
 - ✅ **Sistema de Sessões V4** - Login + Logout + State management
@@ -142,11 +144,11 @@ activities.gs                 ✅ Sistema híbrido de tags
 
 ## 🎯 **PRÓXIMOS PASSOS RECOMENDADOS**
 
-### **Sessão atual (27/09/2025):**
-1. **✅ Sistema de Alvos** - Lista dupla implementada e testada
-2. **🎨 Ajustes visuais** - Possível refinamento de cores/layout
-3. **📊 Monitoramento** - Verificar performance em uso real
-4. **📝 Documentação** - Finalizar documentos técnicos
+### **Sessão atual (29/09/2025):**
+1. **✅ Sistema de Alvos** - FINALIZADO COMPLETAMENTE com soft delete
+2. **✅ Documentação** - Criada documentação técnica completa
+3. **✅ Testes** - Todos os cenários validados com sucesso
+4. **🎯 Próximo foco** - Aguardando definição da próxima funcionalidade
 
 ### **Próximas funcionalidades priorizadas:**
 - **🎯 Alvos V3** - Lista dupla com drag & drop (futuro)
@@ -251,12 +253,13 @@ clasp open
 ---
 
 **👨‍💻 Desenvolvido com:** Claude Code + Diogo
-**📅 Última sessão:** 27/09/2025 - Sistema de Alvos Lista Dupla implementado
-**🎯 Próxima meta:** Refinamentos visuais e dashboard analytics avançado
+**📅 Última sessão:** 29/09/2025 - Sistema de Alvos Finalizado Completamente
+**🎯 Próxima meta:** Aguardando definição da próxima funcionalidade
 
 ### **🎯 DESTAQUE DA SESSÃO ATUAL**
-**Sistema de Alvos V2.0 - Interface Lista Dupla:**
-- **Problema resolvido:** Usuários perdiam visão dos alvos já selecionados durante novas buscas
-- **Solução inovadora:** Duas listas independentes com movimento visual entre elas
-- **Impacto:** UX revolucionária + gravação automática + logs estruturados
-- **Status:** ✅ **FUNCIONAL E TESTADO** - pronto para uso em produção
+**Sistema de Alvos V2.0 - FINALIZADO COM SUCESSO:**
+- **Problemas corrigidos:** Erro de linha na planilha + campo deleted incorreto
+- **Soft Delete implementado:** Campo 'deleted' = 'x' conforme dicionário de dados
+- **Filtros funcionais:** Lista selecionados (só ativos) vs pesquisa (todos para re-seleção)
+- **Re-seleção:** Alvos deletados podem ser adicionados novamente
+- **Status:** ✅ **100% FUNCIONAL E TESTADO** - sistema completo pronto para produção

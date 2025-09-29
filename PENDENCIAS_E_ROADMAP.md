@@ -1,8 +1,8 @@
 # 📋 PENDÊNCIAS E ROADMAP - Sistema Dojotai V2.0
 
-**Última atualização:** 26/09/2025 - 18:45h
-**Status do projeto:** Menu Dinâmico + Logout Aprimorado COMPLETO ✅
-**Sessão atual:** Sistema de autenticação com menu dinâmico e feedback visual completo
+**Última atualização:** 29/09/2025 - Sistema de Alvos Finalizado
+**Status do projeto:** Sistema de Alvos V2.0 COMPLETO ✅
+**Sessão atual:** Sistema de alvos com soft delete e filtros funcionais implementado
 
 ---
 
@@ -37,6 +37,38 @@
 ---
 
 ## ✅ CONCLUÍDO
+
+### Sistema de Alvos V2.0 com Soft Delete - **FINALIZADO COM SUCESSO** ✅
+
+**Status:** ✅ **SISTEMA 100% FUNCIONAL E TESTADO**
+**Data conclusão:** 29/09/2025
+**Arquivos modificados:**
+- `participacoes.gs` (Backend com soft delete)
+- `app_migrated.html` (Interface frontend)
+
+#### ✅ IMPLEMENTAÇÕES CONCLUÍDAS
+- ✅ **Soft Delete Completo** - Campo 'deleted' = 'x' conforme dicionário de dados
+- ✅ **Filtros Diferenciados** - Lista selecionados (só ativos) vs pesquisa (todos)
+- ✅ **Re-seleção de Deletados** - Alvos removidos disponíveis na pesquisa
+- ✅ **Cálculo de Linha Correto** - `ctx.range.getRow() + target.rowIndex`
+- ✅ **Range Expandido** - A1:N1000 → A1:O1000 (inclui coluna 'deleted')
+- ✅ **Documentação Completa** - STATUS_SISTEMA_ALVOS_FINAL.md
+
+#### 🔧 PROBLEMAS CORRIGIDOS
+- ✅ **Erro "A linha inicial do intervalo é muito pequena"** - Resolvido
+- ✅ **Campo 'status_participacao' incorreto** - Corrigido para 'deleted'
+- ✅ **Alvos deletados apareciam na lista** - Filtros implementados
+- ✅ **Persistência incompleta** - Soft delete funcionando 100%
+- ✅ **Context incompleto** - Usar `ctx` completo de readTableByNome_()
+
+#### 🧪 TESTES REALIZADOS
+- ✅ **Criação de atividade com alvos** - Funcional
+- ✅ **Edição de alvos existentes** - Soft delete funcionando
+- ✅ **Remoção de alvos** - Marca deleted='x' na planilha
+- ✅ **Re-seleção de alvos deletados** - Disponível na pesquisa
+- ✅ **Persistência completa** - Todas alterações salvas
+
+---
 
 ### Sistema de Conclusão de Atividades + Filtro "Minhas Tarefas" - **FINALIZADO COM SUCESSO** ✅
 
@@ -230,12 +262,19 @@
 ## 🗺️ ROADMAP FUTURO - SISTEMA V2.0
 
 ### 🔄 PRÓXIMA SESSÃO (Imediato)
-- [ ] Testar SessionManager V3 simples
-- [ ] Finalizar sistema de sessões funcionando
-- [ ] Revisar estruturas das novas tabelas
-- [ ] Integrar sessões com sistema de auth
+- [x] ~~Sistema de Alvos V2.0~~ ✅ **FINALIZADO COMPLETAMENTE (29/09/2025)**
+- [x] ~~Soft Delete para alvos~~ ✅ **IMPLEMENTADO**
+- [x] ~~Correção de bugs críticos~~ ✅ **RESOLVIDO**
+- [x] ~~Documentação técnica~~ ✅ **CRIADA**
+- [ ] **Próxima funcionalidade**: Aguardando definição do usuário
+
+**Status Atual:** ✅ **SISTEMA DE ALVOS 100% FUNCIONAL E TESTADO**
 
 ### 📈 FASE 2 - Sistemas Avançados (1-2 semanas)
+- [ ] **Sistema de Notificações para Alvos** - Alertar alvos sobre convites
+- [ ] **Dashboard de Participação** - Estatísticas por membro e atividade
+- [ ] **Templates de Alvos** - Conjuntos pré-definidos de alvos
+- [ ] **Histórico de Alterações** - Log de mudanças nos alvos
 - [ ] **PermissionManager** - Sistema de permissões granulares
 - [~] **Sistema de Logs Estruturados** - 🔄 **EM DESENVOLVIMENTO** (22/09/2025)
   - ✅ Logger Core funcional (4 níveis, formatação, configuração)

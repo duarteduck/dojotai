@@ -3056,7 +3056,7 @@
             console.log('🧼 Limpando seleções de alvos ao fechar modal de criação');
             selectedTargets.clear();
             currentTargetsData = [];
-            window.allMembersCache = [];
+            window.allMembersCache = new Map();
 
             const modal = document.getElementById('activityModal');
             if (modal) {
@@ -3193,15 +3193,11 @@
                                     <button onclick="toggleTargetsSection('edit')" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; color: var(--text-light);">&times;</button>
                                 </div>
 
-                                <!-- Alvos atuais (se houver) -->
-                                <div id="editCurrentTargets" style="display: none; background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
-                                    <h4 style="font-size: var(--font-size-md); font-weight: 600; margin: 0 0 12px 0; color: var(--text);">Alvos Atuais</h4>
-                                    <div id="editCurrentTargetsList" style="max-height: 200px; overflow-y: auto;"></div>
-                                </div>
+                                <!-- Alvos atuais (seção removida - agora integrada no sistema de lista dupla) -->
 
-                                <!-- Filtros para adicionar novos membros -->
+                                <!-- Filtros para buscar e gerenciar alvos -->
                                 <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
-                                    <h4 style="font-size: var(--font-size-md); font-weight: 600; margin: 0 0 12px 0; color: var(--text);">Adicionar Novos Alvos</h4>
+                                    <h4 style="font-size: var(--font-size-md); font-weight: 600; margin: 0 0 12px 0; color: var(--text);">Buscar e Gerenciar Alvos</h4>
                                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
                                         <div>
                                             <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Dojo</label>
@@ -3350,7 +3346,7 @@
             console.log('🧼 Limpando seleções de alvos ao fechar modal de edição');
             selectedTargets.clear();
             currentTargetsData = [];
-            window.allMembersCache = [];
+            window.allMembersCache = new Map();
 
             const modal = document.getElementById('editActivityModal');
             if (modal) {
@@ -3660,21 +3656,43 @@
         function updateActivity(activityId) {
             console.log('🔄 Atualizando atividade:', activityId);
 
-            // Coletar dados do formulário
+            // Coletar dados do formulário com debug
+            console.log('🔍 DEBUG: Coletando dados do formulário...');
+
             const categorySelect = document.getElementById('edit-activity-category');
             const selectedCategories = Array.from(categorySelect.selectedOptions).map(option => option.value);
 
+            // Debug individual dos campos
+            const tituloEl = document.getElementById('edit-activity-name');
+            const dateEl = document.getElementById('edit-activity-date');
+            const timeEl = document.getElementById('edit-activity-time');
+            const descricaoEl = document.getElementById('edit-activity-description');
+            const responsibleEl = document.getElementById('edit-activity-responsible');
+            const tagsEl = document.getElementById('edit-activity-tags');
+
+            console.log('🔍 DEBUG: Elementos encontrados:', {
+                tituloEl: !!tituloEl,
+                dateEl: !!dateEl,
+                timeEl: !!timeEl,
+                descricaoEl: !!descricaoEl,
+                responsibleEl: !!responsibleEl,
+                tagsEl: !!tagsEl,
+                categorySelect: !!categorySelect
+            });
+
             const formData = {
                 id: activityId,
-                titulo: document.getElementById('edit-activity-name').value,
+                titulo: tituloEl ? tituloEl.value : '',
                 categorias: selectedCategories,
-                data: document.getElementById('edit-activity-date').value + 'T' + document.getElementById('edit-activity-time').value,
-                descricao: document.getElementById('edit-activity-description').value,
-                atribuido_uid: document.getElementById('edit-activity-responsible').value,
-                tags: document.getElementById('edit-activity-tags').value
+                data: (dateEl ? dateEl.value : '') + 'T' + (timeEl ? timeEl.value : ''),
+                descricao: descricaoEl ? descricaoEl.value : '',
+                atribuido_uid: responsibleEl ? responsibleEl.value : '',
+                tags: tagsEl ? tagsEl.value : '',
+                alvos: Array.from(selectedTargets) // Adicionar alvos selecionados
             };
 
             console.log('📝 Dados para atualização:', formData);
+            console.log('🔍 DEBUG: Título coletado:', `"${formData.titulo}"`, 'Length:', formData.titulo.length);
 
             // Validação básica
             if (!formData.titulo) {
@@ -3727,7 +3745,16 @@
                         alert('❌ Erro ao conectar com o servidor. Tente novamente.');
                         closeEditActivityModal(); // Fechar mesmo com erro
                     })
-                    .updateActivity(formData);
+                    .updateActivityWithTargets({
+                        id: formData.id,
+                        patch: {
+                            titulo: formData.titulo,
+                            descricao: formData.descricao,
+                            data: formData.data,
+                            atribuido_uid: formData.atribuido_uid
+                        },
+                        alvos: formData.alvos
+                    });
                 return;
             }
 
@@ -4263,7 +4290,7 @@
         let currentTargetsData = [];
         let selectedTargets = new Set();
         // Cache global para manter dados de membros selecionados de buscas anteriores
-        window.allMembersCache = [];
+        window.allMembersCache = new Map();
 
         // Função para mostrar/esconder botão após salvar atividade
         function showTargetsButton(mode = 'create') {
@@ -4325,13 +4352,13 @@
             // Carregar filtros
             loadTargetFilters(mode);
 
-            // Se modo edição e há activityId, carregar alvos existentes
+            // Se modo edição e há activityId, mostrar lista de selecionados imediatamente e carregar alvos existentes
             if (mode === 'edit' && activityId) {
+                // Mostrar container de selecionados imediatamente
+                showSelectedTargetsContainerWithLoading(mode);
                 loadExistingTargets(activityId);
-            }
-
-            // Mostrar estado inicial
-            if (mode === 'edit') {
+            } else if (mode === 'edit') {
+                // Só mostrar empty se não há activityId (caso impossível, mas por segurança)
                 showTargetsEmpty(mode);
             } else {
                 // No modo create, mostrar apenas a mensagem explicativa (filtros ficam sempre visíveis)
@@ -4413,57 +4440,232 @@
 
         // Exibir alvos existentes
         function displayExistingTargets(targets) {
-            const currentSection = document.getElementById('editCurrentTargets');
-            const currentList = document.getElementById('editCurrentTargetsList');
+            console.log('🎯 Carregando alvos existentes no sistema de lista dupla:', targets.length);
 
-            if (!currentSection || !currentList) return;
+            // Esconder a seção antiga de alvos atuais (não usamos mais)
+            const currentSection = document.getElementById('editCurrentTargets');
+            if (currentSection) {
+                currentSection.style.display = 'none';
+            }
 
             if (targets.length === 0) {
-                currentSection.style.display = 'none';
+                console.log('⚠️ Nenhum alvo existente encontrado');
+
+                // Limpar seleções
+                selectedTargets.clear();
+
+                // Mostrar mensagem de lista vazia (substitui o loading)
+                showEmptySelectedTargetsList('edit');
                 return;
             }
 
-            currentSection.style.display = 'block';
+            // Limpar seleções anteriores
+            selectedTargets.clear();
 
-            currentList.innerHTML = targets.map(target => `
-                <div style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 8px 12px;
-                    border: 1px solid var(--border-color);
-                    border-radius: 6px;
-                    margin-bottom: 4px;
-                    background: var(--light);
-                ">
-                    <span style="font-weight: 500;">${target.id_membro} - ${target.nome || 'Nome não encontrado'}</span>
-                    <button
-                        onclick="removeExistingTarget('${target.id}', '${target.id_membro}')"
-                        style="
-                            background: var(--danger);
-                            color: white;
-                            border: none;
-                            border-radius: 4px;
-                            padding: 4px 8px;
-                            font-size: var(--font-size-xs);
-                            cursor: pointer;
-                        "
-                    >Remover</button>
-                </div>
-            `).join('');
+            // Extrair IDs dos membros para buscar dados completos
+            const memberIds = targets.map(target => target.id_membro);
+            console.log('🔍 Buscando dados completos dos membros:', memberIds);
+
+            // Buscar dados completos dos membros via API
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((result) => {
+                        if (result && result.ok && result.items) {
+                            console.log('✅ Dados dos membros carregados:', result.items.length);
+
+                            // Debug: verificar dados dos alvos
+                            console.log('🔍 DEBUG - targets recebidos:', targets);
+                            console.log('🔍 DEBUG - membros carregados:', result.items.length);
+                            console.log('🔍 DEBUG - IDs dos alvos:', targets.map(t => t.id_membro));
+
+                            // Debug: verificar estrutura dos membros
+                            if (result.items.length > 0) {
+                                console.log('🔍 DEBUG - Estrutura do primeiro membro:', result.items[0]);
+                                console.log('🔍 DEBUG - Campos disponíveis:', Object.keys(result.items[0]));
+                            }
+
+                            // Adicionar alvos existentes ao selectedTargets com dados completos
+                            result.items.forEach(member => {
+                                // Tentar diferentes campos para o ID
+                                const memberId = String(member.codigo_sequencial || member.id || member.codigo || '');
+
+                                console.log(`🔍 DEBUG - Membro processado:`, {
+                                    nome: member.nome,
+                                    codigo_sequencial: member.codigo_sequencial,
+                                    id: member.id,
+                                    codigo: member.codigo,
+                                    memberId: memberId
+                                });
+
+                                // Verificar se este membro estava nos alvos
+                                const isTarget = targets.find(t => String(t.id_membro) === memberId);
+                                console.log(`🔍 DEBUG - Verificando membro ${memberId} (${member.nome}):`, isTarget ? 'É ALVO' : 'NÃO é alvo');
+
+                                if (isTarget) {
+                                    selectedTargets.add(memberId);
+
+                                    // Inicializar cache se necessário
+                                    if (!window.allMembersCache) {
+                                        window.allMembersCache = new Map();
+                                    }
+
+                                    // Adicionar dados completos ao cache
+                                    window.allMembersCache.set(memberId, member);
+                                    console.log('✅ Alvo existente adicionado com dados completos:', member.nome, `(#${member.codigo_sequencial})`);
+                                }
+                            });
+
+                            console.log('🎯 Alvos existentes carregados:', selectedTargets.size);
+                            console.log('📋 Cache final:', window.allMembersCache);
+
+                            // Gerenciar visibilidade dos elementos UI
+                            const emptyEl = document.getElementById('editTargetsEmpty');
+                            const selectedContainerEl = document.getElementById('editTargetsSelectedContainer');
+
+                            if (emptyEl) {
+                                emptyEl.style.display = 'none';
+                                console.log('✅ Estado vazio escondido');
+                            }
+
+                            if (selectedContainerEl) {
+                                selectedContainerEl.style.display = 'block';
+                                console.log('✅ Container de selecionados forçado para visível');
+                            }
+
+                            // Atualizar lista de selecionados
+                            console.log('🚀 Chamando updateSelectedMembersList(edit)...');
+                            updateSelectedMembersList('edit');
+                        } else {
+                            console.error('❌ Erro ao buscar dados dos membros:', result?.error);
+                            // Fallback: usar dados parciais
+                            loadTargetsWithPartialData(targets);
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        console.error('❌ Erro na API de membros:', error);
+                        // Fallback: usar dados parciais
+                        loadTargetsWithPartialData(targets);
+                    })
+                    .listMembersApi();
+            } else {
+                // Fallback: usar dados parciais
+                loadTargetsWithPartialData(targets);
+            }
         }
 
-        // Remover alvo existente
-        function removeExistingTarget(participacaoId, memberId) {
-            if (!confirm('Deseja remover este membro dos alvos da atividade?')) {
-                return;
+        // Função fallback melhorada para carregar alvos com dados reais
+        function loadTargetsWithPartialData(targets) {
+            console.log('⚠️ Tentando buscar dados reais dos membros via searchMembersByCriteria...');
+
+            // Primeiro, tentar buscar dados reais via searchMembersByCriteria
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((result) => {
+                        if (result && result.ok && result.items && result.items.length > 0) {
+                            console.log('✅ Dados reais dos membros obtidos via fallback:', result.items.length);
+                            processTargetsWithRealData(targets, result.items);
+                        } else {
+                            console.log('⚠️ Fallback para dados básicos - não foi possível obter dados reais');
+                            processTargetsWithBasicData(targets);
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        console.error('❌ Erro no fallback melhorado:', error);
+                        console.log('⚠️ Usando dados básicos como último recurso');
+                        processTargetsWithBasicData(targets);
+                    })
+                    .searchMembersByCriteria({}); // Buscar todos os membros
+            } else {
+                console.log('⚠️ Google script não disponível - usando dados básicos');
+                processTargetsWithBasicData(targets);
+            }
+        }
+
+        // Processar alvos com dados reais dos membros
+        function processTargetsWithRealData(targets, allMembers) {
+            console.log('🎯 Processando alvos com dados reais dos membros');
+
+            targets.forEach(target => {
+                const memberId = String(target.id_membro);
+                selectedTargets.add(memberId);
+
+                // Inicializar cache se necessário
+                if (!window.allMembersCache) {
+                    window.allMembersCache = new Map();
+                }
+
+                // Buscar dados reais do membro
+                const realMember = allMembers.find(m => String(m.codigo_sequencial) === memberId);
+
+                if (realMember) {
+                    window.allMembersCache.set(memberId, realMember);
+                    console.log('✅ Alvo existente adicionado (dados reais):', realMember.nome, `(#${realMember.codigo_sequencial})`);
+                } else {
+                    // Fallback para dados básicos se membro não encontrado
+                    const memberData = {
+                        codigo_sequencial: target.id_membro,
+                        nome: `Membro #${target.id_membro}`,
+                        dojo: 'N/A',
+                        status: 'N/A'
+                    };
+                    window.allMembersCache.set(memberId, memberData);
+                    console.log('⚠️ Alvo existente adicionado (dados básicos):', memberData.nome);
+                }
+            });
+
+            finalizarCarregamentoAlvos();
+        }
+
+        // Processar alvos com dados básicos (último recurso)
+        function processTargetsWithBasicData(targets) {
+            console.log('⚠️ Carregando alvos com dados básicos (último recurso)');
+
+            targets.forEach(target => {
+                const memberId = String(target.id_membro);
+                selectedTargets.add(memberId);
+
+                // Inicializar cache se necessário
+                if (!window.allMembersCache) {
+                    window.allMembersCache = new Map();
+                }
+
+                // Criar objeto membro básico para o cache
+                const memberData = {
+                    codigo_sequencial: target.id_membro,
+                    nome: `Membro #${target.id_membro}`,
+                    dojo: 'N/A',
+                    status: 'N/A'
+                };
+
+                window.allMembersCache.set(memberId, memberData);
+                console.log('✅ Alvo existente adicionado (dados básicos):', memberData.nome);
+            });
+
+            finalizarCarregamentoAlvos();
+        }
+
+        // Finalizar carregamento de alvos (código comum)
+        function finalizarCarregamentoAlvos() {
+            // Gerenciar visibilidade dos elementos UI
+            const emptyEl = document.getElementById('editTargetsEmpty');
+            const selectedContainerEl = document.getElementById('editTargetsSelectedContainer');
+
+            if (emptyEl) {
+                emptyEl.style.display = 'none';
+                console.log('✅ Estado vazio escondido (fallback)');
             }
 
-            console.log('🗑️ Removendo alvo:', participacaoId, memberId);
+            if (selectedContainerEl) {
+                selectedContainerEl.style.display = 'block';
+                console.log('✅ Container de selecionados forçado para visível (fallback)');
+            }
 
-            // Aqui implementaremos a remoção via API depois
-            alert('Funcionalidade de remoção será implementada em breve');
+            // Atualizar lista de selecionados
+            console.log('🚀 Chamando updateSelectedMembersList(edit) - fallback...');
+            updateSelectedMembersList('edit');
         }
+
+        // Função removeExistingTarget removida - agora usamos o sistema de lista dupla integrado
 
         // Buscar membros com base nos filtros
         function searchMembersForTargets(mode = 'create') {
@@ -4531,7 +4733,7 @@
 
         // Criar item da lista de membro
         function createMemberListItem(member, isSelected, mode) {
-            const bgStyle = isSelected ? 'background-color: var(--primary-light); border: 2px solid var(--primary);' : 'background-color: white; border: 1px solid var(--border-color);';
+            const bgStyle = isSelected ? 'background-color: white; border: 2px solid var(--primary);' : 'background-color: white; border: 1px solid var(--border-color);';
             const textColor = isSelected ? 'var(--primary)' : 'var(--text)';
 
             return `<div style="
@@ -4560,6 +4762,8 @@
         function updateSelectedMembersList(mode = 'create') {
             let selectedListEl, selectedCountEl, selectedContainerEl;
 
+            console.log('🔧 updateSelectedMembersList INICIADO para mode:', mode);
+
             if (mode === 'edit') {
                 selectedListEl = document.getElementById('editTargetsSelectedList');
                 selectedCountEl = document.getElementById('editTargetsSelected');
@@ -4570,34 +4774,56 @@
                 selectedContainerEl = document.getElementById('targetsSelectedContainer');
             }
 
-            if (!selectedListEl) return;
+            console.log('🔍 Elementos encontrados:', {
+                selectedListEl: !!selectedListEl,
+                selectedCountEl: !!selectedCountEl,
+                selectedContainerEl: !!selectedContainerEl,
+                mode: mode
+            });
+
+            if (!selectedListEl) {
+                console.error('❌ selectedListEl não encontrado para mode:', mode);
+                return;
+            }
 
             console.log('🎯 Atualizando lista de selecionados - INICIADO:', selectedTargets.size);
+            console.log('🔍 currentTargetsData:', currentTargetsData?.length || 0, 'membros');
+            console.log('🔍 allMembersCache size:', window.allMembersCache?.size || 0);
+            console.log('🔍 selectedTargets:', Array.from(selectedTargets));
 
             // Obter membros selecionados de currentTargetsData e adicionar outros já selecionados
             const allSelectedMembers = [];
 
             console.log('📊 Processando selectedTargets:', Array.from(selectedTargets));
+            console.log('📊 currentTargetsData disponível:', currentTargetsData.length);
 
-            // Adicionar da busca atual
-            currentTargetsData.forEach(member => {
-                if (selectedTargets.has(String(member.codigo_sequencial))) {
-                    allSelectedMembers.push(member);
-                    console.log('✅ Adicionado da busca atual:', member.nome);
-                }
-            });
+            // Adicionar da busca atual (se existir dados)
+            if (currentTargetsData && currentTargetsData.length > 0) {
+                currentTargetsData.forEach(member => {
+                    if (selectedTargets.has(String(member.codigo_sequencial))) {
+                        allSelectedMembers.push(member);
+                        console.log('✅ Adicionado da busca atual:', member.nome);
+                    }
+                });
+            }
 
             // Buscar dados de membros selecionados que não estão na busca atual
             selectedTargets.forEach(memberId => {
-                const memberInCurrent = currentTargetsData.find(m => String(m.codigo_sequencial) === memberId);
+                const memberInCurrent = currentTargetsData && currentTargetsData.length > 0
+                    ? currentTargetsData.find(m => String(m.codigo_sequencial) === memberId)
+                    : null;
+
                 if (!memberInCurrent) {
                     // Membro foi selecionado em busca anterior, precisamos dos dados
-                    const cachedMember = window.allMembersCache?.find(m => String(m.codigo_sequencial) === memberId);
+                    console.log('🔍 Buscando no cache memberId:', memberId, 'type:', typeof memberId);
+                    const cachedMember = window.allMembersCache?.get(memberId);
+                    console.log('🔍 Resultado do cache:', cachedMember ? `${cachedMember.nome} (#${cachedMember.codigo_sequencial})` : 'NÃO ENCONTRADO');
                     if (cachedMember) {
                         allSelectedMembers.push(cachedMember);
                         console.log('✅ Adicionado do cache:', cachedMember.nome);
                     } else {
                         console.warn('⚠️ Membro selecionado não encontrado no cache:', memberId);
+                        console.log('🔍 Chaves disponíveis no cache:', Array.from(window.allMembersCache?.keys() || []));
                     }
                 }
             });
@@ -4630,9 +4856,10 @@
 
             // Controlar visibilidade do container de selecionados
             if (selectedContainerEl) {
-                if (selectedTargets.size > 0) {
+                // No modo edição, sempre mostrar o container se há membros selecionados OU se é modo edição
+                if (mode === 'edit' || selectedTargets.size > 0) {
                     selectedContainerEl.style.display = 'block';
-                    console.log('✅ Container de selecionados visível');
+                    console.log('✅ Container de selecionados visível (mode:', mode, ', selectedTargets:', selectedTargets.size, ')');
                 } else {
                     selectedContainerEl.style.display = 'none';
                     console.log('✅ Container de selecionados oculto');
@@ -4700,7 +4927,7 @@
             // Lista superior: Apenas membros NÃO selecionados
             if (searchListEl) {
                 const unselectedMembers = sortedMembers.filter(member =>
-                    !selectedTargets.has(member.codigo_sequencial)
+                    !selectedTargets.has(String(member.codigo_sequencial))
                 );
 
                 console.log('📋 Lista superior:', unselectedMembers.length, 'não selecionados');
@@ -4722,51 +4949,82 @@
             updateSelectedMembersList(mode);
         }
 
-        // Toggle seleção de membro (sistema de lista dupla)
+        // Toggle seleção de membro (sistema de lista dupla) - VERSÃO MELHORADA
         function toggleTargetSelection(memberId, mode = 'create') {
-            console.log('🔄 Toggle seleção INICIADO:', memberId, 'Mode:', mode);
-            console.log('📊 Estado atual selectedTargets:', Array.from(selectedTargets));
-            console.log('📊 currentTargetsData:', currentTargetsData.length, 'membros');
+            try {
+                console.log('🔄 Toggle seleção INICIADO:', memberId, 'Mode:', mode);
 
-            // Garantir que memberId seja string para consistência
-            const memberIdStr = String(memberId);
-
-            // Verificar se membro está selecionado
-            const isCurrentlySelected = selectedTargets.has(memberIdStr);
-            console.log('🔍 Membro atualmente selecionado?', isCurrentlySelected);
-            console.log('🔍 MemberId (convertido para string):', memberIdStr);
-
-            if (isCurrentlySelected) {
-                // Remover da seleção
-                selectedTargets.delete(memberIdStr);
-                console.log('❌ Membro removido dos alvos:', memberIdStr);
-            } else {
-                // Adicionar à seleção
-                selectedTargets.add(memberIdStr);
-                console.log('✅ Membro adicionado aos alvos:', memberIdStr);
-
-                // Adicionar ao cache global se não estiver lá
-                const member = currentTargetsData.find(m => String(m.codigo_sequencial) === memberIdStr);
-                console.log('🔍 Membro encontrado nos dados atuais?', !!member);
-                console.log('🔍 Comparando IDs:', currentTargetsData.map(m => `${m.nome}: ${typeof m.codigo_sequencial} "${m.codigo_sequencial}"`));
-
-                if (member && !window.allMembersCache) {
-                    window.allMembersCache = [];
-                    console.log('🆕 Cache global criado');
+                // Validações iniciais
+                if (!memberId) {
+                    console.error('❌ memberId não fornecido');
+                    return;
                 }
-                if (member && window.allMembersCache && !window.allMembersCache.find(m => m.codigo_sequencial === memberId)) {
-                    window.allMembersCache.push(member);
-                    console.log('💾 Membro adicionado ao cache global');
+
+                // Inicializar estruturas se necessário
+                if (!selectedTargets) {
+                    selectedTargets = new Set();
+                    console.log('🆕 selectedTargets inicializado');
                 }
+
+                if (!currentTargetsData) {
+                    currentTargetsData = [];
+                    console.log('🆕 currentTargetsData inicializado');
+                }
+
+                if (!window.allMembersCache) {
+                    window.allMembersCache = new Map();
+                    console.log('🆕 Cache global inicializado');
+                }
+
+                console.log('📊 Estado atual selectedTargets:', Array.from(selectedTargets));
+                console.log('📊 currentTargetsData:', currentTargetsData.length, 'membros');
+
+                // Garantir que memberId seja string para consistência
+                const memberIdStr = String(memberId);
+
+                // Verificar se membro está selecionado
+                const isCurrentlySelected = selectedTargets.has(memberIdStr);
+                console.log('🔍 Membro atualmente selecionado?', isCurrentlySelected);
+                console.log('🔍 MemberId (convertido para string):', memberIdStr);
+
+                if (isCurrentlySelected) {
+                    // Remover da seleção
+                    selectedTargets.delete(memberIdStr);
+                    console.log('❌ Membro removido dos alvos:', memberIdStr);
+                } else {
+                    // Adicionar à seleção
+                    selectedTargets.add(memberIdStr);
+                    console.log('✅ Membro adicionado aos alvos:', memberIdStr);
+
+                    // Buscar dados do membro para adicionar ao cache
+                    const member = currentTargetsData.find(m => String(m.codigo_sequencial) === memberIdStr);
+                    console.log('🔍 Membro encontrado nos dados atuais?', !!member);
+
+                    if (member) {
+                        // Cache é Map, usar set() para adicionar
+                        if (!window.allMembersCache.has(memberIdStr)) {
+                            window.allMembersCache.set(memberIdStr, member);
+                            console.log('💾 Membro adicionado ao cache global');
+                        }
+                    } else {
+                        console.warn('⚠️ Membro não encontrado nos dados atuais para cache');
+                    }
+                }
+
+                console.log('📊 Novo estado selectedTargets:', Array.from(selectedTargets));
+                console.log('🔄 Chamando updateDualListDisplay...');
+
+                // Atualizar ambas as listas
+                updateDualListDisplay(mode);
+
+                console.log('✅ Toggle seleção CONCLUÍDO');
+
+            } catch (error) {
+                console.error('❌ Erro em toggleTargetSelection:', error);
+                // Tentar recuperar o estado
+                if (!selectedTargets) selectedTargets = new Set();
+                if (!window.allMembersCache) window.allMembersCache = new Map();
             }
-
-            console.log('📊 Novo estado selectedTargets:', Array.from(selectedTargets));
-            console.log('🔄 Chamando updateDualListDisplay...');
-
-            // Atualizar ambas as listas
-            updateDualListDisplay(mode);
-
-            console.log('✅ Toggle seleção CONCLUÍDO');
         }
 
         // Atualizar display das duas listas
@@ -4846,7 +5104,7 @@
             }
 
             // Obter membros selecionados
-            const selectedMembers = currentTargetsData.filter(member => selectedTargets.has(member.codigo_sequencial));
+            const selectedMembers = currentTargetsData.filter(member => selectedTargets.has(String(member.codigo_sequencial)));
             selectedMembers.sort((a, b) => a.nome.localeCompare(b.nome));
 
             if (selectedMembers.length === 0) {
@@ -4861,13 +5119,13 @@
                     display: flex;
                     align-items: center;
                     padding: 8px 12px;
-                    border: 1px solid var(--primary);
-                    background-color: var(--primary-light);
+                    border: 2px solid var(--primary);
+                    background-color: white;
                     border-radius: 6px;
                     margin-bottom: 4px;
                     cursor: pointer;
                     transition: all 0.2s;
-                " onmouseover="this.style.backgroundColor='var(--light)'" onmouseout="this.style.backgroundColor='var(--primary-light)'" onclick="toggleTargetSelection('${member.codigo_sequencial}', '${mode}')">
+                " onmouseover="this.style.backgroundColor='var(--light)'" onmouseout="this.style.backgroundColor='white'" onclick="toggleTargetSelection('${member.codigo_sequencial}', '${mode}')">
                     <span style="margin-right: 12px; font-size: 16px;">✅</span>
                     <div style="flex: 1;">
                         <div style="font-weight: 600; font-size: var(--font-size-sm); color: var(--primary);">${member.nome}</div>
@@ -4902,10 +5160,10 @@
 
                     // Adicionar ao cache global
                     if (!window.allMembersCache) {
-                        window.allMembersCache = [];
+                        window.allMembersCache = new Map();
                     }
-                    if (!window.allMembersCache.find(m => String(m.codigo_sequencial) === memberId)) {
-                        window.allMembersCache.push(member);
+                    if (!window.allMembersCache.has(memberId)) {
+                        window.allMembersCache.set(memberId, member);
                     }
                 }
             });
@@ -5028,10 +5286,65 @@
             if (loadingEl) loadingEl.style.display = 'none';
         }
 
+        // Mostrar container de selecionados imediatamente com loading (modo edição)
+        function showSelectedTargetsContainerWithLoading(mode = 'create') {
+            console.log('🔄 Mostrando container de selecionados com loading:', mode);
+
+            const selectedContainerEl = document.getElementById(mode === 'edit' ? 'editTargetsSelectedContainer' : 'targetsSelectedContainer');
+            const selectedListEl = document.getElementById(mode === 'edit' ? 'editTargetsSelectedList' : 'targetsSelectedList');
+            const emptyEl = document.getElementById(mode === 'edit' ? 'editTargetsEmpty' : 'targetsEmpty');
+
+            // Esconder estado vazio
+            if (emptyEl) {
+                emptyEl.style.display = 'none';
+                console.log('✅ Estado vazio escondido');
+            }
+
+            // Mostrar container de selecionados
+            if (selectedContainerEl) {
+                selectedContainerEl.style.display = 'block';
+                console.log('✅ Container de selecionados visível');
+            }
+
+            // Mostrar loading na lista
+            if (selectedListEl) {
+                selectedListEl.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; padding: 20px; color: var(--text-muted);">
+                        <div class="loading-select-spinner" style="margin-right: 10px;"></div>
+                        <span>Carregando alvos existentes...</span>
+                    </div>`;
+                console.log('✅ Loading mostrado na lista de selecionados');
+            }
+        }
+
+        // Mostrar mensagem de lista vazia (substituir loading quando não há alvos)
+        function showEmptySelectedTargetsList(mode = 'create') {
+            console.log('📝 Mostrando mensagem de lista vazia para:', mode);
+
+            const selectedContainerEl = document.getElementById(mode === 'edit' ? 'editTargetsSelectedContainer' : 'targetsSelectedContainer');
+            const selectedListEl = document.getElementById(mode === 'edit' ? 'editTargetsSelectedList' : 'targetsSelectedList');
+
+            // Manter container visível
+            if (selectedContainerEl) {
+                selectedContainerEl.style.display = 'block';
+                console.log('✅ Container de selecionados mantido visível');
+            }
+
+            // Mostrar mensagem de vazio na lista (substitui loading)
+            if (selectedListEl) {
+                selectedListEl.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                        Nenhum membro selecionado ainda.<br>
+                        <small>Clique nos membros acima para adicioná-los como alvos.</small>
+                    </div>`;
+                console.log('✅ Mensagem de lista vazia mostrada');
+            }
+        }
+
         function resetTargetsSection(mode = 'create') {
             selectedTargets.clear();
             currentTargetsData = [];
-            window.allMembersCache = [];
+            window.allMembersCache = new Map();
             showTargetsEmpty(mode);
         }
 

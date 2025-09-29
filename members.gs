@@ -42,6 +42,7 @@ function _listMembersCore() {
       const member = {
         // Campos obrigatórios mapeados
         id: String(row[headerIndex['codigo_sequencial']] || '').trim(),
+        codigo_sequencial: String(row[headerIndex['codigo_sequencial']] || '').trim(), // Campo correto do dicionário
         codigo_mestre: String(row[headerIndex['codigo_mestre']] || '').trim(),
         nome: String(row[headerIndex['nome']] || '').trim(),
         nome_completo: String(row[headerIndex['nome']] || '').trim(), // alias

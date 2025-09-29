@@ -1,7 +1,7 @@
 # 📅 CHANGELOG - Sistema Dojotai
 
-**Versão Atual:** 2.0.0-alpha.4
-**Atualizado:** 27/09/2025
+**Versão Atual:** 2.0.0-alpha.5
+**Atualizado:** 29/09/2025
 
 ---
 
@@ -17,6 +17,41 @@ Seguimos [Semantic Versioning](https://semver.org/):
 - `-alpha.X` - Versão em desenvolvimento inicial
 - `-beta.X` - Versão em testes avançados
 - `-rc.X` - Release candidate (candidata a lançamento)
+
+---
+
+## 🚀 **V2.0.0-alpha.5** - 2025-09-29
+
+### 🎯 **SISTEMA DE ALVOS - FINALIZAÇÃO COMPLETA COM SOFT DELETE**
+
+#### ✅ **Adicionado**
+- **Soft Delete Completo** - Campo 'deleted' = 'x' conforme dicionário de dados
+- **Filtros Diferenciados** - Lista selecionados (só ativos) vs pesquisa (todos para re-seleção)
+- **Re-seleção de Deletados** - Alvos removidos disponíveis na pesquisa para nova seleção
+- **Validações Robustas** - Verificação de campo 'deleted' existe na tabela
+- **Logs Detalhados** - Debug completo para troubleshooting de linha e soft delete
+
+#### 🔧 **Corrigido**
+- **❌ → ✅ Erro "A linha inicial do intervalo é muito pequena"** - Cálculo correto com `ctx.range.getRow()`
+- **❌ → ✅ Campo 'status_participacao' incorreto** - Usar campo 'deleted' conforme dicionário
+- **❌ → ✅ Range da planilha insuficiente** - Expandido A1:N1000 → A1:O1000 (inclui coluna 'deleted')
+- **❌ → ✅ Filtros inadequados** - listParticipacoes() filtra `deleted !== 'x'`
+- **❌ → ✅ Context incompleto** - Usar `ctx` completo de readTableByNome_()
+
+#### 📚 **Documentação**
+- **STATUS_SISTEMA_ALVOS_FINAL.md** - Documentação técnica completa do sistema
+- **STATUS_SESSAO_ATUAL.md** - Atualizado com todos os problemas resolvidos
+- **Arquitetura detalhada** - Soft delete pattern e fluxos principais
+- **Cenários de teste** - Todos os casos validados com sucesso
+
+#### 🧪 **Testes Realizados**
+- ✅ **Criação com alvos** - Funcional
+- ✅ **Edição de alvos** - Funcional com soft delete
+- ✅ **Remoção de alvos** - Marcação 'x' na planilha
+- ✅ **Re-seleção** - Alvos deletados aparecem na pesquisa
+- ✅ **Persistência** - Todas alterações salvas corretamente
+
+**Status:** ✅ **SISTEMA 100% FUNCIONAL E TESTADO**
 
 ---
 

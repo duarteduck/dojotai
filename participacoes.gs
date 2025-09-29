@@ -71,7 +71,7 @@ function listParticipacoes(activityId) {
   try {
     var ss = SpreadsheetApp.openById(ssid);
     var sheet = ss.getSheetByName('Participacoes'); // Nome da aba fixo
-    var range = sheet.getRange('A1:N1000'); // Range fixo
+    var range = sheet.getRange('A1:O1000'); // Range fixo expandido para incluir coluna 'deleted'
     var values = range.getValues();
 
     if (!values || values.length < 2) {
@@ -85,8 +85,10 @@ function listParticipacoes(activityId) {
       if (!row[0]) break; // Para quando não há mais dados
 
       var idAtividade = String(row[1] || '').trim(); // Coluna B = id_atividade
+      var deleted = String(row[14] || '').trim().toLowerCase(); // Coluna O = deleted
 
-      if (idAtividade === String(activityId).trim()) {
+      // Só incluir se for da atividade e NÃO estiver deletado
+      if (idAtividade === String(activityId).trim() && deleted !== 'x') {
         items.push({
           id: String(row[0] || '').trim(),           // A = id
           id_atividade: idAtividade,                 // B = id_atividade
@@ -472,7 +474,7 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
     }
 
     // Usa o mesmo padrão de acesso que activities.gs
-    const { values, headerIndex } = readTableByNome_('participacoes');
+    const { values, headerIndex, ctx } = readTableByNome_('participacoes');
 
     if (!values || values.length === 0) {
       return { ok: false, error: 'Tabela "participacoes" não encontrada ou vazia.' };
@@ -485,20 +487,78 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
       return { ok: false, error: 'Colunas faltando na tabela Participacoes: ' + missing.join(', ') };
     }
 
-    // Verifica duplicatas existentes
+    // Verifica alvos existentes e identifica mudanças
+    const existingTargets = [];
     const existingMemberIds = [];
+
     for (let r = 1; r < values.length; r++) {
       const row = values[r] || [];
       const rowActivityId = String(row[headerIndex['id_atividade']] || '').trim();
       if (rowActivityId === activityId.toString().trim()) {
-        existingMemberIds.push(String(row[headerIndex['id_membro']] || '').trim());
+        const memberId = String(row[headerIndex['id_membro']] || '').trim();
+        const tipo = String(row[headerIndex['tipo']] || '').trim();
+        const status = String(row[headerIndex['status_participacao']] || '').trim().toLowerCase();
+
+        // Só considerar alvos ativos (não deletados - campo 'deleted' vazio)
+        const deleted = String(row[headerIndex['deleted']] || '').trim().toLowerCase();
+        if (tipo === 'alvo' && deleted !== 'x') {
+          existingMemberIds.push(memberId);
+          existingTargets.push({
+            rowIndex: r,
+            memberId: memberId,
+            id: String(row[headerIndex['id']] || '').trim()
+          });
+        }
       }
     }
 
-    const newMemberIds = memberIds.filter(id => !existingMemberIds.includes(id.toString()));
+    console.log('🔍 Alvos existentes:', existingMemberIds);
+    console.log('🔍 Novos alvos solicitados:', memberIds);
 
-    if (newMemberIds.length === 0) {
-      return { ok: true, created: 0, message: 'Todos os membros já estão na lista.' };
+    const newMemberIds = memberIds.filter(id => !existingMemberIds.includes(id.toString()));
+    const removedTargets = existingTargets.filter(target => !memberIds.includes(target.memberId));
+
+    console.log('➕ Alvos a adicionar:', newMemberIds);
+    console.log('🗑️ Alvos a remover:', removedTargets.map(t => t.memberId));
+
+    // Se não há mudanças, retornar
+    if (newMemberIds.length === 0 && removedTargets.length === 0) {
+      return { ok: true, created: 0, deleted: 0, message: 'Nenhuma alteração necessária nos alvos.' };
+    }
+
+    // Marcar alvos removidos como 'deleted'
+    if (removedTargets.length > 0) {
+      console.log('🗑️ Marcando alvos removidos como deleted...');
+
+      // Usar o contexto já obtido de readTableByNome_
+      const sheet = ctx.sheet;
+
+      // Marcar como deleted (usar campo 'deleted' com valor 'x')
+      const deletedColIndex = headerIndex['deleted'] + 1; // +1 para índice baseado em 1
+      const nowStr = nowString_();
+
+      if (deletedColIndex === 0) {
+        console.error('❌ Campo "deleted" não encontrado na tabela participações');
+        return { ok: false, error: 'Campo "deleted" não encontrado na tabela participações' };
+      }
+
+      removedTargets.forEach(target => {
+        // rowIndex é baseado no array values (0=header, 1=primeira linha de dados, etc.)
+        // Precisa usar ctx.range.getRow() para obter a posição inicial da planilha
+        const startRow = ctx.range.getRow();
+        const sheetRowNumber = startRow + target.rowIndex;
+
+        console.log(`🔍 DEBUG: target.rowIndex=${target.rowIndex}, startRow=${startRow}, sheetRowNumber=${sheetRowNumber}, deletedColIndex=${deletedColIndex}`);
+
+        if (target.rowIndex > 0 && sheetRowNumber > startRow) { // Garantir que não é o cabeçalho
+          sheet.getRange(sheetRowNumber, deletedColIndex).setValue('x');
+          console.log(`🗑️ Alvo ${target.memberId} marcado como deleted (x) na linha ${sheetRowNumber}`);
+        } else {
+          console.error(`❌ Linha inválida para target ${target.memberId}: rowIndex=${target.rowIndex}, startRow=${startRow}`);
+        }
+      });
+
+      console.log(`✅ ${removedTargets.length} alvos marcados como deleted`);
     }
 
     // Gera novos IDs seguindo o padrão
@@ -584,7 +644,12 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
       sheet.getRange(startRow, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
     }
 
-    return { ok: true, created: newMemberIds.length };
+    return {
+      ok: true,
+      created: newMemberIds.length,
+      deleted: removedTargets ? removedTargets.length : 0,
+      message: `Alvos atualizados: ${newMemberIds.length} adicionados, ${removedTargets ? removedTargets.length : 0} removidos`
+    };
 
   } catch (err) {
     return { ok: false, error: 'Erro saveTargetsDirectly: ' + (err && err.message ? err.message : err) };
