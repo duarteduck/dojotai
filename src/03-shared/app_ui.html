@@ -190,6 +190,7 @@ var UI = {
       var hasUltimaAcao=!!(a.atualizadoPorNome&&a.atualizadoEm);
       var atualizadoEmFormatado=hasUltimaAcao?formatarDataBrasileira(a.atualizadoEm):'';
       var hasCategoriaAtividade=!!(a.categoriaAtividadeIcone&&a.categoriaAtividadeNome);
+      var hasCategorias=!!(a.categorias&&a.categorias.length>0);
 
       html=html
         .replace(/{{id}}/g,UI.escape(a.id))
@@ -209,10 +210,16 @@ var UI = {
         .replace(/{{confirmados}}/g,a.confirmados||0)
         .replace(/{{rejeitados}}/g,a.rejeitados||0)
         .replace(/{{participantes}}/g,a.participantes||0)
-        .replace(/{{ausentes}}/g,a.ausentes||0);
+        .replace(/{{ausentes}}/g,a.ausentes||0)
+        .replace(/{{tags}}/g,UI.escape(a.tags||''));
 
+      // As categorias serão inseridas no DOM após a criação do card
+
+      var hasTags = !!(a.tags && a.tags.trim());
       html=block(html,'hasDesc',!!a.descricao);
       html=block(html,'hasCategoriaAtividade',hasCategoriaAtividade);
+      html=block(html,'hasCategorias',hasCategorias);
+      html=block(html,'hasTags',hasTags);
       html=block(html,'hasUltimaAcao',hasUltimaAcao);
       html=block(html,'isPendente',a.status==='pendente');
       html=block(html,'isConcluida',a.status==='concluida');
@@ -220,6 +227,27 @@ var UI = {
 
       var wrap=document.createElement('div'); wrap.innerHTML=html;
       var card=wrap.firstElementChild;
+
+      // Inserir múltiplas categorias no DOM
+      if (hasCategorias && a.categorias && a.categorias.length > 0) {
+        var categoriasContainer = card.querySelector('#categorias-' + a.id);
+        if (categoriasContainer) {
+          console.log('🔍 DEBUG: Inserindo', a.categorias.length, 'categorias para atividade', a.id);
+          a.categorias.forEach(function(cat) {
+            var badge = document.createElement('span');
+            badge.className = 'categoria-atividade-badge';
+            badge.style.color = cat.cor || '#6B7280';
+            badge.title = cat.nome;
+            badge.textContent = cat.icone || '';
+            categoriasContainer.appendChild(badge);
+            console.log('✅ Categoria adicionada ao DOM:', cat.nome, cat.icone);
+          });
+        } else {
+          console.log('❌ DEBUG: Container de categorias não encontrado para', a.id);
+        }
+      } else {
+        console.log('🔍 DEBUG: Nenhuma categoria para inserir na atividade', a.id, 'hasCategorias:', hasCategorias);
+      }
 
       // classes de alerta (pendente)
       if(a.status==='pendente'){
@@ -750,6 +778,15 @@ var Views = {
         pageActionsContainer.innerHTML = pageActionsTemplate.innerHTML;
         Views.setupPageSpecificButtons('activities');
       }
+    }
+
+    // Inicializar novos filtros de seleção múltipla
+    console.log('🎯 Tentando inicializar filtros...');
+    try {
+      Views.initMultiSelectFilters();
+      console.log('✅ Filtros inicializados com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao inicializar filtros:', error);
     }
   },
 
@@ -2671,6 +2708,339 @@ var Views = {
     }
 
     return params;
+  },
+
+  // Inicializa os novos filtros de seleção múltipla
+  initMultiSelectFilters: function() {
+    console.log('🎯 Inicializando filtros de seleção múltipla');
+
+    // Inicializar estado dos filtros se não existir
+    if (!State.ui.multiFilters) {
+      State.ui.multiFilters = {
+        status: [],
+        categorias: [],
+        periodo: [],
+        responsavel: []
+      };
+    }
+
+    // Configurar eventos de dropdown
+    var dropdowns = document.querySelectorAll('.multi-select-dropdown');
+    dropdowns.forEach(function(dropdown) {
+      var toggle = dropdown.querySelector('.dropdown-toggle');
+      var menu = dropdown.querySelector('.dropdown-menu');
+      var filterType = dropdown.getAttribute('data-filter');
+
+      // Evento de clique no toggle
+      toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        Views.toggleMultiSelectDropdown(dropdown);
+      });
+
+      // Evento de clique nas opções
+      var options = menu.querySelectorAll('.option');
+      options.forEach(function(option) {
+        option.addEventListener('click', function(e) {
+          e.stopPropagation();
+          Views.toggleMultiSelectOption(filterType, option);
+        });
+      });
+    });
+
+    // Fechar dropdown ao clicar fora
+    document.addEventListener('click', function() {
+      Views.closeAllMultiSelectDropdowns();
+    });
+
+    // Carregar dados dinâmicos
+    Views.loadDynamicFilterOptions();
+
+    // Aplicar filtros padrão
+    Views.applyDefaultFilters();
+  },
+
+  toggleMultiSelectDropdown: function(dropdown) {
+    var isOpen = dropdown.classList.contains('open');
+
+    // Fechar todos os outros dropdowns
+    Views.closeAllMultiSelectDropdowns();
+
+    // Toggle do dropdown atual
+    if (!isOpen) {
+      dropdown.classList.add('open');
+    }
+  },
+
+  closeAllMultiSelectDropdowns: function() {
+    var openDropdowns = document.querySelectorAll('.multi-select-dropdown.open');
+    openDropdowns.forEach(function(dropdown) {
+      dropdown.classList.remove('open');
+    });
+  },
+
+  toggleMultiSelectOption: function(filterType, option) {
+    var value = option.getAttribute('data-value');
+    var text = option.textContent;
+
+    // Toggle selected state
+    option.classList.toggle('selected');
+
+    // Atualizar array no State
+    var filterArray = State.ui.multiFilters[filterType];
+    var index = filterArray.findIndex(function(item) { return item.value === value; });
+
+    if (option.classList.contains('selected')) {
+      // Adicionar se não existir
+      if (index === -1) {
+        filterArray.push({ value: value, text: text });
+      }
+    } else {
+      // Remover se existir
+      if (index !== -1) {
+        filterArray.splice(index, 1);
+      }
+    }
+
+    // Atualizar tags visuais
+    Views.updateSelectedTags(filterType);
+
+    // Atualizar texto do toggle
+    Views.updateToggleText(filterType);
+
+    // Aplicar filtros
+    Views.applyMultiSelectFilters();
+  },
+
+  updateSelectedTags: function(filterType) {
+    var container = document.querySelector('.selected-tags[data-filter="' + filterType + '"]');
+    if (!container) return;
+
+    var filterArray = State.ui.multiFilters[filterType];
+    container.innerHTML = '';
+
+    filterArray.forEach(function(item) {
+      var tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.innerHTML = item.text + ' <button class="remove" data-value="' + item.value + '">×</button>';
+
+      // Evento para remover tag
+      var removeBtn = tag.querySelector('.remove');
+      removeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        Views.removeFilterTag(filterType, item.value);
+      });
+
+      container.appendChild(tag);
+    });
+  },
+
+  updateToggleText: function(filterType) {
+    var dropdown = document.querySelector('.multi-select-dropdown[data-filter="' + filterType + '"]');
+    if (!dropdown) return;
+
+    var toggle = dropdown.querySelector('.toggle-text');
+    var filterArray = State.ui.multiFilters[filterType];
+    var count = filterArray.length;
+
+    var texts = {
+      status: count === 0 ? 'Selecionar status' : count + ' status selecionado(s)',
+      categorias: count === 0 ? 'Selecionar categorias' : count + ' categoria(s) selecionada(s)',
+      periodo: count === 0 ? 'Selecionar período' : count + ' período(s) selecionado(s)',
+      responsavel: count === 0 ? 'Selecionar responsáveis' : count + ' responsável(eis) selecionado(s)'
+    };
+
+    toggle.textContent = texts[filterType] || 'Selecionar';
+  },
+
+  removeFilterTag: function(filterType, value) {
+    // Remover do array
+    var filterArray = State.ui.multiFilters[filterType];
+    var index = filterArray.findIndex(function(item) { return item.value === value; });
+    if (index !== -1) {
+      filterArray.splice(index, 1);
+    }
+
+    // Atualizar option no dropdown
+    var option = document.querySelector('.multi-select-dropdown[data-filter="' + filterType + '"] .option[data-value="' + value + '"]');
+    if (option) {
+      option.classList.remove('selected');
+    }
+
+    // Atualizar visualmente
+    Views.updateSelectedTags(filterType);
+    Views.updateToggleText(filterType);
+
+    // Aplicar filtros
+    Views.applyMultiSelectFilters();
+  },
+
+  loadDynamicFilterOptions: function() {
+    // Carregar categorias
+    if (State.cache && State.cache.categoriasAtividades) {
+      Views.populateCategoriesFilter(State.cache.categoriasAtividades);
+    }
+
+    // Carregar responsáveis
+    Views.loadResponsaveisFilter();
+  },
+
+  populateCategoriesFilter: function(categorias) {
+    var container = document.getElementById('categorias-options');
+    if (!container) return;
+
+    container.innerHTML = '';
+    categorias.forEach(function(categoria) {
+      var option = document.createElement('div');
+      option.className = 'option';
+      option.setAttribute('data-value', categoria.id);
+      option.textContent = (categoria.icone ? categoria.icone + ' ' : '') + categoria.nome;
+      container.appendChild(option);
+
+      // Adicionar evento de clique
+      option.addEventListener('click', function(e) {
+        e.stopPropagation();
+        Views.toggleMultiSelectOption('categorias', option);
+      });
+    });
+  },
+
+  loadResponsaveisFilter: function() {
+    // Usar dados já carregados ou fazer nova chamada
+    if (State.cache && State.cache.atividades) {
+      var responsaveis = [];
+      var uniqueUids = new Set();
+
+      State.cache.atividades.forEach(function(atividade) {
+        if (atividade.atribuido_uid && atividade.atribuido_nome && !uniqueUids.has(atividade.atribuido_uid)) {
+          uniqueUids.add(atividade.atribuido_uid);
+          responsaveis.push({
+            uid: atividade.atribuido_uid,
+            nome: atividade.atribuido_nome
+          });
+        }
+      });
+
+      Views.populateResponsaveisFilter(responsaveis);
+    }
+  },
+
+  populateResponsaveisFilter: function(responsaveis) {
+    var container = document.getElementById('responsavel-options');
+    if (!container) return;
+
+    container.innerHTML = '';
+    responsaveis.forEach(function(responsavel) {
+      var option = document.createElement('div');
+      option.className = 'option';
+      option.setAttribute('data-value', responsavel.uid);
+      option.textContent = '👤 ' + responsavel.nome;
+      container.appendChild(option);
+
+      // Adicionar evento de clique
+      option.addEventListener('click', function(e) {
+        e.stopPropagation();
+        Views.toggleMultiSelectOption('responsavel', option);
+      });
+    });
+  },
+
+  applyDefaultFilters: function() {
+    // Aplicar filtro padrão: status = pendente
+    var statusOption = document.querySelector('.multi-select-dropdown[data-filter="status"] .option[data-value="pendente"]');
+    if (statusOption) {
+      Views.toggleMultiSelectOption('status', statusOption);
+    }
+  },
+
+  applyMultiSelectFilters: function() {
+    if (!State.cache || !State.cache.atividades) return;
+
+    var filteredActivities = State.cache.atividades.slice();
+    console.log('🎯 Aplicando filtros. Total inicial:', filteredActivities.length);
+
+    // Aplicar filtro de status
+    if (State.ui.multiFilters.status.length > 0) {
+      var statusValues = State.ui.multiFilters.status.map(function(item) { return item.value; });
+      filteredActivities = filteredActivities.filter(function(atividade) {
+        return statusValues.includes(atividade.status);
+      });
+      console.log('📋 Após filtro status:', filteredActivities.length);
+    }
+
+    // Aplicar filtro de categorias
+    if (State.ui.multiFilters.categorias.length > 0) {
+      var categoriaValues = State.ui.multiFilters.categorias.map(function(item) { return item.value; });
+      filteredActivities = filteredActivities.filter(function(atividade) {
+        return categoriaValues.includes(atividade.categoriaAtividadeId);
+      });
+      console.log('🏷️ Após filtro categorias:', filteredActivities.length);
+    }
+
+    // Aplicar filtro de período
+    if (State.ui.multiFilters.periodo.length > 0) {
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      filteredActivities = filteredActivities.filter(function(atividade) {
+        if (!atividade.data) return false;
+
+        var activityDate = Views.parseActivityDate(atividade.data);
+        if (!activityDate) return false;
+
+        return State.ui.multiFilters.periodo.some(function(periodo) {
+          return Views.matchesPeriodFilter(activityDate, periodo.value, today);
+        });
+      });
+      console.log('📅 Após filtro período:', filteredActivities.length);
+    }
+
+    // Aplicar filtro de responsável
+    if (State.ui.multiFilters.responsavel.length > 0) {
+      var responsavelValues = State.ui.multiFilters.responsavel.map(function(item) { return item.value; });
+      filteredActivities = filteredActivities.filter(function(atividade) {
+        return responsavelValues.includes(atividade.atribuido_uid);
+      });
+      console.log('👤 Após filtro responsável:', filteredActivities.length);
+    }
+
+    // Renderizar atividades filtradas
+    var listEl = document.getElementById('list');
+    if (listEl) {
+      UI.renderAtividades(filteredActivities, 'filtered', listEl);
+    }
+  },
+
+  parseActivityDate: function(dateStr) {
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return new Date(dateStr);
+      } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+        var parts = dateStr.split('/');
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      } else {
+        return new Date(dateStr);
+      }
+    } catch (e) {
+      return null;
+    }
+  },
+
+  matchesPeriodFilter: function(activityDate, periodValue, today) {
+    switch (periodValue) {
+      case 'atrasadas':
+        return activityDate < today;
+      case 'hoje':
+        return activityDate.getTime() === today.getTime();
+      case 'proximos_10':
+        var tenDaysFromNow = new Date(today);
+        tenDaysFromNow.setDate(today.getDate() + 10);
+        return activityDate >= today && activityDate <= tenDaysFromNow;
+      case 'mes_atual':
+        return activityDate.getMonth() === today.getMonth() &&
+               activityDate.getFullYear() === today.getFullYear();
+      default:
+        return false;
+    }
   }
 };
 

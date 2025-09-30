@@ -1,0 +1,98 @@
+<div class="container" data-view="dash" data-page-icon="📅" data-page-title="Atividades">
+  <!-- Header componente reutilizável -->
+  <div id="dash-header-container"></div>
+
+  <!-- Navigation componente reutilizável -->
+  <div id="nav-tabs-container"></div>
+
+  <!-- Page Actions (tema + botões específicos) -->
+  <div id="page-actions-container"></div>
+
+  <div id="calendar-wrapper" style="display:none;">
+    <div id="calendar"></div>
+  </div>
+
+  <div class="chips" id="chips">
+    <div class="chip" id="chip-calendar">📅</div>
+  </div>
+
+  <!-- Novos Filtros com Seleção Múltipla -->
+  <div class="filters-container" id="new-filters-debug">
+
+    <!-- Filtro Status -->
+    <div class="filter-section">
+      <label class="filter-label">Status:</label>
+      <div class="multi-select-dropdown" data-filter="status">
+        <button class="dropdown-toggle">
+          <span class="toggle-text">Selecionar status</span>
+          <span class="toggle-icon">▼</span>
+        </button>
+        <div class="dropdown-menu">
+          <div class="option" data-value="pendente">📋 Pendentes</div>
+          <div class="option" data-value="concluida">✅ Concluídas</div>
+        </div>
+      </div>
+      <div class="selected-tags" data-filter="status"></div>
+    </div>
+
+    <!-- Filtro Categorias -->
+    <div class="filter-section">
+      <label class="filter-label">Categorias:</label>
+      <div class="multi-select-dropdown" data-filter="categorias">
+        <button class="dropdown-toggle">
+          <span class="toggle-text">Selecionar categorias</span>
+          <span class="toggle-icon">▼</span>
+        </button>
+        <div class="dropdown-menu" id="categorias-options">
+          <!-- Opções carregadas dinamicamente -->
+        </div>
+      </div>
+      <div class="selected-tags" data-filter="categorias"></div>
+    </div>
+
+    <!-- Filtro Período -->
+    <div class="filter-section">
+      <label class="filter-label">Período:</label>
+      <div class="multi-select-dropdown" data-filter="periodo">
+        <button class="dropdown-toggle">
+          <span class="toggle-text">Selecionar período</span>
+          <span class="toggle-icon">▼</span>
+        </button>
+        <div class="dropdown-menu">
+          <div class="option" data-value="atrasadas">⏰ Atrasadas</div>
+          <div class="option" data-value="hoje">📅 Hoje</div>
+          <div class="option" data-value="proximos_10">🔜 Próximos 10 dias</div>
+          <div class="option" data-value="mes_atual">📆 Mês atual</div>
+        </div>
+      </div>
+      <div class="selected-tags" data-filter="periodo"></div>
+    </div>
+
+    <!-- Filtro Responsável -->
+    <div class="filter-section">
+      <label class="filter-label">Responsável:</label>
+      <div class="multi-select-dropdown" data-filter="responsavel">
+        <button class="dropdown-toggle">
+          <span class="toggle-text">Selecionar responsáveis</span>
+          <span class="toggle-icon">▼</span>
+        </button>
+        <div class="dropdown-menu" id="responsavel-options">
+          <!-- Opções carregadas dinamicamente -->
+        </div>
+      </div>
+      <div class="selected-tags" data-filter="responsavel"></div>
+    </div>
+
+  </div>
+
+<div id="list" class="row"></div>
+
+<!-- Logout Loading Overlay -->
+<div id="logout-loading-overlay" class="logout-loading-overlay hidden">
+  <div class="loading-content">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Encerrando sessão...</p>
+  </div>
+</div>
+
+</div>

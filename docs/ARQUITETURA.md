@@ -61,45 +61,61 @@ src/
 │   ├── 00_config.gs         # Configurações globais
 │   ├── database_manager.gs  # CRUD centralizado + Logger
 │   ├── session_manager.gs   # Gestão de sessões
-│   └── data_dictionary.gs   # Schema e validações
+│   ├── data_dictionary.gs   # Schema e validações
+│   ├── performance_monitor.gs # Monitoramento de sistema
+│   └── utils.gs             # Utilitários e configuração dinâmica
 │
 ├── 01-business/             # Lógica de negócio
-│   ├── auth.gs             # Autenticação e segurança
-│   ├── atividades.gs       # Gestão de atividades
-│   ├── membros.gs          # Gestão de membros
-│   ├── participacoes.gs    # Sistema de participação + ALVOS
-│   └── performance_monitor.gs # Monitoramento
+│   ├── auth.gs              # Autenticação e segurança
+│   ├── activities.gs        # Gestão de atividades
+│   ├── activities_categories.gs # Categorias de atividades
+│   ├── members.gs           # Gestão de membros
+│   ├── participacoes.gs     # Sistema de participação + ALVOS
+│   └── menu.gs              # Configuração dinâmica de menu
 │
-└── 02-api/                 # Endpoints web
-    ├── doGet.gs            # Router principal
-    ├── doPost.gs           # Handlers POST
-    └── api_handlers.gs     # Controllers específicos
+└── 02-api/                  # Endpoints web
+    ├── main.gs              # Router principal (doGet/doPost)
+    └── main_migrated.gs     # Version migrada do router
 ```
 
 ### **Frontend SPA (HTML/JS)**
 ```
-├── index.html              # Template principal
-├── app_state.html          # Gerenciamento de estado
-├── app_api.html           # Cliente API + ALVOS
-├── app_ui.html            # Sistema de UI + Modal de Alvos
-├── app_router.html        # Roteamento SPA
-├── styles_base.html       # Estilos CSS base
-├── styles_components.html # Estilos + Alvos UI
-├── src/                   # Código fonte organizado
-│   ├── 03-shared/         # Recursos compartilhados
+├── index.html               # Template principal da aplicação
+├── src/                     # Código fonte organizado
+│   ├── 03-shared/           # Recursos compartilhados
+│   │   ├── app_state.html           # Gerenciamento de estado
+│   │   ├── app_api.html            # Cliente API + ALVOS
+│   │   ├── app_ui.html             # Sistema de UI + Modal de Alvos
+│   │   ├── app_router.html         # Roteamento SPA
+│   │   ├── styles_base.html        # Estilos CSS base
 │   │   └── components.html         # Estilos de componentes
-│   ├── 04-views/          # Telas do sistema
-│   │   ├── dashboard.html          # Dashboard principal
-│   │   ├── practices.html          # Práticas diárias
-│   │   └── reports.html            # Relatórios
-│   └── 05-components/     # Componentes reutilizáveis
-│       ├── userMenu.html           # Menu de usuário dinâmico
-│       ├── memberCard.html         # Card de membro
-│       ├── activityCard.html       # Card de atividade
+│   ├── 04-views/            # Telas do sistema
+│   │   ├── dashboard.html           # Dashboard principal
+│   │   ├── practices.html           # Práticas diárias
+│   │   ├── reports.html            # Relatórios
+│   │   ├── view_dash.html          # View dashboard (atividades)
+│   │   ├── view_login.html         # Tela de login
+│   │   ├── view_members_list.html  # Lista de membros
+│   │   ├── view_member_detail.html # Detalhes do membro
+│   │   ├── view_activity_new.html  # Nova atividade
+│   │   └── view_participacoes_modal.html # Modal de participações
+│   └── 05-components/       # Componentes reutilizáveis
+│       ├── userMenu.html            # Menu de usuário dinâmico
+│       ├── memberCard.html          # Card de membro
+│       ├── activityCard.html        # Card de atividade
+│       ├── dashboardCard.html       # Card do dashboard
+│       ├── dashHeader.html          # Cabeçalho do dashboard
+│       ├── navTabs.html            # Abas de navegação
+│       ├── pageActions.html        # Ações da página
 │       ├── emptyState.html         # Estado vazio
 │       ├── toast.html              # Notificações
 │       └── calendarModal.html      # Modal de calendário
-└── view_*.html            # Views principais (atividades com alvos)
+└── legacy/                  # Arquivos legados e backups
+    ├── app_migrated.html           # Aplicação migrada (legacy)
+    ├── main_backup.gs              # Backup do main
+    ├── view_login_backup.html      # Backup da view de login
+    ├── deploy.ps1                  # Script de deploy antigo
+    └── prototipos layout/          # Protótipos de layout
 ```
 
 ---

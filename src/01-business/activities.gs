@@ -140,6 +140,10 @@ function _listActivitiesCore() {
 
   const headerIndex = {}; header.forEach((name, i) => headerIndex[name] = i);
 
+  // DEBUG: Verificar colunas disponíveis
+  console.log('🔍 DEBUG Header disponível:', header);
+  console.log('🔍 DEBUG HeaderIndex mapeado:', headerIndex);
+
   // Corta vazios no final (considera colunas-chave)
   const v = trimValuesByRequired_(values, headerIndex, ['id','titulo','status']);
 
@@ -152,13 +156,18 @@ function _listActivitiesCore() {
   const idxCri  = headerIndex['criado_em'];
   const idxAtuE = headerIndex['atualizado_em'];
   const idxAtrU = headerIndex['atribuido_uid'];
-  const idxCatAtiv = headerIndex['categoria_atividade_id']; // NOVO
+  const idxCatIds = headerIndex['categorias_ids']; // CORRETO: conforme dicionário
+  const idxTags = headerIndex['tags']; // NOVO: tags livres
+
+  // DEBUG: Verificar se colunas existe
+  console.log('🔍 DEBUG idxCatIds (categorias_ids):', idxCatIds);
+  console.log('🔍 DEBUG idxTags (tags):', idxTags);
 
   const items = [];
   for (let i=1;i<v.length;i++) {
     const r = v[i];
     if (!r.length) continue;
-    
+
     const item = {
       id: r[idxId],
       titulo: r[idxTit],
@@ -170,17 +179,26 @@ function _listActivitiesCore() {
       atualizado_em: r[idxAtuE],
       atribuido_uid: r[idxAtrU]
     };
-    
-    // Adicionar categoria_atividade_id se a coluna existir
-    if (idxCatAtiv >= 0) {
-      item.categoria_atividade_id = r[idxCatAtiv] || '';
+
+    // Adicionar categorias_ids se a coluna existir
+    if (idxCatIds >= 0) {
+      item.categorias_ids = r[idxCatIds] || '';
     }
-    
+
+    // Adicionar tags se a coluna existir
+    if (idxTags >= 0) {
+      item.tags = r[idxTags] || '';
+    }
+
     items.push(item);
   }
 
   const users = getUsersMapReadOnly_();
   const categoriasAtividades = getCategoriasAtividadesMapReadOnly_(); // NOVO
+
+  // DEBUG: Verificar dados das categorias
+  console.log('🔍 DEBUG categoriasAtividades map:', JSON.stringify(categoriasAtividades, null, 2));
+  console.log('🔍 DEBUG categoriasAtividades keys:', Object.keys(categoriasAtividades));
 
   items.forEach(it => {
     const atr = (it.atribuido_uid || '').toString().trim();
@@ -188,17 +206,49 @@ function _listActivitiesCore() {
     it.atribuido_nome = users[atr]?.nome || '';
     it.atualizado_nome = users[atu]?.nome || '';
 
-    // Adicionar dados da categoria de atividade
-    const catAtivId = (it.categoria_atividade_id || '').toString().trim();
-    if (catAtivId && categoriasAtividades[catAtivId]) {
-      it.categoria_atividade_nome = categoriasAtividades[catAtivId].nome;
-      it.categoria_atividade_icone = categoriasAtividades[catAtivId].icone;
-      it.categoria_atividade_cor = categoriasAtividades[catAtivId].cor;
+    // Adicionar dados de todas as categorias da atividade
+    const categoriasIds = (it.categorias_ids || '').toString().trim();
+    console.log(`🔍 DEBUG Atividade ${it.id}: categorias_ids="${categoriasIds}"`);
+
+    it.categorias = []; // Array de todas as categorias
+
+    if (categoriasIds) {
+      const idsArray = categoriasIds.split(',').map(id => id.trim()).filter(id => id);
+      console.log(`🔍 DEBUG IDs das categorias: [${idsArray.join(', ')}]`);
+
+      idsArray.forEach(catId => {
+        if (categoriasAtividades[catId]) {
+          const categoria = {
+            id: catId,
+            nome: categoriasAtividades[catId].nome,
+            icone: categoriasAtividades[catId].icone,
+            cor: categoriasAtividades[catId].cor
+          };
+          it.categorias.push(categoria);
+          console.log(`✅ Categoria adicionada: ${catId} = ${categoria.nome}`);
+        } else {
+          console.log(`❌ Categoria NÃO encontrada: ${catId}. Disponíveis:`, Object.keys(categoriasAtividades));
+        }
+      });
+
+      // Para compatibilidade, manter campos da primeira categoria
+      if (it.categorias.length > 0) {
+        it.categoria_atividade_nome = it.categorias[0].nome;
+        it.categoria_atividade_icone = it.categorias[0].icone;
+        it.categoria_atividade_cor = it.categorias[0].cor;
+      } else {
+        it.categoria_atividade_nome = '';
+        it.categoria_atividade_icone = '';
+        it.categoria_atividade_cor = '';
+      }
     } else {
+      console.log(`❌ Nenhuma categoria definida para atividade ${it.id}`);
       it.categoria_atividade_nome = '';
       it.categoria_atividade_icone = '';
       it.categoria_atividade_cor = '';
     }
+
+    console.log(`🔍 DEBUG Categorias processadas para ${it.id}:`, it.categorias);
 
     // Adicionar contadores de participação usando função existente
     try {
@@ -396,10 +446,14 @@ function updateActivityWithTargets(input, uidEditor) {
     var patch = input.patch || {};
 
     // Validar categoria se for alterada
-    if (patch.categoria_atividade_id !== undefined && patch.categoria_atividade_id !== '') {
-      const catValida = validateCategoriaAtividade_(patch.categoria_atividade_id);
-      if (!catValida) {
-        return { ok:false, error:'Categoria de atividade inválida: ' + patch.categoria_atividade_id };
+    if (patch.categorias_ids !== undefined && patch.categorias_ids !== '') {
+      // Validar cada categoria na lista (separadas por vírgula)
+      const categoriasArray = patch.categorias_ids.split(',').map(id => id.trim()).filter(id => id);
+      for (const catId of categoriasArray) {
+        const catValida = validateCategoriaAtividade_(catId);
+        if (!catValida) {
+          return { ok:false, error:'Categoria de atividade inválida: ' + catId };
+        }
       }
     }
 
@@ -434,7 +488,7 @@ function updateActivityWithTargets(input, uidEditor) {
     if (patch.descricao != null)     setIfPresent('descricao', patch.descricao);
     if (patch.data != null)          setIfPresent('data', patch.data);
     if (patch.atribuido_uid != null) setIfPresent('atribuido_uid', patch.atribuido_uid);
-    if (patch.categoria_atividade_id != null) setIfPresent('categoria_atividade_id', patch.categoria_atividade_id); // NOVO
+    if (patch.categorias_ids != null) setIfPresent('categorias_ids', patch.categorias_ids); // NOVO
 
     // SEMPRE preenche os campos de auditoria quando há alteração
     var now = nowString_ ? nowString_() : (new Date()).toISOString();

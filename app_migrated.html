@@ -846,6 +846,359 @@
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
+        /* ===== MULTI-SELECT DROPDOWNS ===== */
+        .filter-section {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .multi-select-dropdown {
+            position: relative;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .dropdown-toggle {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius);
+            background: var(--white);
+            color: var(--text);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all var(--transition);
+        }
+
+        .dropdown-toggle:hover {
+            border-color: var(--primary);
+        }
+
+        .dropdown-toggle:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .toggle-icon {
+            transition: transform var(--transition);
+        }
+
+        .multi-select-dropdown.open .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .multi-select-dropdown.open .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-menu .option {
+            padding: var(--spacing-sm) var(--spacing-md);
+            cursor: pointer;
+            transition: background-color var(--transition);
+            font-size: var(--font-size-sm);
+        }
+
+        .dropdown-menu .option:hover {
+            background-color: var(--gray-light);
+        }
+
+        .dropdown-menu .option.selected {
+            background-color: var(--primary);
+            color: var(--white);
+        }
+
+        .dropdown-menu .option.loading,
+        .dropdown-menu .option.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .selected-tags {
+            margin-top: var(--spacing-xs);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+        }
+
+        .selected-tag {
+            background: var(--primary);
+            color: var(--white);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius);
+            font-size: var(--font-size-xs);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .selected-tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* ===== SISTEMA DE FILTROS COM MODAL ===== */
+
+        /* Botão principal de filtros */
+        .btn-filtros {
+            padding: 10px 18px;
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-filtros:hover {
+            background: #7c3aed;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Botão limpar filtros */
+        .btn-limpar-filtros {
+            padding: 8px 14px;
+            background: transparent;
+            color: #ef4444;
+            border: 1px solid #ef4444;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .btn-limpar-filtros:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Chips de filtros */
+        .filter-chip {
+            color: white;
+            padding: 8px 14px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            animation: fadeIn 0.2s ease-in;
+        }
+
+        .filter-chip .remove-chip {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+            padding: 0;
+            transition: background 0.2s;
+        }
+
+        .filter-chip .remove-chip:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        /* Modal de filtros */
+        .modal-filtros {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease-in;
+        }
+
+        .modal-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            cursor: pointer;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            padding: 0;
+            max-width: 420px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 24px 16px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .btn-fechar-modal {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            color: #64748b;
+            transition: background 0.2s;
+        }
+
+        .btn-fechar-modal:hover {
+            background: #f1f5f9;
+        }
+
+        .modal-body {
+            padding: 0 24px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .filter-group {
+            margin-bottom: 24px;
+        }
+
+        .filter-group h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-options {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.15s;
+            border-left: 4px solid transparent;
+        }
+
+        .filter-option:hover {
+            background: #f8fafc;
+        }
+
+        .filter-option.selected {
+            border-left-color: #8b5cf6;
+        }
+
+        .filter-option input[type="checkbox"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #8b5cf6;
+        }
+
+        .filter-option span {
+            font-size: 15px;
+            color: #334155;
+        }
+
+        .modal-footer {
+            padding: 16px 24px 24px;
+        }
+
+        .btn-aplicar-filtros {
+            width: 100%;
+            padding: 14px;
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-aplicar-filtros:hover {
+            background: #7c3aed;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
         /* ===== PROGRESS BARS UNIFICADOS ===== */
         .progress-bar {
             width: 100%;
@@ -1561,47 +1914,110 @@
 
         <!-- Activities Page -->
         <div id="activities" class="page-content hidden">
-            <!-- Filtros -->
+            <!-- Sistema de Filtros com Modal e Chips -->
             <div class="filters-container">
-                <div class="filters-row">
-                    <div class="filter-group">
-                        <label class="filter-label">Categoria</label>
-                        <select class="filter-select" id="activities-category-filter">
-                            <option value="">Todas</option>
-                            <option value="okiyome">Okiyome</option>
-                            <option value="estudo">Estudo</option>
-                            <option value="cerimonia">Cerimônia</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Status</label>
-                        <select class="filter-select" id="activities-status-filter">
-                            <option value="">Todos</option>
-                            <option value="pendente">Pendente</option>
-                            <option value="realizada">Realizada</option>
-                            <option value="cancelada">Cancelada</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Período</label>
-                        <select class="filter-select" id="activities-period-filter">
-                            <option value="current-month">Este mês</option>
-                            <option value="next-30">Próximos 30 dias</option>
-                            <option value="last-30">Últimos 30 dias</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Responsável</label>
-                        <select class="filter-select" id="activities-owner-filter">
-                            <option value="">Todas</option>
-                            <option value="minhas" selected>Minhas Tarefas</option>
-                        </select>
-                    </div>
+                <!-- Container dos filtros e chips -->
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 24px;">
+
+                    <!-- Botão principal "Filtros" -->
+                    <button id="btn-filtros" class="btn-filtros">
+                        <span>🔍</span>
+                        <span id="filtros-text">Filtros</span>
+                    </button>
+
+                    <!-- Container dos chips -->
+                    <div id="chips-container" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
+
+                    <!-- Botão Limpar Tudo (será mostrado via JS) -->
+                    <button id="btn-limpar-filtros" class="btn-limpar-filtros" style="display: none;">
+                        <span>×</span>
+                        <span>Limpar Tudo</span>
+                    </button>
+
+                    <!-- Botão Nova Atividade -->
                     <div style="margin-left: auto;">
                         <button class="btn btn-primary" id="btn-nova-atividade">
                             <span>➕</span>
                             <span>Nova Atividade</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Filtros -->
+            <div id="modal-filtros" class="modal-filtros" style="display: none;">
+                <!-- Backdrop -->
+                <div class="modal-backdrop"></div>
+
+                <!-- Caixa do Modal -->
+                <div class="modal-content">
+                    <!-- Cabeçalho -->
+                    <div class="modal-header">
+                        <h3>Filtros</h3>
+                        <button id="btn-fechar-modal" class="btn-fechar-modal">×</button>
+                    </div>
+
+                    <!-- Conteúdo do Modal -->
+                    <div class="modal-body">
+                        <!-- Seção: Status -->
+                        <div class="filter-group">
+                            <h4>Status</h4>
+                            <div class="filter-options">
+                                <label class="filter-option">
+                                    <input type="checkbox" data-filter="status" data-value="pendente">
+                                    <span>📋 Pendentes</span>
+                                </label>
+                                <label class="filter-option">
+                                    <input type="checkbox" data-filter="status" data-value="concluida">
+                                    <span>✅ Concluídas</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Seção: Categorias -->
+                        <div class="filter-group">
+                            <h4>Categorias</h4>
+                            <div class="filter-options" id="categorias-filter-options">
+                                <!-- Carregadas dinamicamente -->
+                            </div>
+                        </div>
+
+                        <!-- Seção: Período -->
+                        <div class="filter-group">
+                            <h4>Período</h4>
+                            <div class="filter-options">
+                                <label class="filter-option">
+                                    <input type="checkbox" data-filter="periodo" data-value="atrasadas">
+                                    <span>⏰ Atrasadas</span>
+                                </label>
+                                <label class="filter-option">
+                                    <input type="checkbox" data-filter="periodo" data-value="hoje">
+                                    <span>📅 Hoje</span>
+                                </label>
+                                <label class="filter-option">
+                                    <input type="checkbox" data-filter="periodo" data-value="proximos_10">
+                                    <span>🔜 Próximos 10 dias</span>
+                                </label>
+                                <label class="filter-option">
+                                    <input type="checkbox" data-filter="periodo" data-value="mes_atual">
+                                    <span>📆 Mês atual</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Seção: Responsável -->
+                        <div class="filter-group">
+                            <h4>Responsável</h4>
+                            <div class="filter-options" id="responsavel-filter-options">
+                                <!-- Carregadas dinamicamente -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rodapé -->
+                    <div class="modal-footer">
+                        <button id="btn-aplicar-filtros" class="btn-aplicar-filtros">
+                            Aplicar Filtros
                         </button>
                     </div>
                 </div>
@@ -2494,11 +2910,21 @@
                 // Conectar com API real
                 google.script.run
                     .withSuccessHandler(function(result) {
+                        console.log('📊 Resultado completo da API de atividades:', result);
                         if (result && result.ok && result.items) {
-                            const activitiesWithCategory = result.items.map(activity => ({
-                                ...activity,
-                                categoria: getCategoryFromId(activity.categoria_atividade_id) || 'Geral'
-                            }));
+                            console.log('🔍 Primeira atividade para debug:', result.items[0]);
+                            const activitiesWithCategory = result.items.map(activity => {
+                                console.log('🏷️ Processando atividade:', activity.titulo, 'Categorias:', activity.categorias);
+                                return {
+                                    ...activity,
+                                    // Manter compatibilidade com campos de categoria única
+                                    categoria: activity.categoria_atividade_nome || 'Geral',
+                                    categoria_icone: activity.categoria_atividade_icone || '📋',
+                                    categoria_cor: activity.categoria_atividade_cor || '#6b7280',
+                                    // PRESERVAR o array de múltiplas categorias
+                                    categorias: activity.categorias || []
+                                };
+                            });
 
                             // Aplicar filtros antes de renderizar
                             const filteredActivities = applyActivityFilters(activitiesWithCategory);
@@ -2522,10 +2948,17 @@
         function applyActivityFilters(activities) {
             if (!activities || !Array.isArray(activities)) return [];
 
+            // Aplicar filtros do novo sistema de modal
+            if (typeof window.aplicarFiltrosNasAtividades === 'function') {
+                const filteredByModal = window.aplicarFiltrosNasAtividades(activities);
+                console.log('🔍 Filtros aplicados pelo modal:', filteredByModal.length, 'de', activities.length);
+                return filteredByModal;
+            }
+
             const ownerFilter = document.getElementById('activities-owner-filter');
             let filteredActivities = activities;
 
-            // Filtro por responsável (Minhas Tarefas)
+            // Filtro por responsável (Minhas Tarefas) - sistema antigo mantido para compatibilidade
             if (ownerFilter && ownerFilter.value === 'minhas') {
                 console.log('🔍 Aplicando filtro: Minhas Tarefas');
 
@@ -2638,15 +3071,24 @@
             const grid = document.getElementById('activities-grid');
             if (!grid || !activities) return;
 
+            console.log('🎨 Renderizando', activities.length, 'atividades');
+
             const html = activities.map(activity => {
+                console.log('🏷️ Renderizando atividade:', activity.titulo, {
+                    categoria: activity.categoria,
+                    categoria_icone: activity.categoria_icone,
+                    categoria_cor: activity.categoria_cor,
+                    categorias: activity.categorias,
+                    categoriaAtividadeNome: activity.categoriaAtividadeNome,
+                    hasMultipleCategories: activity.categorias && activity.categorias.length > 1
+                });
+
                 // Lógica inteligente de status baseada na data
                 const statusInfo = getSmartStatus(activity.status, activity.data);
 
                 const categoryClass = activity.categoria.toLowerCase();
 
-                const icon = activity.categoria === 'Okiyome' ? '🤲' :
-                           activity.categoria === 'Estudo' ? '📚' :
-                           activity.categoria === 'Cerimônia' ? '🏛️' : '📋';
+                const icon = activity.categoria_icone || '📋';
 
                 const formattedDate = formatDate(activity.data);
 
@@ -2655,24 +3097,33 @@
                         <div style="padding: var(--spacing-md); flex: 1; display: flex; flex-direction: column;">
                             <!-- Parte Superior: Conteúdo principal -->
                             <div style="flex: 1;">
-                                <!-- Linha 1: Ícone + Título -->
+                                <!-- Linha 1: Ícones das categorias + Título -->
                                 <div style="display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-xs);">
-                                    <div class="card-icon">${icon}</div>
+                                    ${activity.categorias && activity.categorias.length > 0
+                                        ? activity.categorias.map(cat => `<div class="card-icon" style="color: ${cat.cor || '#6b7280'};" title="${cat.nome}">${cat.icone || '📋'}</div>`).join('')
+                                        : `<div class="card-icon">${icon}</div>`
+                                    }
                                     <div class="card-title" style="flex: 1; margin: 0; font-size: var(--font-size-md); line-height: 1.3;">${activity.titulo}</div>
                                 </div>
 
-                                <!-- Linha 2: Tags horizontais -->
+                                <!-- Linha 2: Tags das categorias horizontais -->
                                 <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-xs); margin-bottom: var(--spacing-xs);">
-                                    <div class="badge badge-info" style="font-size: var(--font-size-xs);">${activity.categoria}</div>
+                                    ${activity.categorias && activity.categorias.length > 0
+                                        ? activity.categorias.map(cat => `<div class="badge badge-info" style="font-size: var(--font-size-xs); background-color: ${cat.cor || '#6b7280'}; color: white;">${cat.nome}</div>`).join('')
+                                        : `<div class="badge badge-info" style="font-size: var(--font-size-xs); background-color: ${activity.categoria_cor || '#6b7280'}; color: white;">${activity.categoria}</div>`
+                                    }
                                 </div>
 
                                 <!-- Linha 3: Data/hora + Status -->
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
                                     <div class="activity-date" style="font-size: var(--font-size-xs); color: var(--text-light);">${formattedDate}</div>
                                     <div class="badge ${statusInfo.class}" style="font-size: var(--font-size-xs);">${statusInfo.text}</div>
                                 </div>
 
-                                <!-- Linha 4: Descrição -->
+                                <!-- Linha 4: Responsável -->
+                                ${activity.atribuido_nome ? `<div style="font-size: var(--font-size-xs); color: var(--text-light); margin-bottom: var(--spacing-sm);">Responsável: ${activity.atribuido_nome}</div>` : ''}
+
+                                <!-- Linha 5: Descrição -->
                                 <div style="color: var(--text-light); font-size: var(--font-size-xs); line-height: 1.4;">
                                     ${activity.descricao}
                                 </div>
@@ -2701,6 +3152,12 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Tags da atividade -->
+                                ${activity.tags ? `<div style="margin-bottom: var(--spacing-sm); padding: var(--spacing-sm); background: var(--light); border-radius: var(--radius); border-left: 3px solid var(--primary);">
+                                    <div style="font-size: var(--font-size-xs); color: var(--text-light); margin-bottom: var(--spacing-xs);">🏷️ Tags:</div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--text); line-height: 1.4;">${activity.tags}</div>
+                                </div>` : ''}
 
                                 <!-- Botões de ação -->
                                 <div class="activity-actions" style="display: flex; gap: var(--spacing-xs); justify-content: center;">
@@ -3411,6 +3868,276 @@
                 '<option disabled selected>❌ Erro ao carregar categorias</option>';
         }
 
+        function loadCategoriesFilter() {
+            console.log('🏷️ loadCategoriesFilter iniciada');
+            const container = document.getElementById('categorias-options');
+            if (!container) {
+                console.error('❌ Container categorias-options não encontrado');
+                return;
+            }
+
+            console.log('✅ Container encontrado:', container);
+
+            // Mostrar loading
+            container.innerHTML = '<div class="option loading">🔄 Carregando categorias...</div>';
+
+            // Carregar da API real
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                console.log('🔄 Chamando API listCategoriasAtividadesApi...');
+                try {
+                    google.script.run
+                        .withSuccessHandler(function(result) {
+                            console.log('📥 Resultado da API categorias:', result);
+                            if (result && result.ok && result.items) {
+                                console.log('✅ Categorias recebidas:', result.items.length, 'itens');
+                                populateCategoriesFilter(result.items);
+                            } else {
+                                console.error('❌ Resultado inválido da API:', result);
+                                container.innerHTML = '<div class="option disabled">❌ Erro ao carregar categorias</div>';
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            console.error('❌ Falha na API categorias:', error);
+                            container.innerHTML = '<div class="option disabled">❌ Erro ao carregar categorias</div>';
+                        })
+                        .listCategoriasAtividadesApi();
+                } catch (error) {
+                    console.error('❌ Exception ao chamar API:', error);
+                    container.innerHTML = '<div class="option disabled">❌ Erro ao carregar categorias</div>';
+                }
+            } else {
+                console.error('❌ Google script não disponível');
+                container.innerHTML = '<div class="option disabled">❌ Google script não disponível</div>';
+            }
+        }
+
+        function populateCategoriesFilter(categories) {
+            console.log('🏗️ populateCategoriesFilter iniciada com:', categories);
+            const container = document.getElementById('categorias-options');
+            if (!container) {
+                console.error('❌ Container não encontrado em populateCategoriesFilter');
+                return;
+            }
+
+            console.log('🧹 Limpando container...');
+            container.innerHTML = '';
+
+            console.log('🔄 Processando', categories.length, 'categorias...');
+            categories.forEach((category, index) => {
+                console.log(`📝 Categoria ${index + 1}:`, category);
+                const option = document.createElement('div');
+                option.className = 'option';
+                option.setAttribute('data-value', category.id);
+                option.innerHTML = `${category.icone || '📋'} ${category.nome}`;
+                container.appendChild(option);
+                console.log('✅ Opção adicionada:', option.innerHTML);
+            });
+
+            console.log('🎉 Todas as categorias foram adicionadas ao container');
+        }
+
+        function initDefaultFilters() {
+            // Configurar filtros padrão após carregamento
+            setTimeout(() => {
+                // Filtro de status padrão: "pendentes"
+                const statusOption = document.querySelector('[data-filter="status"] .option[data-value="pendente"]');
+                if (statusOption) {
+                    statusOption.click();
+                }
+
+                // Filtro de responsável padrão: "Minhas tarefas"
+                const responsavelOption = document.querySelector('[data-filter="responsavel"] .option[data-value="minhas_tarefas"]');
+                if (responsavelOption) {
+                    responsavelOption.click();
+                }
+            }, 500); // Aguardar um pouco mais para os dados carregarem
+        }
+
+        function initMultiSelectDropdowns() {
+            // Inicializar funcionalidade dos dropdowns multi-select
+            const dropdowns = document.querySelectorAll('.multi-select-dropdown');
+
+            dropdowns.forEach(dropdown => {
+                const toggle = dropdown.querySelector('.dropdown-toggle');
+                const menu = dropdown.querySelector('.dropdown-menu');
+                const selectedTags = dropdown.querySelector('.selected-tags');
+                const filterType = dropdown.getAttribute('data-filter');
+
+                if (!toggle || !menu || !selectedTags) return;
+
+                // Controlar abertura/fechamento do dropdown
+                toggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Fechar outros dropdowns
+                    dropdowns.forEach(otherDropdown => {
+                        if (otherDropdown !== dropdown) {
+                            otherDropdown.classList.remove('open');
+                        }
+                    });
+
+                    // Toggle este dropdown
+                    dropdown.classList.toggle('open');
+                });
+
+                // Gerenciar seleção de opções
+                menu.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('option') &&
+                        !e.target.classList.contains('loading') &&
+                        !e.target.classList.contains('disabled')) {
+
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const option = e.target;
+                        const value = option.getAttribute('data-value');
+                        const text = option.textContent.trim();
+
+                        if (option.classList.contains('selected')) {
+                            // Remover seleção
+                            option.classList.remove('selected');
+                            removeSelectedTag(selectedTags, value);
+                        } else {
+                            // Adicionar seleção
+                            option.classList.add('selected');
+                            addSelectedTag(selectedTags, value, text);
+                        }
+
+                        updateToggleText(toggle, selectedTags, filterType);
+                        applyFilters(); // Aplicar filtros quando houver mudança
+                    }
+                });
+            });
+
+            // Fechar dropdowns quando clicar fora
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.multi-select-dropdown')) {
+                    dropdowns.forEach(dropdown => {
+                        dropdown.classList.remove('open');
+                    });
+                }
+            });
+        }
+
+        function addSelectedTag(container, value, text) {
+            // Verificar se tag já existe
+            if (container.querySelector(`[data-value="${value}"]`)) return;
+
+            const tag = document.createElement('div');
+            tag.className = 'selected-tag';
+            tag.setAttribute('data-value', value);
+            tag.innerHTML = `
+                <span>${text}</span>
+                <span class="remove" onclick="removeTagAndOption('${value}', this)">×</span>
+            `;
+            container.appendChild(tag);
+        }
+
+        function removeSelectedTag(container, value) {
+            const tag = container.querySelector(`[data-value="${value}"]`);
+            if (tag) {
+                tag.remove();
+            }
+        }
+
+        function updateToggleText(toggle, selectedTags, filterType) {
+            const toggleText = toggle.querySelector('.toggle-text');
+            const selectedCount = selectedTags.children.length;
+
+            if (selectedCount === 0) {
+                const defaultTexts = {
+                    'status': 'Selecionar status',
+                    'categorias': 'Selecionar categorias',
+                    'periodo': 'Selecionar período',
+                    'responsavel': 'Selecionar responsáveis'
+                };
+                toggleText.textContent = defaultTexts[filterType] || 'Selecionar';
+            } else if (selectedCount === 1) {
+                toggleText.textContent = selectedTags.children[0].querySelector('span').textContent;
+            } else {
+                toggleText.textContent = `${selectedCount} selecionados`;
+            }
+        }
+
+        function removeTagAndOption(value, element) {
+            const tag = element.closest('.selected-tag');
+            const dropdown = element.closest('.multi-select-dropdown');
+            const option = dropdown.querySelector(`.option[data-value="${value}"]`);
+
+            if (tag) tag.remove();
+            if (option) option.classList.remove('selected');
+
+            const toggle = dropdown.querySelector('.dropdown-toggle');
+            const selectedTags = dropdown.querySelector('.selected-tags');
+            const filterType = dropdown.getAttribute('data-filter');
+
+            updateToggleText(toggle, selectedTags, filterType);
+            applyFilters(); // Aplicar filtros quando remover tag
+        }
+
+        function applyFilters() {
+            // Esta função será chamada quando os filtros mudarem
+            // Por enquanto, apenas um log para debug
+            console.log('🔍 Aplicando filtros...');
+            loadActivities(); // Recarregar atividades com novos filtros
+        }
+
+        function loadResponsaveisFilter() {
+            const container = document.getElementById('responsavel-options');
+            if (!container) return;
+
+            // Mostrar loading
+            container.innerHTML = '<div class="option loading">🔄 Carregando responsáveis...</div>';
+
+            // Carregar usuários da API
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                try {
+                    google.script.run
+                        .withSuccessHandler(function(result) {
+                            if (result && result.ok && result.items) {
+                                populateResponsaveisFilter(result.items);
+                            } else {
+                                container.innerHTML = '<div class="option disabled">❌ Erro ao carregar responsáveis</div>';
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            console.error('Erro ao carregar responsáveis:', error);
+                            container.innerHTML = '<div class="option disabled">❌ Erro ao carregar responsáveis</div>';
+                        })
+                        .listUsuariosApi();
+                } catch (error) {
+                    console.warn('API listUsuariosApi() não implementada ainda');
+                    container.innerHTML = '<div class="option disabled">❌ Erro ao carregar responsáveis</div>';
+                }
+            } else {
+                container.innerHTML = '<div class="option disabled">❌ Erro ao carregar responsáveis</div>';
+            }
+        }
+
+        function populateResponsaveisFilter(users) {
+            const container = document.getElementById('responsavel-options');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            // Adicionar opção "Minhas tarefas" como primeira opção
+            const myTasksOption = document.createElement('div');
+            myTasksOption.className = 'option';
+            myTasksOption.setAttribute('data-value', 'minhas_tarefas');
+            myTasksOption.innerHTML = 'Minhas tarefas';
+            container.appendChild(myTasksOption);
+
+            // Adicionar todos os usuários
+            users.forEach(user => {
+                const option = document.createElement('div');
+                option.className = 'option';
+                option.setAttribute('data-value', user.uid);
+                option.innerHTML = user.nome;
+                container.appendChild(option);
+            });
+        }
+
 
         function loadResponsibleUsers(selectId) {
             const select = document.getElementById(selectId);
@@ -3982,6 +4709,10 @@
             loadTheme();
             initNavigation();
             loadCurrentUser(); // Carregar dados do usuário
+            loadCategoriesFilter(); // Carregar categorias para o filtro
+            loadResponsaveisFilter(); // Carregar responsáveis para o filtro
+            initMultiSelectDropdowns(); // Inicializar funcionalidade dos dropdowns
+            initDefaultFilters(); // Configurar filtros padrão
 
             // DEBUG: Verificar modais após carregamento
             setTimeout(() => {
@@ -5527,15 +6258,385 @@
 
     <!-- Includes do JavaScript atual -->
     <script>
-        <?= HtmlService.createHtmlOutputFromFile('app_api').getContent() ?>
+        <?= HtmlService.createHtmlOutputFromFile('src/03-shared/app_api').getContent() ?>
     </script>
 
     <script>
-        <?= HtmlService.createHtmlOutputFromFile('app_router').getContent() ?>
+        <?= HtmlService.createHtmlOutputFromFile('src/03-shared/app_router').getContent() ?>
     </script>
 
     <script>
-        <?= HtmlService.createHtmlOutputFromFile('app_state').getContent() ?>
+        <?= HtmlService.createHtmlOutputFromFile('src/03-shared/app_state').getContent() ?>
+    </script>
+
+    <!-- Sistema de Filtros JavaScript -->
+    <script>
+        // Estado dos filtros
+        const filtrosState = {
+            status: [],
+            categorias: [],
+            periodo: [],
+            responsavel: []
+        };
+
+        // Categorias disponíveis (carregadas dinamicamente)
+        let categoriasDisponiveis = [];
+        let responsaveisDisponiveis = [];
+
+        // Inicializar sistema de filtros
+        function initFiltrosSystem() {
+            console.log('🔍 Inicializando sistema de filtros');
+
+            // Event listeners
+            const btnFiltros = document.getElementById('btn-filtros');
+            const btnFechar = document.getElementById('btn-fechar-modal');
+            const btnAplicar = document.getElementById('btn-aplicar-filtros');
+            const btnLimpar = document.getElementById('btn-limpar-filtros');
+            const backdrop = document.querySelector('.modal-backdrop');
+
+            if (btnFiltros) btnFiltros.addEventListener('click', abrirModalFiltros);
+            if (btnFechar) btnFechar.addEventListener('click', fecharModalFiltros);
+            if (btnAplicar) btnAplicar.addEventListener('click', aplicarFiltros);
+            if (btnLimpar) btnLimpar.addEventListener('click', limparTodosFiltros);
+            if (backdrop) backdrop.addEventListener('click', fecharModalFiltros);
+
+            // Fechar modal com ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('modal-filtros');
+                    if (modal && modal.style.display !== 'none') {
+                        fecharModalFiltros();
+                    }
+                }
+            });
+
+            // Carregar dados dinâmicos
+            carregarCategorias();
+            carregarResponsaveis();
+
+            // Event listeners para checkboxes
+            document.addEventListener('change', function(e) {
+                if (e.target.type === 'checkbox' && e.target.dataset.filter) {
+                    handleCheckboxChange(e.target);
+                }
+            });
+        }
+
+        // Abrir modal de filtros
+        function abrirModalFiltros() {
+            console.log('🔍 Abrindo modal de filtros');
+            const modal = document.getElementById('modal-filtros');
+            if (modal) {
+                modal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        // Fechar modal de filtros
+        function fecharModalFiltros() {
+            console.log('🔍 Fechando modal de filtros');
+            const modal = document.getElementById('modal-filtros');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Handle mudança de checkbox
+        function handleCheckboxChange(checkbox) {
+            const filterType = checkbox.dataset.filter;
+            const value = checkbox.dataset.value;
+
+            if (checkbox.checked) {
+                if (!filtrosState[filterType].includes(value)) {
+                    filtrosState[filterType].push(value);
+                }
+            } else {
+                filtrosState[filterType] = filtrosState[filterType].filter(v => v !== value);
+            }
+
+            console.log('🔍 Filtros atualizados:', filtrosState);
+            atualizarContadorFiltros();
+        }
+
+        // Aplicar filtros
+        function aplicarFiltros() {
+            console.log('🔍 Aplicando filtros:', filtrosState);
+            fecharModalFiltros();
+            renderizarChips();
+            filtrarAtividades();
+        }
+
+        // Atualizar contador de filtros no botão
+        function atualizarContadorFiltros() {
+            const total = Object.values(filtrosState).reduce((acc, arr) => acc + arr.length, 0);
+            const texto = total > 0 ? `Filtros (${total})` : 'Filtros';
+            const textElement = document.getElementById('filtros-text');
+            if (textElement) {
+                textElement.textContent = texto;
+            }
+        }
+
+        // Renderizar chips dos filtros ativos
+        function renderizarChips() {
+            const container = document.getElementById('chips-container');
+            const btnLimpar = document.getElementById('btn-limpar-filtros');
+
+            if (!container) return;
+
+            container.innerHTML = '';
+            let hasChips = false;
+
+            // Chips de Status
+            filtrosState.status.forEach(status => {
+                const nome = status === 'pendente' ? '📋 Pendentes' : '✅ Concluídas';
+                const chip = criarChip(nome, '#64748b', 'status', status);
+                container.appendChild(chip);
+                hasChips = true;
+            });
+
+            // Chips de Categorias
+            filtrosState.categorias.forEach(catId => {
+                const categoria = categoriasDisponiveis.find(c => c.id === catId);
+                if (categoria) {
+                    const chip = criarChip(`${categoria.icone || '📋'} ${categoria.nome}`, categoria.cor || '#8b5cf6', 'categorias', catId);
+                    container.appendChild(chip);
+                    hasChips = true;
+                }
+            });
+
+            // Chips de Período
+            filtrosState.periodo.forEach(periodo => {
+                const nomes = {
+                    'atrasadas': '⏰ Atrasadas',
+                    'hoje': '📅 Hoje',
+                    'proximos_10': '🔜 Próximos 10 dias',
+                    'mes_atual': '📆 Mês atual'
+                };
+                const chip = criarChip(nomes[periodo] || periodo, '#64748b', 'periodo', periodo);
+                container.appendChild(chip);
+                hasChips = true;
+            });
+
+            // Chips de Responsável
+            filtrosState.responsavel.forEach(respId => {
+                const responsavel = responsaveisDisponiveis.find(r => r.uid === respId);
+                if (responsavel) {
+                    const chip = criarChip(`👤 ${responsavel.nome}`, '#64748b', 'responsavel', respId);
+                    container.appendChild(chip);
+                    hasChips = true;
+                }
+            });
+
+            // Mostrar/esconder botão limpar
+            if (btnLimpar) {
+                btnLimpar.style.display = hasChips ? 'flex' : 'none';
+            }
+        }
+
+        // Criar chip individual
+        function criarChip(nome, cor, tipo, valor) {
+            const chip = document.createElement('span');
+            chip.className = 'filter-chip';
+            chip.style.backgroundColor = cor;
+
+            chip.innerHTML = `
+                ${nome}
+                <button class="remove-chip" onclick="removerFiltro('${tipo}', '${valor}')">×</button>
+            `;
+
+            return chip;
+        }
+
+        // Remover filtro específico
+        function removerFiltro(tipo, valor) {
+            filtrosState[tipo] = filtrosState[tipo].filter(v => v !== valor);
+
+            // Atualizar checkbox no modal
+            const checkbox = document.querySelector(`input[data-filter="${tipo}"][data-value="${valor}"]`);
+            if (checkbox) checkbox.checked = false;
+
+            atualizarContadorFiltros();
+            renderizarChips();
+            filtrarAtividades();
+        }
+
+        // Limpar todos os filtros
+        function limparTodosFiltros() {
+            Object.keys(filtrosState).forEach(key => {
+                filtrosState[key] = [];
+            });
+
+            // Limpar todos os checkboxes
+            document.querySelectorAll('#modal-filtros input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+
+            atualizarContadorFiltros();
+            renderizarChips();
+            filtrarAtividades();
+        }
+
+        // Carregar categorias do backend
+        function carregarCategorias() {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        if (result && result.ok && result.items) {
+                            categoriasDisponiveis = result.items;
+                            populateCategoriasOptions();
+                            console.log('✅ Categorias carregadas:', result.items.length);
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('❌ Erro ao carregar categorias:', error);
+                    })
+                    .listCategoriasAtividadesApi();
+            }
+        }
+
+        // Carregar responsáveis do backend
+        function carregarResponsaveis() {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        if (result && result.ok && result.items) {
+                            responsaveisDisponiveis = result.items;
+                            populateResponsaveisOptions();
+                            console.log('✅ Responsáveis carregados:', result.items.length);
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('❌ Erro ao carregar responsáveis:', error);
+                    })
+                    .listUsuariosApi();
+            }
+        }
+
+        // Popular opções de categorias no modal
+        function populateCategoriasOptions() {
+            const container = document.getElementById('categorias-filter-options');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            categoriasDisponiveis.forEach(categoria => {
+                const label = document.createElement('label');
+                label.className = 'filter-option';
+
+                label.innerHTML = `
+                    <input type="checkbox" data-filter="categorias" data-value="${categoria.id}">
+                    <span>${categoria.icone || '📋'} ${categoria.nome}</span>
+                `;
+
+                container.appendChild(label);
+            });
+        }
+
+        // Popular opções de responsáveis no modal
+        function populateResponsaveisOptions() {
+            const container = document.getElementById('responsavel-filter-options');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            responsaveisDisponiveis.forEach(usuario => {
+                const label = document.createElement('label');
+                label.className = 'filter-option';
+
+                label.innerHTML = `
+                    <input type="checkbox" data-filter="responsavel" data-value="${usuario.uid}">
+                    <span>👤 ${usuario.nome}</span>
+                `;
+
+                container.appendChild(label);
+            });
+        }
+
+        // Filtrar atividades (integrar com sistema existente)
+        function filtrarAtividades() {
+            console.log('🔍 Filtrando atividades com:', filtrosState);
+            // Recarregar atividades aplicando filtros
+            if (typeof loadActivities === 'function') {
+                loadActivities();
+            }
+        }
+
+        // Função global para aplicar filtros nas atividades
+        window.aplicarFiltrosNasAtividades = function(atividades) {
+            if (!atividades || !Array.isArray(atividades)) return atividades;
+
+            let filtered = [...atividades];
+
+            // Filtro por Status
+            if (filtrosState.status.length > 0) {
+                filtered = filtered.filter(atividade => {
+                    return filtrosState.status.includes(atividade.status);
+                });
+            }
+
+            // Filtro por Categorias
+            if (filtrosState.categorias.length > 0) {
+                filtered = filtered.filter(atividade => {
+                    if (atividade.categorias && atividade.categorias.length > 0) {
+                        return atividade.categorias.some(cat => filtrosState.categorias.includes(cat.id));
+                    }
+                    return false;
+                });
+            }
+
+            // Filtro por Período
+            if (filtrosState.periodo.length > 0) {
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+
+                filtered = filtered.filter(atividade => {
+                    if (!atividade.data) return false;
+
+                    const dataAtividade = new Date(atividade.data);
+                    dataAtividade.setHours(0, 0, 0, 0);
+
+                    return filtrosState.periodo.some(periodo => {
+                        switch (periodo) {
+                            case 'hoje':
+                                return dataAtividade.getTime() === hoje.getTime();
+                            case 'atrasadas':
+                                return dataAtividade < hoje && atividade.status === 'pendente';
+                            case 'proximos_10':
+                                const em10Dias = new Date(hoje);
+                                em10Dias.setDate(hoje.getDate() + 10);
+                                return dataAtividade >= hoje && dataAtividade <= em10Dias;
+                            case 'mes_atual':
+                                return dataAtividade.getMonth() === hoje.getMonth() &&
+                                       dataAtividade.getFullYear() === hoje.getFullYear();
+                            default:
+                                return false;
+                        }
+                    });
+                });
+            }
+
+            // Filtro por Responsável
+            if (filtrosState.responsavel.length > 0) {
+                filtered = filtered.filter(atividade => {
+                    return filtrosState.responsavel.includes(atividade.atribuido_uid);
+                });
+            }
+
+            console.log(`🔍 Filtrados: ${filtered.length}/${atividades.length} atividades`);
+            return filtered;
+        };
+
+        // Inicializar quando DOM carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Aguardar um pouco para garantir que outros scripts carregaram
+            setTimeout(initFiltrosSystem, 500);
+        });
+
+        // Expor função para uso externo
+        window.getFiltrosAtivos = function() {
+            return filtrosState;
+        };
     </script>
 
 </body>

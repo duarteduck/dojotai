@@ -69,7 +69,13 @@ var API = {
           console.log('✅ listActivitiesApi sucesso:', res?.ok ? 'OK' : 'ERRO', '- Items:', res?.items?.length || 0);
           if(res && res.ok){
             var data = (res.items || []).map(function(a){
-              return {
+              // DEBUG: Log do item backend antes do mapeamento
+              console.log('🔍🔍🔍 DEBUG API - Item backend:', a.id, 'categorias:', a.categorias, 'categorias_ids:', a.categorias_ids);
+              if (a.id && a.id.includes('teste alvo 3')) {
+                console.log('🎯 ATIVIDADE TESTE ALVO 3 - DADOS BACKEND:', a);
+              }
+
+              var mapped = {
                 id: a.id,
                 titulo: a.titulo || a.descricao || '',
                 descricao: a.descricao || '',
@@ -79,11 +85,13 @@ var API = {
                 categoriaAtividadeNome: a.categoria_atividade_nome || '',
                 categoriaAtividadeIcone: a.categoria_atividade_icone || '',
                 categoriaAtividadeCor: a.categoria_atividade_cor || '',
+                categorias: a.categorias || [], // Array de todas as categorias
                 status: StatusMap.toUi(a.status),
                 uid: a.atribuido_uid || '',
                 usuarioNome: a.atribuido_nome || '',
                 atualizadoPorNome: a.atualizado_nome || '',
                 atualizadoEm: a.atualizado_em || '',
+                tags: a.tags || '',
                 // Campos de participação
                 total_alvos: a.total_alvos || 0,
                 confirmados: a.confirmados || 0,
@@ -91,6 +99,15 @@ var API = {
                 participantes: a.participantes || 0,
                 ausentes: a.ausentes || 0
               };
+
+              // DEBUG: Log do item após mapeamento
+              console.log('🔍 DEBUG API - Item mapeado:', mapped.id, 'categorias:', mapped.categorias);
+              if (a.id && a.id.includes('teste alvo 3')) {
+                console.log('🎯 ATIVIDADE TESTE ALVO 3 - DADOS MAPEADOS:', mapped);
+                console.log('🎯 COMPARAÇÃO categorias - Backend:', a.categorias, 'Mapeado:', mapped.categorias);
+              }
+
+              return mapped;
             });
             console.log('✅ Dados normalizados:', data.length, 'atividades');
             resolve(data);

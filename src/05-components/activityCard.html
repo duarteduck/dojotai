@@ -5,23 +5,25 @@
         <span class="chip {{statusClass}}">{{statusLabel}}</span>
         {{#data}}
           <div class="meta-date-wrapper">
-            {{#hasCategoriaAtividade}}
-              <span class="categoria-atividade-badge" style="color: {{categoriaAtividadeCor}}" title="{{categoriaAtividadeNome}}">
-                {{categoriaAtividadeIcone}}
-              </span>
-            {{/hasCategoriaAtividade}}
+            {{#hasCategorias}}
+              <div class="categorias-wrapper" id="categorias-{{id}}">
+                <!-- Categorias serão inseridas via JavaScript -->
+              </div>
+            {{/hasCategorias}}
             <small class="meta-date">{{data}}</small>
           </div>
         {{/data}}
       </div>
+
+      {{#data}}
+      <div class="meta-author">Responsável: {{atribuido_nome}}</div>
+      {{/data}}
 
       <div class="title">{{titulo}}</div>
 
       {{#hasDesc}}
       <div class="desc">{{descricao}}</div>
       {{/hasDesc}}
-
-      <div class="meta-author">Responsável: {{usuarioNome}}</div>
 
       <div class="participation-summary">
         <div class="participation-line">
@@ -41,6 +43,13 @@
           <span class="stat-absent">{{ausentes}}</span>
         </div>
       </div>
+
+      {{#hasTags}}
+      <div class="activity-tags">
+        <small class="tags-label">Tags:</small>
+        <span class="tags-text">{{tags}}</span>
+      </div>
+      {{/hasTags}}
 
       {{#hasUltimaAcao}}
       <div class="meta-last">Última ação de {{atualizadoPorNome}} <br>em {{atualizadoEm}}</div>

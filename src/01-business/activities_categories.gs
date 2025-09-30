@@ -54,19 +54,31 @@ let __categoriasAtividadesCache = null;
 
 function getCategoriasAtividadesMapReadOnly_() {
   try {
-    if (__categoriasAtividadesCache) return __categoriasAtividadesCache;
-    
+    if (__categoriasAtividadesCache) {
+      console.log('🔍 DEBUG: Usando cache de categorias:', __categoriasAtividadesCache);
+      return __categoriasAtividadesCache;
+    }
+
+    console.log('🔍 DEBUG: Carregando categorias do banco...');
     const result = _listCategoriasAtividadesCore();
-    if (!result || !result.ok) return {};
-    
+    console.log('🔍 DEBUG: Resultado _listCategoriasAtividadesCore:', result);
+
+    if (!result || !result.ok) {
+      console.log('❌ DEBUG: Erro ao carregar categorias:', result);
+      return {};
+    }
+
     const map = {};
     (result.items || []).forEach(cat => {
+      console.log(`🔍 DEBUG: Adicionando categoria ao map: ${cat.id} = ${cat.nome}`);
       map[cat.id] = cat;
     });
-    
+
+    console.log('🔍 DEBUG: Map final de categorias:', map);
     __categoriasAtividadesCache = map;
     return map;
   } catch (e) {
+    console.log('❌ DEBUG: Erro na função getCategoriasAtividadesMapReadOnly_:', e);
     return {};
   }
 }

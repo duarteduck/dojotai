@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(clasp push:*)"
+      "Bash(clasp push:*)",
+      "Bash(clasp open)",
+      "Bash(npx @google/clasp:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(clasp:*)"
     ],
     "deny": [],
     "ask": []

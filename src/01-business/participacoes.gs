@@ -4,40 +4,37 @@
  * Lista participações usando acesso direto à planilha
  */
 function listParticipacoes(activityId) {
-  // ACESSO DIRETO - SEM CONFIGURAÇÃO DINÂMICA
-  var ssid = '1IAR4_Y3-F5Ca2ZfBF7Z3gzC6u6ut-yQsfGtTasmmQHw'; // SSID fixo da participações
+  var ssid = '1IAR4_Y3-F5Ca2ZfBF7Z3gzC6u6ut-yQsfGtTasmmQHw';
 
   try {
     var ss = SpreadsheetApp.openById(ssid);
-    var sheet = ss.getSheetByName('Participacoes'); // Nome da aba fixo
-    var range = sheet.getRange('A1:O1000'); // Range fixo expandido para incluir coluna 'deleted'
+    var sheet = ss.getSheetByName('Participacoes');
+    var range = sheet.getRange('A1:O1000');
     var values = range.getValues();
 
     if (!values || values.length < 2) {
       return { ok: true, items: [] };
     }
 
-    // Header fixo baseado na estrutura que você mencionou
     var items = [];
     for (var i = 1; i < values.length; i++) {
       var row = values[i];
-      if (!row[0]) break; // Para quando não há mais dados
+      if (!row[0]) break;
 
-      var idAtividade = String(row[1] || '').trim(); // Coluna B = id_atividade
-      var deleted = String(row[14] || '').trim().toLowerCase(); // Coluna O = deleted
+      var idAtividade = String(row[1] || '').trim();
+      var deleted = String(row[14] || '').trim().toLowerCase();
 
-      // Só incluir se for da atividade e NÃO estiver deletado
       if (idAtividade === String(activityId).trim() && deleted !== 'x') {
         items.push({
-          id: String(row[0] || '').trim(),           // A = id
-          id_atividade: idAtividade,                 // B = id_atividade
-          id_membro: String(row[2] || '').trim(),    // C = id_membro
-          tipo: String(row[3] || '').trim(),         // D = tipo
-          confirmou: String(row[4] || '').trim(),    // E = confirmou
-          participou: String(row[6] || '').trim(),   // G = participou
-          chegou_tarde: String(row[7] || '').trim(), // H = chegou_tarde
-          saiu_cedo: String(row[8] || '').trim(),    // I = saiu_cedo
-          observacoes: String(row[11] || '').trim()  // L = observacoes
+          id: String(row[0] || '').trim(),
+          id_atividade: idAtividade,
+          id_membro: String(row[2] || '').trim(),
+          tipo: String(row[3] || '').trim(),
+          confirmou: String(row[4] || '').trim(),
+          participou: String(row[6] || '').trim(),
+          chegou_tarde: String(row[7] || '').trim(),
+          saiu_cedo: String(row[8] || '').trim(),
+          observacoes: String(row[11] || '').trim()
         });
       }
     }
@@ -251,7 +248,7 @@ function confirmarParticipacao(activityId, memberId, confirmou, uid) {
 }
 
 /**
- * Busca membros por critérios para definição de alvos - VERSÃO V2 (DatabaseManager)
+ * Busca membros por critérios para definição de alvos
  * @param {Object} filters - Filtros aplicados
  * @returns {Object} { ok: boolean, items: Array }
  */
@@ -305,7 +302,6 @@ function searchMembersByCriteria(filters) {
     const result = { ok: true, items: optimizedMembers };
     return result;
   } catch (err) {
-    console.error('❌ Erro em searchMembersByCriteria V2:', err);
     return { ok: false, error: 'Erro searchMembersByCriteria: ' + (err && err.message ? err.message : err) };
   }
 }
@@ -347,7 +343,6 @@ function getParticipacaoStats(activityId) {
       stats: stats
     };
   } catch (err) {
-    console.error('❌ ERRO em getParticipacaoStats:', err);
     return { ok: false, error: 'Erro getParticipacaoStats: ' + (err && err.message ? err.message : err) };
   }
 }
@@ -451,7 +446,6 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
       const nowStr = nowString_();
 
       if (deletedColIndex === 0) {
-        console.error('❌ Campo "deleted" não encontrado na tabela participações');
         return { ok: false, error: 'Campo "deleted" não encontrado na tabela participações' };
       }
 
@@ -463,8 +457,6 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
 
         if (target.rowIndex > 0 && sheetRowNumber > startRow) { // Garantir que não é o cabeçalho
           sheet.getRange(sheetRowNumber, deletedColIndex).setValue('x');
-        } else {
-          console.error(`❌ Linha inválida para target ${target.memberId}: rowIndex=${target.rowIndex}`);
         }
       });
 
@@ -708,7 +700,6 @@ function getParticipacaesCtx_() {
       startCol: 1
     };
   } catch (err) {
-    console.error('Erro getParticipacaesCtx_:', err);
     return null;
   }
 }
@@ -736,7 +727,6 @@ function generateParticipacaoId_() {
 
     return 'PART-' + String(maxNum + 1).padStart(4, '0');
   } catch (err) {
-    console.error('Erro generateParticipacaoId_:', err);
     return 'PART-0001';
   }
 }
