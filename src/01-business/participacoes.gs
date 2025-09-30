@@ -1,47 +1,49 @@
 // participacoes.gs - Sistema de Gestão de Participações em Atividades
 
 /**
- * Lista participações usando acesso direto à planilha
+ * Lista participações usando DatabaseManager
  */
 function listParticipacoes(activityId) {
-  var ssid = '1IAR4_Y3-F5Ca2ZfBF7Z3gzC6u6ut-yQsfGtTasmmQHw';
-
   try {
-    var ss = SpreadsheetApp.openById(ssid);
-    var sheet = ss.getSheetByName('Participacoes');
-    var range = sheet.getRange('A1:O1000');
-    var values = range.getValues();
+    if (!activityId) {
+      return { ok: false, error: 'ID da atividade é obrigatório.' };
+    }
 
-    if (!values || values.length < 2) {
+    console.log('🔧 [BACKEND] listParticipacoes chamada para atividade:', activityId);
+
+    // Busca todas as participações da atividade usando DatabaseManager
+    const filters = {
+      id_atividade: activityId.toString().trim()
+    };
+
+    const participacoes = DatabaseManager.query('participacoes', filters, false);
+
+    if (!participacoes) {
       return { ok: true, items: [] };
     }
 
-    var items = [];
-    for (var i = 1; i < values.length; i++) {
-      var row = values[i];
-      if (!row[0]) break;
+    // Filtra apenas participações ativas (não deletadas)
+    const activeParticipacoes = participacoes
+      .filter(p => p.deleted !== 'x')
+      .map(p => ({
+        id: p.id,
+        id_atividade: p.id_atividade,
+        id_membro: p.id_membro,
+        tipo: p.tipo,
+        confirmou: p.confirmou,
+        participou: p.participou,
+        chegou_tarde: p.chegou_tarde,
+        saiu_cedo: p.saiu_cedo,
+        observacoes: p.observacoes,
+        deleted: p.deleted // Incluir para controle no frontend
+      }));
 
-      var idAtividade = String(row[1] || '').trim();
-      var deleted = String(row[14] || '').trim().toLowerCase();
+    console.log('🔧 [BACKEND] Participações encontradas:', activeParticipacoes.length);
 
-      if (idAtividade === String(activityId).trim() && deleted !== 'x') {
-        items.push({
-          id: String(row[0] || '').trim(),
-          id_atividade: idAtividade,
-          id_membro: String(row[2] || '').trim(),
-          tipo: String(row[3] || '').trim(),
-          confirmou: String(row[4] || '').trim(),
-          participou: String(row[6] || '').trim(),
-          chegou_tarde: String(row[7] || '').trim(),
-          saiu_cedo: String(row[8] || '').trim(),
-          observacoes: String(row[11] || '').trim()
-        });
-      }
-    }
-
-    return { ok: true, items: items };
+    return { ok: true, items: activeParticipacoes };
 
   } catch (error) {
+    console.error('❌ [BACKEND] Erro listParticipacoes:', error);
     return { ok: false, error: 'Erro: ' + error.message };
   }
 }
@@ -71,7 +73,7 @@ function calculateStatusParticipacao(participacao) {
 }
 
 /**
- * Define alvos para uma atividade
+ * Define alvos para uma atividade usando DatabaseManager
  * @param {string} activityId - ID da atividade
  * @param {Array} memberIds - Array de IDs dos membros
  * @param {string} uid - UID do usuário que está definindo
@@ -83,59 +85,63 @@ function defineTargets(activityId, memberIds, uid) {
       return { ok: false, error: 'Parâmetros inválidos.' };
     }
 
-    const ctx = getParticipacaesCtx_();
-    if (!ctx) {
-      return { ok: false, error: 'Contexto de participações não encontrado.' };
-    }
+    console.log('🔧 [BACKEND] defineTargets chamada para atividade:', activityId, 'membros:', memberIds);
 
     // Verifica duplicatas existentes
     const existing = listParticipacoes(activityId);
     if (!existing.ok) return existing;
 
     const existingMemberIds = existing.items.map(p => p.id_membro);
-    const newMemberIds = memberIds.filter(id => !existingMemberIds.includes(id));
+    const newMemberIds = memberIds.filter(id => !existingMemberIds.includes(id.toString()));
 
     if (newMemberIds.length === 0) {
       return { ok: true, created: 0, message: 'Todos os membros já estão na lista.' };
     }
 
+    console.log('🔧 [BACKEND] Novos membros a adicionar:', newMemberIds);
+
     const nowStr = nowString_();
-    const rowsToAdd = [];
+    const createdIds = [];
 
-    newMemberIds.forEach(memberId => {
-      const newId = generateParticipacaoId_();
-      rowsToAdd.push([
-        newId,                    // id
-        activityId,               // id_atividade
-        memberId,                 // id_membro
-        'alvo',                   // tipo
-        '',                       // confirmou
-        '',                       // confirmado_em
-        '',                       // participou
-        '',                       // chegou_tarde
-        '',                       // saiu_cedo
-        '',                       // justificativa
-        '',                       // observacoes
-        nowStr,                   // marcado_em
-        uid || ''                 // marcado_por
-      ]);
-    });
+    // Cria as novas participações usando DatabaseManager
+    for (const memberId of newMemberIds) {
+      const participacaoData = {
+        id_atividade: activityId,
+        id_membro: memberId.toString(),
+        tipo: 'alvo',
+        confirmou: '',
+        confirmado_em: '',
+        participou: '',
+        chegou_tarde: '',
+        saiu_cedo: '',
+        justificativa: '',
+        observacoes: '',
+        marcado_em: nowStr,
+        marcado_por: uid || ''
+      };
 
-    // Adiciona as linhas
-    if (rowsToAdd.length > 0) {
-      const lastRow = ctx.sheet.getLastRow();
-      const range = ctx.sheet.getRange(lastRow + 1, ctx.startCol, rowsToAdd.length, rowsToAdd[0].length);
-      range.setValues(rowsToAdd);
+      const result = DatabaseManager.create('participacoes', participacaoData);
+
+      if (result.ok) {
+        createdIds.push(result.id);
+        console.log('🔧 [BACKEND] Participação criada:', result.id, 'para membro:', memberId);
+      } else {
+        console.error('❌ [BACKEND] Erro ao criar participação para membro:', memberId, result.error);
+        return { ok: false, error: 'Erro ao criar participação para membro ' + memberId + ': ' + result.error };
+      }
     }
 
-    return { ok: true, created: rowsToAdd.length };
+    console.log('✅ [BACKEND] Alvos definidos com sucesso:', createdIds.length);
+    return { ok: true, created: createdIds.length, ids: createdIds };
+
   } catch (err) {
+    console.error('❌ [BACKEND] Erro defineTargets:', err);
     return { ok: false, error: 'Erro defineTargets: ' + (err && err.message ? err.message : err) };
   }
 }
 
 /**
- * Marca participação de um membro
+ * Marca participação de um membro usando DatabaseManager
  * @param {string} activityId - ID da atividade
  * @param {string} memberId - ID do membro
  * @param {Object} dados - Dados da participação
@@ -148,54 +154,60 @@ function markParticipacao(activityId, memberId, dados, uid) {
       return { ok: false, error: 'Parâmetros inválidos.' };
     }
 
-    const ctx = getParticipacaesCtx_();
-    const values = getFullTableValues_(ctx);
+    console.log('🔧 [BACKEND] markParticipacao chamada:', activityId, memberId);
 
-    if (!values || !values.length) {
-      return { ok: false, error: 'Tabela de participações vazia.' };
+    // Busca todas as participações da atividade
+    const filters = {
+      id_atividade: activityId.toString(),
+      id_membro: memberId.toString()
+    };
+
+    const participacoes = DatabaseManager.query('participacoes', filters, false);
+
+    if (!participacoes || participacoes.length === 0) {
+      return { ok: false, error: 'Participação não encontrada.' };
     }
 
-    const header = values[0].map(h => (h||'').toString().trim().toLowerCase());
-    const idxIdAtiv = header.indexOf('id_atividade');
-    const idxIdMembro = header.indexOf('id_membro');
-    const idxParticipou = header.indexOf('participou');
-    const idxChegouTarde = header.indexOf('chegou_tarde');
-    const idxSaiuCedo = header.indexOf('saiu_cedo');
-    const idxJustificativa = header.indexOf('justificativa');
-    const idxObservacoes = header.indexOf('observacoes');
-    const idxMarcadoEm = header.indexOf('marcado_em');
-    const idxMarcadoPor = header.indexOf('marcado_por');
+    // Busca a participação ativa (não deletada)
+    const participacao = participacoes.find(p => p.deleted !== 'x');
 
-    // Encontra a linha da participação
-    for (let i = 1; i < values.length; i++) {
-      const row = values[i];
-      if (row[idxIdAtiv] == activityId && row[idxIdMembro] == memberId) {
-        const rowNumber = ctx.startRow + i;
-        const nowStr = nowString_();
-
-        // Atualiza os dados
-        ctx.sheet.getRange(rowNumber, idxParticipou + 1).setValue(dados.participou || '');
-
-        // Se não participou, limpa chegou_tarde e saiu_cedo
-        if (dados.participou === 'nao') {
-          ctx.sheet.getRange(rowNumber, idxChegouTarde + 1).setValue('');
-          ctx.sheet.getRange(rowNumber, idxSaiuCedo + 1).setValue('');
-        } else {
-          ctx.sheet.getRange(rowNumber, idxChegouTarde + 1).setValue(dados.chegou_tarde || '');
-          ctx.sheet.getRange(rowNumber, idxSaiuCedo + 1).setValue(dados.saiu_cedo || '');
-        }
-
-        ctx.sheet.getRange(rowNumber, idxJustificativa + 1).setValue(dados.justificativa || '');
-        ctx.sheet.getRange(rowNumber, idxObservacoes + 1).setValue(dados.observacoes || '');
-        ctx.sheet.getRange(rowNumber, idxMarcadoEm + 1).setValue(nowStr);
-        ctx.sheet.getRange(rowNumber, idxMarcadoPor + 1).setValue(uid || '');
-
-        return { ok: true };
-      }
+    if (!participacao) {
+      return { ok: false, error: 'Participação ativa não encontrada.' };
     }
 
-    return { ok: false, error: 'Participação não encontrada.' };
+    console.log('🔧 [BACKEND] Participação encontrada:', participacao.id);
+
+    // Prepara os dados para atualização
+    const updateData = {
+      participou: dados.participou || '',
+      justificativa: dados.justificativa || '',
+      observacoes: dados.observacoes || '',
+      marcado_em: nowString_(),
+      marcado_por: uid || ''
+    };
+
+    // Se não participou, limpa chegou_tarde e saiu_cedo
+    if (dados.participou === 'nao') {
+      updateData.chegou_tarde = '';
+      updateData.saiu_cedo = '';
+    } else {
+      updateData.chegou_tarde = dados.chegou_tarde || '';
+      updateData.saiu_cedo = dados.saiu_cedo || '';
+    }
+
+    // Atualiza usando DatabaseManager
+    const result = DatabaseManager.update('participacoes', participacao.id, updateData);
+
+    if (result.ok) {
+      console.log('✅ [BACKEND] Participação marcada com sucesso:', participacao.id);
+      return { ok: true };
+    } else {
+      console.error('❌ [BACKEND] Erro ao marcar participação:', result.error);
+      return { ok: false, error: result.error };
+    }
+
   } catch (err) {
+    console.error('❌ [BACKEND] Erro markParticipacao:', err);
     return { ok: false, error: 'Erro markParticipacao: ' + (err && err.message ? err.message : err) };
   }
 }
@@ -567,102 +579,84 @@ function saveTargetsDirectly(activityId, memberIds, uid) {
  */
 function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
   try {
-    if (!activityId || !memberId || !dados) {
-      return { ok: false, error: 'Parâmetros inválidos.' };
+    console.log('🔧 [BACKEND] saveParticipacaoDirectly chamada com:');
+    console.log('🔧 [BACKEND] - activityId:', activityId);
+    console.log('🔧 [BACKEND] - memberId:', memberId);
+    console.log('🔧 [BACKEND] - dados:', JSON.stringify(dados, null, 2));
+    console.log('🔧 [BACKEND] - uid:', uid);
+
+    // Se dados.id estiver presente, usar busca por ID da tabela
+    if (dados && dados.id) {
+      console.log('🔧 [BACKEND] Usando busca por ID da tabela:', dados.id);
+      return updateParticipacaoById(dados.id, dados, uid);
     }
 
-    // Usa o mesmo padrão de acesso que a função de alvos
-    const { values, headerIndex } = readTableByNome_('participacoes');
-
-    if (!values || values.length === 0) {
-      return { ok: false, error: 'Tabela "participacoes" não encontrada.' };
-    }
-
-    // Campos obrigatórios
-    const required = ['id', 'id_atividade', 'id_membro'];
-    const missing = required.filter(k => headerIndex[k] === undefined);
-    if (missing.length) {
-      return { ok: false, error: 'Colunas faltando na tabela Participacoes: ' + missing.join(', ') };
-    }
-
-    // Encontra a linha da participação
-    let foundRowIndex = -1;
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r] || [];
-      const rowActivityId = String(row[headerIndex['id_atividade']] || '').trim();
-      const rowMemberId = String(row[headerIndex['id_membro']] || '').trim();
-
-      if (rowActivityId === activityId.toString().trim() && rowMemberId === memberId.toString()) {
-        foundRowIndex = r;
-        break;
-      }
-    }
-
-    if (foundRowIndex === -1) {
-      return { ok: false, error: 'Participação não encontrada para o membro.' };
-    }
-
-    // Usa o contexto da tabela para escrita
-    const ref = getPlanRef_('participacoes');
-    const ctxPlan = getContextFromRef_(ref);
-
-    let sheet;
-    if (ctxPlan.namedRange) {
-      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
-        ? SpreadsheetApp.openById(ref.ssid)
-        : SpreadsheetApp.getActiveSpreadsheet();
-      const rng = ss.getRangeByName(ctxPlan.namedRange);
-      sheet = rng.getSheet();
-    } else {
-      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
-        ? SpreadsheetApp.openById(ref.ssid)
-        : SpreadsheetApp.getActiveSpreadsheet();
-
-      const sheetNames = [
-        ctxPlan.planilha,
-        'participacoes',
-        'Participacoes',
-        'participações',
-        'Participações'
-      ];
-
-      for (const name of sheetNames) {
-        sheet = ss.getSheetByName(name);
-        if (sheet) break;
-      }
-    }
-
-    if (!sheet) {
-      return { ok: false, error: 'Aba de participações não encontrada.' };
-    }
-
-    // Atualiza os campos na linha encontrada
-    const actualRowNumber = foundRowIndex + 1; // +1 porque foundRowIndex é 0-based, mas sheet rows são 1-based
-    const nowStr = nowString_();
-
-    if (headerIndex['participou'] !== undefined) {
-      sheet.getRange(actualRowNumber, headerIndex['participou'] + 1).setValue(dados.participou || '');
-    }
-    if (headerIndex['chegou_tarde'] !== undefined) {
-      sheet.getRange(actualRowNumber, headerIndex['chegou_tarde'] + 1).setValue(dados.chegou_tarde || '');
-    }
-    if (headerIndex['saiu_cedo'] !== undefined) {
-      sheet.getRange(actualRowNumber, headerIndex['saiu_cedo'] + 1).setValue(dados.saiu_cedo || '');
-    }
-    if (headerIndex['observacoes'] !== undefined) {
-      sheet.getRange(actualRowNumber, headerIndex['observacoes'] + 1).setValue(dados.observacoes || '');
-    }
-    if (headerIndex['marcado_em'] !== undefined) {
-      sheet.getRange(actualRowNumber, headerIndex['marcado_em'] + 1).setValue(nowStr);
-    }
-    if (headerIndex['marcado_por'] !== undefined) {
-      sheet.getRange(actualRowNumber, headerIndex['marcado_por'] + 1).setValue(uid || '');
-    }
-
-    return { ok: true };
+    // Lógica antiga (fallback) - busca por activityId + memberId usando DatabaseManager
+    console.log('🔧 [BACKEND] Usando busca por activityId + memberId (fallback)');
+    console.log('🔧 [BACKEND] - dados.id não encontrado, usando fallback');
+    return markParticipacao(activityId, memberId, dados, uid);
 
   } catch (err) {
     return { ok: false, error: 'Erro saveParticipacaoDirectly: ' + (err && err.message ? err.message : err) };
+  }
+}
+
+/**
+ * Atualiza participação usando ID específico da tabela
+ * @param {string} participacaoId - ID específico da participação (ex: PART-0001)
+ * @param {Object} dados - Dados da participação
+ * @param {string} uid - UID do usuário
+ * @returns {Object} { ok: boolean }
+ */
+function updateParticipacaoById(participacaoId, dados, uid) {
+  try {
+    if (!participacaoId || !dados) {
+      return { ok: false, error: 'Parâmetros inválidos para updateParticipacaoById.' };
+    }
+
+    console.log('🔧 [BACKEND] updateParticipacaoById chamada com ID:', participacaoId);
+
+    // Busca a participação pelo ID usando DatabaseManager
+    const participacao = DatabaseManager.findByField('participacoes', 'id', participacaoId);
+
+    if (!participacao) {
+      console.error('🔧 [BACKEND] Participação não encontrada para ID:', participacaoId);
+      return { ok: false, error: 'Participação não encontrada para o ID: ' + participacaoId };
+    }
+
+    // Verifica se a participação não está deletada
+    if (participacao.deleted === 'x') {
+      return { ok: false, error: 'Participação está marcada como deletada.' };
+    }
+
+    console.log('🔧 [BACKEND] Participação encontrada:', participacao);
+
+    // Prepara os dados para atualização
+    const updateData = {
+      participou: dados.participou || '',
+      chegou_tarde: dados.chegou_tarde || '',
+      saiu_cedo: dados.saiu_cedo || '',
+      observacoes: dados.observacoes || '',
+      marcado_em: nowString_(),
+      marcado_por: uid || ''
+    };
+
+    console.log('🔧 [BACKEND] Dados para atualização:', updateData);
+
+    // Atualiza usando DatabaseManager
+    const result = DatabaseManager.update('participacoes', participacaoId, updateData);
+
+    if (result.ok) {
+      console.log('✅ [BACKEND] Participação atualizada com sucesso para ID:', participacaoId);
+      return { ok: true, message: 'Participação atualizada com sucesso.' };
+    } else {
+      console.error('❌ [BACKEND] Erro na atualização:', result.error);
+      return { ok: false, error: result.error };
+    }
+
+  } catch (err) {
+    console.error('❌ [BACKEND] Erro updateParticipacaoById:', err);
+    return { ok: false, error: 'Erro updateParticipacaoById: ' + (err && err.message ? err.message : err) };
   }
 }
 

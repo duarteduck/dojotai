@@ -6,7 +6,17 @@
       "Bash(npx @google/clasp:*)",
       "Bash(tree:*)",
       "Bash(find:*)",
-      "Bash(clasp:*)"
+      "Bash(clasp:*)",
+      "Bash(for file in \"C:\\Users\\diogo\\Documents\\Sistema Dojotai\\src\\00-core\"/*.gs)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(grep:*)",
+      "Bash(done)",
+      "Bash(for file in activityCard app_api app_router app_state app_ui calendarModal components dashboard dashboardCard dashHeader emptyState memberCard navTabs pageActions practices reports styles_base toast userMenu view_activity_new view_dash view_login view_member_detail view_members_list view_participacoes_modal)",
+      "Bash(do echo \"Searching for $file...\")",
+      "Bash(echo \"FOUND: $file\")",
+      "Bash(echo:*)",
+      "Bash(wc:*)",
+      "Bash(for file in \"C:\\Users\\diogo\\Documents\\Sistema Dojotai\\src\\01-business\"/*.gs)"
     ],
     "deny": [],
     "ask": []

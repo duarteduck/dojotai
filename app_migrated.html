@@ -2372,6 +2372,52 @@
 
 
 
+    <!-- Sistema de Estado da Aplicação -->
+    <script>
+        console.log('🔧 [DEBUG] Definindo State diretamente...');
+        window.State = {
+          get uid(){ return localStorage.getItem('uid'); },
+          set uid(v){ localStorage.setItem('uid', v); },
+
+          get user(){
+            const userData = localStorage.getItem('user');
+            return userData ? JSON.parse(userData) : null;
+          },
+          set user(v){
+            if(v) {
+              localStorage.setItem('user', JSON.stringify(v));
+            } else {
+              localStorage.removeItem('user');
+            }
+          },
+
+          get session(){
+            const sessionData = localStorage.getItem('session');
+            return sessionData ? JSON.parse(sessionData) : null;
+          },
+          set session(v){
+            if(v) {
+              localStorage.setItem('session', JSON.stringify(v));
+              console.log('💾 State.session salva:', v.id);
+            } else {
+              localStorage.removeItem('session');
+            }
+          },
+
+          clear(){
+            localStorage.removeItem('uid');
+            localStorage.removeItem('user');
+            localStorage.removeItem('session');
+            console.log('🧹 State limpo - uid, user, session removidos');
+          },
+
+          cache: { atividades: [] },
+          ui: { minhas:false, nomeFiltro:"" }
+        };
+        console.log('✅ [DEBUG] State definido com sucesso:', typeof window.State !== 'undefined');
+        console.log('✅ [DEBUG] State global acessível:', typeof State !== 'undefined');
+    </script>
+
     <script>
         // ===== SISTEMA UNIFICADO DE NAVEGAÇÃO =====
         function initNavigation() {
@@ -4059,28 +4105,102 @@
             }
         }
 
-        async function loadActivityForParticipants(activityId) {
+        async function loadActivityForParticipants(activityId, tentativa = 1) {
             try {
-                console.log('📊 [PARTICIPANTES] Iniciando carregamento para atividade:', activityId);
-                console.log('📊 [PARTICIPANTES] Função executada com sucesso');
+                console.log('📊 [PARTICIPANTES] Iniciando carregamento para atividade:', activityId, '(tentativa', tentativa + ')');
 
-                // Carregar dados da atividade
-                const activityResult = await new Promise((resolve, reject) => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(reject)
-                        .getActivityById(activityId);
-                });
-
-                if (!activityResult || !activityResult.ok) {
-                    throw new Error('Falha ao carregar dados da atividade');
+                // Verificar se State está disponível
+                if (typeof State === 'undefined') {
+                    if (tentativa >= 5) {
+                        throw new Error('State não carregado após 5 tentativas. Verifique se app_state.html está sendo incluído corretamente.');
+                    }
+                    console.warn('⚠️ State não definido na tentativa', tentativa, '- tentando novamente em 200ms...');
+                    setTimeout(() => loadActivityForParticipants(activityId, tentativa + 1), 200);
+                    return;
                 }
 
-                const activity = activityResult.item;
+                console.log('✅ [PARTICIPANTES] State carregado! User:', State?.user);
+
+                if (!activityId) {
+                    throw new Error('ID da atividade não fornecido');
+                }
+
+                // Verificar se o Google Apps Script está disponível
+                if (typeof google === 'undefined' || !google.script) {
+                    throw new Error('Google Apps Script não está disponível');
+                }
+
+                // Testar se conseguimos chamar uma função simples primeiro
+                console.log('📊 [PARTICIPANTES] Testando conectividade com Google Apps Script...');
+
+                try {
+                    const testResult = await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => reject(new Error('Timeout no teste')), 3000);
+                        google.script.run
+                            .withSuccessHandler((result) => {
+                                clearTimeout(timeout);
+                                console.log('📊 [PARTICIPANTES] Teste de conectividade OK');
+                                resolve(result);
+                            })
+                            .withFailureHandler((error) => {
+                                clearTimeout(timeout);
+                                reject(error);
+                            })
+                            .listActivitiesApi(); // Função que sabemos que existe
+                    });
+                    console.log('📊 [PARTICIPANTES] Conectividade confirmada');
+                } catch (testError) {
+                    console.warn('📊 [PARTICIPANTES] Problema de conectividade:', testError);
+                }
+
+                console.log('📊 [PARTICIPANTES] Chamando getActivityById...');
+
+                // Carregar dados da atividade com timeout
+                const activityResult = await Promise.race([
+                    new Promise((resolve, reject) => {
+                        console.log('📊 [PARTICIPANTES] Configurando chamada para Google Apps Script...');
+                        google.script.run
+                            .withSuccessHandler((result) => {
+                                console.log('📊 [PARTICIPANTES] Sucesso da API getActivityById:', result);
+                                resolve(result);
+                            })
+                            .withFailureHandler((error) => {
+                                console.error('📊 [PARTICIPANTES] Erro da API getActivityById:', error);
+                                reject(error);
+                            })
+                            .getActivityById(activityId);
+                    }),
+                    new Promise((_, reject) => {
+                        setTimeout(() => {
+                            reject(new Error('Timeout: getActivityById demorou mais de 10 segundos'));
+                        }, 10000);
+                    })
+                ]);
+
+                console.log('📊 [PARTICIPANTES] Resultado da API:', activityResult);
+                console.log('📊 [PARTICIPANTES] Estrutura completa:', JSON.stringify(activityResult, null, 2));
+
+                if (!activityResult) {
+                    throw new Error('Resultado nulo da API getActivityById');
+                }
+
+                if (!activityResult.ok) {
+                    throw new Error('API retornou erro: ' + (activityResult.error || 'Erro desconhecido'));
+                }
+
+                // A API pode retornar tanto activity diretamente quanto item
+                const activity = activityResult.activity || activityResult.item;
+
+                console.log('📊 [PARTICIPANTES] Atividade extraída:', activity);
+                console.log('📊 [PARTICIPANTES] Propriedades disponíveis:', Object.keys(activity || {}));
+
+                if (!activity) {
+                    throw new Error('Atividade não encontrada na resposta da API');
+                }
 
                 // Atualizar informações da atividade no modal (campos do modal de edição)
-                document.getElementById('edit-activity-name').value = activity.titulo || 'Sem título';
-                document.getElementById('edit-activity-description').value = activity.descricao || 'Sem descrição';
+                document.getElementById('edit-activity-name').value = activity.titulo || activity.title || activity.nome || 'Sem título';
+                document.getElementById('edit-activity-description').value = activity.descricao || activity.description || 'Sem descrição';
 
                 // Carregar alvos da atividade (participações)
                 const participationsResult = await new Promise((resolve, reject) => {
@@ -4100,9 +4220,20 @@
                 document.getElementById('participantsLoading').style.display = 'none';
 
                 if (participationsResult && participationsResult.ok && participationsResult.items && participationsResult.items.length > 0) {
-                    // Mostrar lista de participações
-                    document.getElementById('participantsList').style.display = 'block';
-                    renderParticipantsForModal(participationsResult.items);
+                    // Filtrar apenas registros não deletados
+                    const activeParticipations = participationsResult.items.filter(p => p.deleted !== 'x');
+
+                    console.log('👥 Total de participações:', participationsResult.items.length);
+                    console.log('👥 Participações ativas (não deletadas):', activeParticipations.length);
+
+                    if (activeParticipations.length > 0) {
+                        // Mostrar lista de participações ativas
+                        document.getElementById('participantsList').style.display = 'block';
+                        renderParticipantsForModal(activeParticipations);
+                    } else {
+                        // Mostrar mensagem de sem alvos ativos
+                        document.getElementById('participantsEmpty').style.display = 'block';
+                    }
                 } else {
                     // Mostrar mensagem de sem alvos
                     document.getElementById('participantsEmpty').style.display = 'block';
@@ -4110,12 +4241,29 @@
 
             } catch (error) {
                 console.error('❌ Erro ao carregar dados para participações:', error);
-                document.getElementById('participantsLoading').innerHTML = `
-                    <div style="text-align: center; color: #ef4444;">
-                        ❌ Erro ao carregar dados da atividade
-                        <br><small>${error.message || error}</small>
-                    </div>
-                `;
+
+                // Garantir que o loading desapareça
+                const loadingState = document.getElementById('editActivityLoadingState');
+                const formContent = document.getElementById('editActivityFormContent');
+                const participantsLoading = document.getElementById('participantsLoading');
+
+                if (loadingState) loadingState.style.display = 'none';
+                if (formContent) formContent.style.display = 'block';
+
+                if (participantsLoading) {
+                    participantsLoading.innerHTML = `
+                        <div style="text-align: center; color: #ef4444; padding: 20px;">
+                            ❌ Erro ao carregar dados da atividade
+                            <br><small>${error.message || error}</small>
+                            <br><br>
+                            <button onclick="loadActivityForParticipants('${activityId}', 1)" class="btn btn-primary btn-sm">
+                                🔄 Tentar Novamente
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    console.error('❌ Elemento participantsLoading não encontrado!');
+                }
             }
         }
 
@@ -4128,30 +4276,42 @@
             }
 
             // Buscar nomes dos membros do backend
+            console.log('👥 [PARTICIPANTES] Buscando nomes dos membros...');
+            console.log('👥 [PARTICIPANTES] Participações recebidas:', participations);
+
             google.script.run
                 .withSuccessHandler(function(membersResult) {
+                    console.log('👥 [PARTICIPANTES] Resultado da API de membros:', membersResult);
+
                     if (!membersResult || !membersResult.ok) {
                         console.error('❌ Erro ao carregar membros:', membersResult);
                         return;
                     }
 
                     const members = membersResult.items || [];
+                    console.log('👥 [PARTICIPANTES] Membros disponíveis:', members);
+
                     const membersMap = {};
                     members.forEach(member => {
+                        console.log('👥 [PARTICIPANTES] Mapeando membro:', member.codigo_sequencial, '->', member.nome);
                         membersMap[member.codigo_sequencial] = member.nome;
                     });
 
+                    console.log('👥 [PARTICIPANTES] Mapa de membros:', membersMap);
+
                     let html = '';
                     participations.forEach(participation => {
-                        const memberName = membersMap[participation.id_membro] || 'Nome não encontrado';
+                        console.log('👥 [PARTICIPANTES] Processando participação:', participation.id_membro, 'para atividade');
+                        const memberName = membersMap[participation.id_membro] || `Nome não encontrado (ID: ${participation.id_membro})`;
 
                         html += `
-                            <div class="participant-item" style="
+                            <div class="participant-item" data-deleted="${participation.deleted || ''}" data-table-id="${participation.id}" style="
                                 background: white;
                                 border: 1px solid var(--border-color);
                                 border-radius: 8px;
                                 padding: 16px;
                                 margin-bottom: 12px;
+                                ${participation.deleted === 'x' ? 'opacity: 0.5; background: #fee; border-color: var(--danger);' : ''}
                             ">
                                 <!-- Info do participante -->
                                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
@@ -4270,7 +4430,7 @@
                         </div>
                     `;
                 })
-                .listUsuariosApi();
+                .listMembersApi();
         }
 
         function renderParticipantsList(participations) {
@@ -4432,12 +4592,23 @@
                 participantItems.forEach(item => {
                     const participouCheckbox = item.querySelector('input[data-participation-id]');
                     const participationId = participouCheckbox.dataset.participationId;
-                    const memberId = participouCheckbox.dataset.memberId; // Precisamos adicionar este atributo
+                    const memberId = participouCheckbox.dataset.memberId;
+                    const tableId = item.dataset.tableId; // ID da tabela participações
+
+                    // Verificar se o registro está marcado como deletado nos dados originais
+                    // O campo deleted tem valor "x" quando deletado
+                    const isDeleted = item.dataset.deleted === 'x';
+
+                    if (isDeleted) {
+                        console.log('🗑️ Pulando participação marcada como deletada (deleted = x):', participationId);
+                        return; // Não processa itens deletados
+                    }
 
                     const chegouTardeCheckbox = item.querySelector(`#chegou-tarde-${participationId}`);
                     const saiuCedoCheckbox = item.querySelector(`#saiu-cedo-${participationId}`);
 
                     const participationData = {
+                        tableId: tableId, // ID da tabela para update direto
                         participationId: participationId,
                         memberId: memberId,
                         participou: participouCheckbox.checked ? 'sim' : 'nao',
@@ -4449,18 +4620,26 @@
                 });
 
                 console.log('📊 Dados coletados para salvar:', participationUpdates);
+                console.log('🔍 [DEBUG] Primeiro item completo:', JSON.stringify(participationUpdates[0], null, 2));
 
-                // Salvar cada participação no backend
+                // Salvar cada participação no backend usando ID da tabela participações
                 const savePromises = participationUpdates.map(data => {
                     return new Promise((resolve, reject) => {
+                        console.log('💾 Salvando participação ID:', data.tableId, 'com dados:', {
+                            participou: data.participou,
+                            chegou_tarde: data.chegou_tarde,
+                            saiu_cedo: data.saiu_cedo
+                        });
+
                         google.script.run
                             .withSuccessHandler(resolve)
                             .withFailureHandler(reject)
-                            .saveParticipacaoDirectly(activityId, data.memberId, {
+                            .saveParticipacaoDirectly(null, null, {
+                                id: data.tableId, // ID específico da tabela participações
                                 participou: data.participou,
                                 chegou_tarde: data.chegou_tarde,
                                 saiu_cedo: data.saiu_cedo
-                            }, currentUser?.uid || '');
+                            });
                     });
                 });
 
@@ -7014,16 +7193,10 @@
     </div>
 
     <!-- Includes do JavaScript atual -->
-    <script>
-        <?= HtmlService.createHtmlOutputFromFile('src/03-shared/app_api').getContent() ?>
-    </script>
+
 
     <script>
         <?= HtmlService.createHtmlOutputFromFile('src/03-shared/app_router').getContent() ?>
-    </script>
-
-    <script>
-        <?= HtmlService.createHtmlOutputFromFile('src/03-shared/app_state').getContent() ?>
     </script>
 
     <!-- Sistema de Filtros JavaScript -->
@@ -7389,6 +7562,109 @@
             // Aguardar um pouco para garantir que outros scripts carregaram
             setTimeout(initFiltrosSystem, 500);
         });
+
+        // ===== FUNÇÕES DE PARTICIPAÇÃO FALTANTES =====
+
+        function toggleParticipationOptions(checkbox) {
+            const participationId = checkbox.dataset.participationId;
+            const optionsDiv = document.getElementById(`options-${participationId}`);
+
+            if (checkbox.checked) {
+                optionsDiv.style.display = 'block';
+            } else {
+                optionsDiv.style.display = 'none';
+                // Desmarcar sub-opções quando "participou" é desmarcado
+                document.getElementById(`chegou-tarde-${participationId}`).checked = false;
+                document.getElementById(`saiu-cedo-${participationId}`).checked = false;
+            }
+        }
+
+        async function saveAllParticipations(activityId) {
+            const saveBtn = document.getElementById('save-participations-btn');
+            if (!saveBtn) {
+                console.error('❌ Botão de salvar não encontrado');
+                return;
+            }
+
+            const originalContent = saveBtn.innerHTML;
+
+            try {
+                console.log('💾 Salvando participações para atividade:', activityId);
+
+                // Mostrar loading no botão
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<div style="width: 16px; height: 16px; border: 2px solid #ffffff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>';
+                saveBtn.style.opacity = '0.8';
+
+                // Coletar dados de todos os participantes
+                const participationUpdates = [];
+                const participantItems = document.querySelectorAll('.participant-item');
+
+                participantItems.forEach(item => {
+                    const participouCheckbox = item.querySelector('input[data-participation-id]');
+                    if (!participouCheckbox) return;
+
+                    const participationId = participouCheckbox.dataset.participationId;
+                    const memberId = participouCheckbox.dataset.memberId;
+
+                    const chegouTardeCheckbox = item.querySelector(`#chegou-tarde-${participationId}`);
+                    const saiuCedoCheckbox = item.querySelector(`#saiu-cedo-${participationId}`);
+
+                    participationUpdates.push({
+                        participationId,
+                        memberId,
+                        participou: participouCheckbox.checked ? 'sim' : 'nao',
+                        chegou_tarde: (participouCheckbox.checked && chegouTardeCheckbox?.checked) ? 'sim' : 'nao',
+                        saiu_cedo: (participouCheckbox.checked && saiuCedoCheckbox?.checked) ? 'sim' : 'nao'
+                    });
+                });
+
+                console.log('📊 Dados coletados:', participationUpdates);
+
+                // Salvar cada participação
+                const savePromises = participationUpdates.map(data => {
+                    return new Promise((resolve, reject) => {
+                        google.script.run
+                            .withSuccessHandler(resolve)
+                            .withFailureHandler(reject)
+                            .saveParticipacaoDirectly(activityId, data.memberId, {
+                                participou: data.participou,
+                                chegou_tarde: data.chegou_tarde,
+                                saiu_cedo: data.saiu_cedo
+                            }, '');
+                    });
+                });
+
+                const results = await Promise.all(savePromises);
+                console.log('✅ Resultados:', results);
+
+                // Verificar se todas as operações foram bem-sucedidas
+                const failures = results.filter(result => !result.ok);
+                if (failures.length > 0) {
+                    throw new Error(`${failures.length} participações falharam ao salvar`);
+                }
+
+                showToast('✅ Participações salvas com sucesso!', 'success');
+
+                // Fechar modal após um tempo
+                setTimeout(() => {
+                    closeEditActivityModal();
+                    // Recarregar atividades para mostrar dados atualizados
+                    if (typeof loadActivities === 'function') {
+                        loadActivities();
+                    }
+                }, 1000);
+
+            } catch (error) {
+                console.error('❌ Erro ao salvar participações:', error);
+                showToast('❌ Erro ao salvar participações: ' + (error.message || error), 'error');
+            } finally {
+                // Restaurar botão
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalContent;
+                saveBtn.style.opacity = '1';
+            }
+        }
 
         // Expor função para uso externo
         window.getFiltrosAtivos = function() {
