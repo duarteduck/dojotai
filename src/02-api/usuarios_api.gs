@@ -738,43 +738,37 @@ function getCurrentLoggedUser() {
       }
     }
 
-    // Método 2: Tentar buscar sessão ativa mais recente
+    // Método 2: Tentar buscar sessão ativa mais recente (migrado para DatabaseManager)
     console.log('🔄 Tentando método 2: sessão ativa mais recente...');
     try {
-      const sessionsData = readTableByNome_('sessoes');
-      if (sessionsData && sessionsData.values && sessionsData.values.length > 1) {
-        const headers = sessionsData.values[0];
-        const rows = sessionsData.values.slice(1);
+      // Buscar todas as sessões ativas usando DatabaseManager
+      const queryResult = DatabaseManager.query('sessoes', { active: 'true' }, false);
+      const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
 
-        // Buscar sessões ativas ordenadas por data
-        const sessionsAtivas = rows
-          .map(row => {
-            const session = {};
-            headers.forEach((header, index) => {
-              session[header] = row[index];
-            });
-            return session;
-          })
-          .filter(s => s.active === 'true' || s.active === true)
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      if (sessions && sessions.length > 0) {
+        // Ordenar por created_at (mais recente primeiro)
+        const sessionsOrdenadas = sessions.sort((a, b) => {
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
+          return dateB - dateA;
+        });
 
-        if (sessionsAtivas.length > 0) {
-          const sessionAtiva = sessionsAtivas[0];
-          console.log('🔍 Sessão ativa mais recente encontrada:', sessionAtiva.session_id);
+        const sessionAtiva = sessionsOrdenadas[0];
+        console.log('🔍 Sessão ativa mais recente encontrada:', sessionAtiva.session_id);
 
-          const usuario = DatabaseManager.findById('usuarios', sessionAtiva.user_id);
-          if (usuario) {
-            console.log('✅ Usuário encontrado via sessão ativa:', usuario.uid, usuario.nome);
-            return {
-              uid: usuario.uid,
-              nome: usuario.nome,
-              metodo: 'sessao_ativa_recente'
-            };
-          }
+        const usuario = DatabaseManager.findById('usuarios', sessionAtiva.user_id);
+        if (usuario) {
+          console.log('✅ Usuário encontrado via sessão ativa:', usuario.uid, usuario.nome);
+          return {
+            uid: usuario.uid,
+            nome: usuario.nome,
+            metodo: 'sessao_ativa_recente'
+          };
         }
       }
     } catch (sessionError) {
       console.warn('⚠️ Erro ao buscar sessões ativas:', sessionError.message);
+      Logger.error('UsuariosAPI', 'Error finding active session', { error: sessionError.message });
     }
 
     // Método 3: Log para debug - NÃO retornar usuário aleatório
