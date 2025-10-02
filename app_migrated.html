@@ -5635,6 +5635,11 @@
                     userRoleEl.textContent = '--';
                 }
 
+                // Atualizar dropdown se a função existir
+                if (typeof updateDropdownUserInfo === 'function') {
+                    updateDropdownUserInfo(user);
+                }
+
             } catch (error) {
                 console.error('❌ Erro ao atualizar informações do usuário:', error);
             }
@@ -7671,6 +7676,9 @@
             return filtrosState;
         };
     </script>
+
+    <!-- ===== USER MENU DROPDOWN COMPONENT ===== -->
+    <?!= include('src/05-components/userMenuDropdown'); ?>
 
 </body>
 </html>

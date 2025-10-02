@@ -1,0 +1,432 @@
+<!-- ============================================
+     COMPONENTE: Menu Dropdown do Usuário
+     Descrição: Menu dinâmico carregado da planilha
+     Integração: Sistema Dojotai V2
+     ============================================ -->
+
+<style>
+    /* ===== USER MENU DROPDOWN ===== */
+
+    .user-info {
+        position: relative;
+        cursor: pointer;
+        user-select: none;
+        transition: var(--transition);
+    }
+
+    .user-info:hover {
+        opacity: 0.9;
+    }
+
+    .user-info.active {
+        background: var(--primary-light);
+        color: var(--white);
+    }
+
+    /* Dropdown Container */
+    .user-menu-dropdown {
+        position: absolute;
+        top: calc(100% + 0.5rem);
+        right: 0;
+        min-width: 280px;
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+        overflow: hidden;
+    }
+
+    .user-menu-dropdown.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    /* Header do Dropdown */
+    .user-menu-header {
+        padding: var(--spacing-lg);
+        background: var(--gradient-primary);
+        color: var(--white);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .user-menu-header h4 {
+        margin: 0 0 var(--spacing-xs) 0;
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+    }
+
+    .user-menu-header p {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        opacity: 0.9;
+    }
+
+    /* Lista de Itens */
+    .user-menu-items {
+        padding: var(--spacing-sm) 0;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .user-menu-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) var(--spacing-lg);
+        color: var(--text);
+        text-decoration: none;
+        transition: var(--transition);
+        cursor: pointer;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        font-size: var(--font-size-base);
+    }
+
+    .user-menu-item:hover {
+        background: var(--gray-light);
+    }
+
+    .user-menu-item:active {
+        background: var(--primary-light);
+        color: var(--white);
+    }
+
+    .user-menu-item .icon {
+        font-size: 1.25rem;
+        width: 24px;
+        text-align: center;
+    }
+
+    .user-menu-item .label {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    /* Divider */
+    .user-menu-divider {
+        height: 1px;
+        background: var(--gray-light);
+        margin: var(--spacing-sm) 0;
+    }
+
+    /* Footer */
+    .user-menu-footer {
+        padding: var(--spacing-md) var(--spacing-lg);
+        background: var(--gray-light);
+        border-top: 1px solid var(--gray-light);
+    }
+
+    .user-menu-logout {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        width: 100%;
+        padding: var(--spacing-md);
+        background: var(--danger);
+        color: var(--white);
+        border: none;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .user-menu-logout:hover {
+        background: #dc2626;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow);
+    }
+
+    /* Loading State */
+    .user-menu-loading {
+        padding: var(--spacing-xl);
+        text-align: center;
+        color: var(--text-light);
+    }
+
+    .user-menu-loading::after {
+        content: '...';
+        animation: dots 1.5s infinite;
+    }
+
+    @keyframes dots {
+        0%, 20% { content: '.'; }
+        40% { content: '..'; }
+        60%, 100% { content: '...'; }
+    }
+
+    /* Empty State */
+    .user-menu-empty {
+        padding: var(--spacing-xl);
+        text-align: center;
+        color: var(--text-light);
+        font-size: var(--font-size-sm);
+    }
+
+    /* Dark Mode */
+    [data-theme="dark"] .user-menu-dropdown {
+        background: var(--dark);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    [data-theme="dark"] .user-menu-item {
+        color: var(--text-dark);
+    }
+
+    [data-theme="dark"] .user-menu-item:hover {
+        background: var(--dark-light);
+    }
+
+    [data-theme="dark"] .user-menu-divider {
+        background: var(--dark-light);
+    }
+
+    [data-theme="dark"] .user-menu-footer {
+        background: var(--dark-light);
+        border-top-color: var(--dark-light);
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+        .user-menu-dropdown {
+            position: fixed;
+            top: auto;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            min-width: 100%;
+            border-radius: var(--radius) var(--radius) 0 0;
+            max-height: 70vh;
+        }
+
+        .user-menu-items {
+            max-height: calc(70vh - 180px);
+        }
+    }
+</style>
+
+<!-- HTML Structure -->
+<template id="user-menu-dropdown-template">
+    <div class="user-menu-dropdown" id="userMenuDropdown">
+        <!-- Header com info do usuário -->
+        <div class="user-menu-header">
+            <h4 id="dropdownUserName">Carregando...</h4>
+            <p id="dropdownUserRole">--</p>
+        </div>
+
+        <!-- Lista de Itens do Menu -->
+        <div class="user-menu-items" id="userMenuItems">
+            <div class="user-menu-loading">Carregando menu</div>
+        </div>
+
+        <!-- Divider -->
+        <div class="user-menu-divider"></div>
+
+        <!-- Footer com Logout -->
+        <div class="user-menu-footer">
+            <button class="user-menu-logout" onclick="logout()">
+                <span>⚡</span>
+                <span>Sair do Sistema</span>
+            </button>
+        </div>
+    </div>
+</template>
+
+<script>
+    /**
+     * USER MENU DROPDOWN - Sistema Dinâmico
+     * Carrega itens do menu da planilha via menu.gs
+     */
+
+    // Estado do menu
+    let userMenuDropdown = null;
+    let menuItemsCache = null;
+
+    /**
+     * Inicializar o dropdown do menu do usuário
+     */
+    function initUserMenuDropdown() {
+        // Clonar template
+        const template = document.getElementById('user-menu-dropdown-template');
+        if (!template) {
+            console.error('Template de menu não encontrado');
+            return;
+        }
+
+        const clone = template.content.cloneNode(true);
+
+        // Inserir após o user-info
+        const userInfo = document.querySelector('.user-info');
+        if (!userInfo) {
+            console.error('Elemento .user-info não encontrado');
+            return;
+        }
+
+        userInfo.appendChild(clone);
+        userMenuDropdown = document.getElementById('userMenuDropdown');
+
+        // Adicionar evento de clique no user-info
+        userInfo.addEventListener('click', toggleUserMenu);
+
+        // Fechar ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!userInfo.contains(e.target)) {
+                closeUserMenu();
+            }
+        });
+
+        // Carregar itens do menu
+        loadUserMenuItems();
+    }
+
+    /**
+     * Toggle do menu dropdown
+     */
+    function toggleUserMenu() {
+        const userInfo = document.querySelector('.user-info');
+        const isOpen = userMenuDropdown.classList.contains('show');
+
+        if (isOpen) {
+            closeUserMenu();
+        } else {
+            openUserMenu();
+        }
+    }
+
+    /**
+     * Abrir menu dropdown
+     */
+    function openUserMenu() {
+        userMenuDropdown.classList.add('show');
+        document.querySelector('.user-info').classList.add('active');
+    }
+
+    /**
+     * Fechar menu dropdown
+     */
+    function closeUserMenu() {
+        userMenuDropdown.classList.remove('show');
+        document.querySelector('.user-info').classList.remove('active');
+    }
+
+    /**
+     * Carregar itens do menu da planilha
+     */
+    function loadUserMenuItems() {
+        const container = document.getElementById('userMenuItems');
+
+        // Mostrar loading
+        container.innerHTML = '<div class="user-menu-loading">Carregando menu</div>';
+
+        // Buscar do backend
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.ok) {
+                        menuItemsCache = result.items;
+                        renderUserMenuItems(result.items);
+                    } else {
+                        container.innerHTML = '<div class="user-menu-empty">Erro ao carregar menu</div>';
+                        console.error('Erro ao carregar menu:', result?.error);
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    container.innerHTML = '<div class="user-menu-empty">Falha na conexão</div>';
+                    console.error('Falha ao carregar menu:', error);
+                })
+                .listMenuItems();
+        } else {
+            // Fallback para desenvolvimento local
+            const mockItems = [
+                { id: '1', titulo: 'Meu Perfil', icone: '👤', acao: 'route', destino: 'profile' },
+                { id: '2', titulo: 'Configurações', icone: '⚙️', acao: 'route', destino: 'settings' },
+                { id: '3', titulo: 'Ajuda', icone: '❓', acao: 'route', destino: 'help' }
+            ];
+            menuItemsCache = mockItems;
+            renderUserMenuItems(mockItems);
+        }
+    }
+
+    /**
+     * Renderizar itens do menu
+     */
+    function renderUserMenuItems(items) {
+        const container = document.getElementById('userMenuItems');
+
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="user-menu-empty">Nenhum item disponível</div>';
+            return;
+        }
+
+        let html = '';
+
+        items.forEach(item => {
+            html += `
+                <button class="user-menu-item" onclick="handleMenuItemClick('${item.acao}', '${item.destino}')">
+                    <span class="icon">${item.icone || '📄'}</span>
+                    <span class="label">${item.titulo}</span>
+                </button>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Handler de clique em item do menu
+     */
+    function handleMenuItemClick(acao, destino) {
+        console.log('Menu clicado:', acao, destino);
+
+        // Fechar menu
+        closeUserMenu();
+
+        // Executar ação
+        if (acao === 'route') {
+            // Navegar para página
+            navigateToPage(destino);
+        } else if (acao === 'function') {
+            // Executar função
+            if (typeof window[destino] === 'function') {
+                window[destino]();
+            } else {
+                console.warn('Função não encontrada:', destino);
+            }
+        } else if (acao === 'url') {
+            // Abrir URL
+            window.open(destino, '_blank');
+        }
+    }
+
+    /**
+     * Atualizar informações do usuário no dropdown
+     */
+    function updateDropdownUserInfo(user) {
+        const nameEl = document.getElementById('dropdownUserName');
+        const roleEl = document.getElementById('dropdownUserRole');
+
+        if (nameEl && user?.nome) {
+            nameEl.textContent = user.nome;
+        }
+
+        if (roleEl && user?.role) {
+            roleEl.textContent = user.role;
+        }
+    }
+
+    // Inicializar quando o DOM estiver pronto
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUserMenuDropdown);
+    } else {
+        // DOM já carregado
+        setTimeout(initUserMenuDropdown, 100);
+    }
+</script>

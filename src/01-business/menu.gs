@@ -6,49 +6,36 @@
  */
 function listMenuItems() {
   try {
-    const { values, headerIndex } = readTableByNome_('menu');
-    
-    if (!values || values.length < 2) {
+    // Usar DatabaseManager para buscar itens do menu (com sanitização e cache)
+    const queryResult = DatabaseManager.query('menu', {}, false);
+    const menuItems = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
+
+    if (!menuItems || menuItems.length === 0) {
       return { ok: true, items: [] }; // Menu vazio é válido
     }
 
-    const cId = headerIndex['id'];
-    const cTitulo = headerIndex['titulo'];
-    const cIcone = headerIndex['icone'];
-    const cOrdem = headerIndex['ordem'];
-    const cAcao = headerIndex['acao'];
-    const cDestino = headerIndex['destino'];
-    const cPermissoes = headerIndex['permissoes'];
-    const cStatus = headerIndex['status'];
-
-    if (cId == null || cTitulo == null || cAcao == null || cDestino == null) {
-      return { ok: false, error: 'Tabela de menu precisa das colunas: id, titulo, acao, destino' };
-    }
-
     const items = [];
-    
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r];
-      if (!row) continue;
 
+    menuItems.forEach(menuItem => {
       // Verifica se está ativo
-      const status = cStatus != null ? String(row[cStatus] || '').toLowerCase() : 'ativo';
-      if (status === 'inativo' || status === '0' || status === 'false') continue;
+      const status = menuItem.status ? String(menuItem.status).toLowerCase() : 'ativo';
+      if (status === 'inativo' || status === '0' || status === 'false') return;
+
+      // Validar campos obrigatórios
+      if (!menuItem.titulo || !menuItem.destino) return;
 
       const item = {
-        id: String(row[cId] || ''),
-        titulo: String(row[cTitulo] || ''),
-        icone: cIcone != null ? String(row[cIcone] || '') : '',
-        ordem: cOrdem != null ? (Number(row[cOrdem]) || 999) : 999,
-        acao: String(row[cAcao] || 'route'),
-        destino: String(row[cDestino] || ''),
-        permissoes: cPermissoes != null ? String(row[cPermissoes] || '') : ''
+        id: String(menuItem.id || ''),
+        titulo: String(menuItem.titulo || ''),
+        icone: String(menuItem.icone || ''),
+        ordem: Number(menuItem.ordem) || 999,
+        acao: String(menuItem.acao || 'route'),
+        destino: String(menuItem.destino || ''),
+        permissoes: String(menuItem.permissoes || '')
       };
 
-      if (!item.titulo || !item.destino) continue;
-
       items.push(item);
-    }
+    });
 
     // Ordena pelos campos ordem e depois título
     items.sort((a, b) => {
@@ -57,11 +44,11 @@ function listMenuItems() {
     });
 
     return { ok: true, items };
-    
+
   } catch (err) {
-    return { 
-      ok: false, 
-      error: 'Erro ao carregar menu: ' + (err && err.message ? err.message : err) 
+    return {
+      ok: false,
+      error: 'Erro ao carregar menu: ' + (err && err.message ? err.message : err)
     };
   }
 }
