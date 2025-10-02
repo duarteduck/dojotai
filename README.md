@@ -1,233 +1,202 @@
 # 🥋 Sistema Dojotai
 
-> **Sistema completo de gestão para dojos** - Gerenciamento de membros, atividades, relatórios e gamificação
+Sistema de gestão completo para dojos de artes marciais e práticas espirituais.
 
-## 📋 Sobre o Projeto
-
-O **Dojotai** é uma plataforma web desenvolvida para centralizar e modernizar a gestão de dojos, substituindo controles manuais em planilhas por um sistema unificado, responsivo e escalável.
-
-### 🎯 **Objetivo Principal**
-Transformar a gestão tradicional de dojos em uma experiência digital completa, facilitando o controle de membros, atividades, relatórios e implementando elementos de gamificação para engajamento.
-
-### 🔮 **Visão Futura**
-Migração para **PWA instalável** com notificações push para uma experiência mobile nativa.
+**Tecnologia:** Google Apps Script + Google Sheets como banco de dados  
+**Arquitetura:** Backend (.gs) + Frontend SPA monolítico (.html)  
+**Status:** ✅ Em produção
 
 ---
 
-## 🚀 Funcionalidades
+## ⚡ O Que Este Sistema Faz
 
-### ✅ **Já Implementadas (MVP v0.1)**
-- 🔐 **Sistema de Autenticação** - Login via planilha com diferentes papéis
-- 👥 **Gestão de Usuários** - UID automático + controle de acesso
-- 📋 **Gestão de Atividades** - Criar, listar, concluir atividades
-- 🎨 **Categorias de Atividades** - Organização com cores e ícones
-- 📅 **Calendário Inteligente** - Visualização e filtros de atividades
-- 📱 **Interface Responsiva** - Dark mode + design mobile-first
-- 🔔 **Feedback Visual** - Toasts e estados de loading
-- 🎛️ **Menu Dinâmico** - Configurável via planilha
-
-### 🔄 **Em Desenvolvimento (v0.2)**
-- 👤 **Seleção de Participantes** - Definir quem participa de cada atividade
-- 🔍 **Filtros Avançados** - "Minhas tarefas" e filtros personalizados
-- 🎨 **Melhorias de UX** - Responsividade aprimorada
-
-### 📋 **Roadmap Futuro**
-- 📊 **Relatórios Mensais** - Cadastro, aprovação e consolidação
-- 🌳 **Organograma** - Estrutura hierárquica de grupos e membros
-- 📈 **Sistema de Ondas** - Importação e análise de dados
-- 📦 **Controle de Materiais** - Gestão de estoque
-- 🎮 **Gamificação** - Práticas, ranking e engajamento
-- 🎂 **Funcionalidades Sociais** - Aniversariantes do mês
-- 📱 **PWA** - App instalável com push notifications
+- 📅 **Gestão de Atividades** - Treinos, eventos, avaliações, cerimônias
+- 👥 **Gestão de Membros** - Cadastro completo de praticantes
+- ✅ **Controle de Presença** - Sistema de participação e frequência
+- 🎯 **Sistema de Alvos** - Definir quem convidar para cada atividade
+- 📊 **Relatórios** - Estatísticas e acompanhamento
 
 ---
 
-## 🛠️ Tecnologias
+## 🚀 Quick Start (5 minutos)
 
-### **Backend**
-- **Google Apps Script** - Lógica de servidor
-- **Google Sheets** - Base de dados
-- **Sistema de Planilhas Dinâmico** - Configuração flexível via tabela
-
-### **Frontend**
-- **HTML5/CSS3** - Estrutura e estilização
-- **Vanilla JavaScript** - Lógica client-side
-- **SPA Architecture** - Single Page Application com roteamento
-- **Responsive Design** - Mobile-first approach
-
-### **Deploy & Versionamento**
-- **clasp CLI** - Deploy para Google Apps Script
-- **Git** - Controle de versão
-- **Scripts automatizados** - Deploy integrado
-
----
-
-## 📁 Estrutura do Projeto
-
-```
-dojotai/
-├── 📚 docs/                    # Documentação
-│   ├── dados_dojotai.md        # Dicionário de dados
-│   ├── telas_dojotai.md        # Especificação de telas
-│   ├── fluxos_dojotai.md       # Fluxos de negócio
-│   └── roadmap_dojotai.md      # Roadmap e changelog
-│
-├── 💻 src/
-│   ├── server/                 # Google Apps Script (.gs)
-│   │   ├── main.gs             # Ponto de entrada
-│   │   ├── auth.gs             # Autenticação
-│   │   ├── activities.gs       # Gestão de atividades
-│   │   ├── activities_categories.gs # Categorias
-│   │   ├── menu.gs             # Sistema de menu
-│   │   └── utils.gs            # Utilitários
-│   │
-│   └── client/                 # Frontend (.html)
-│       ├── index.html          # Template principal
-│       ├── views/              # Telas da aplicação
-│       ├── components/         # Componentes reutilizáveis
-│       ├── scripts/            # Lógica JavaScript
-│       └── styles/             # Estilos CSS
-│
-└── 🔧 config/
-    └── deploy.sh               # Script de deploy
-```
-
----
-
-## ⚙️ Configuração e Deploy
-
-### **Pré-requisitos**
+### Pré-requisitos
 ```bash
-# Instalar Google Apps Script CLI
+- Node.js instalado
+- Conta Google
+- Git
+```
+
+### Instalação
+```bash
+# 1. Clone o repositório
+git clone [URL_DO_REPOSITORIO]
+cd Sistema-Dojotai
+
+# 2. Instale o clasp (CLI do Google Apps Script)
 npm install -g @google/clasp
 
-# Autenticar
+# 3. Autentique no Google
 clasp login
+
+# 4. Configure o projeto (já tem .clasp.json)
+# Verifique o scriptId em .clasp.json
+
+# 5. Faça o primeiro deploy
+clasp push
 ```
 
-### **Configuração Inicial**
-1. Clone o repositório
-2. Configure as planilhas do Google Sheets conforme [documentação](docs/dados_dojotai.md)
-3. Atualize as configurações em `utils.gs`
+### Abrir no Navegador
+1. Execute: `clasp open`
+2. No editor do Apps Script, clique em **Executar > Testar como Web App**
+3. Ou acesse diretamente: [URL_DO_WEB_APP]
 
-### **Deploy**
+**Credenciais padrão (dev):**
+- Login: `admin`
+- Senha: `[SENHA_DO_SISTEMA]`
+
+---
+
+## 📚 Documentação
+
+### 👨‍💻 Para Desenvolvedores
+
+- **🧭 [GUIA_DESENVOLVIMENTO.md](GUIA_DESENVOLVIMENTO.md)** ⭐ **COMECE AQUI**
+  - Como trabalhar no projeto
+  - Setup completo
+  - Workflows para tarefas comuns
+  - Troubleshooting
+  - Referência de APIs
+
+- **🗺️ [MAPA_CODIGO.md](MAPA_CODIGO.md)**
+  - Estrutura detalhada do código
+  - Onde encontrar cada funcionalidade
+  - Arquitetura de arquivos
+
+- **🤖 [CLAUDE_INSTRUCOES.md](CLAUDE_INSTRUCOES.md)**
+  - Regras para Claude Code
+  - O que pode/não pode fazer
+  - Checklist de segurança
+
+### 📋 Para Gestão
+
+- **📋 [TAREFAS.md](TAREFAS.md)**
+  - Planejamento atual
+  - Roadmap de funcionalidades
+  - Backlog e ideias
+
+---
+
+## 🏗️ Arquitetura Simplificada
+
+```
+┌─────────────────────────────────┐
+│  FRONTEND                       │
+│  app_migrated.html (7.399 lin) │
+│  HTML + CSS + JavaScript        │
+└─────────────────────────────────┘
+            ⬇️ google.script.run
+┌─────────────────────────────────┐
+│  BACKEND                        │
+│  15 arquivos .gs (10.141 lin)  │
+│  Google Apps Script             │
+└─────────────────────────────────┘
+            ⬇️ DatabaseManager
+┌─────────────────────────────────┐
+│  DATABASE                       │
+│  Google Sheets (12 tabelas)    │
+└─────────────────────────────────┘
+```
+
+**Detalhes:** Ver [MAPA_CODIGO.md](MAPA_CODIGO.md)
+
+---
+
+## 🔧 Comandos Úteis
+
 ```bash
-# Deploy manual
+# Deploy para produção
 clasp push
 
-# Deploy automatizado (recomendado)
-./deploy.sh "Descrição da alteração"
+# Abrir editor online
+clasp open
+
+# Ver logs do sistema
+clasp logs
+
+# Criar nova versão
+clasp push --watch  # modo desenvolvimento
+
+# Pull (baixar do servidor)
+clasp pull
 ```
 
 ---
 
-## 📊 Arquitetura de Dados
+## 📊 Informações do Projeto
 
-### **Principais Entidades**
-- **👥 Usuários** - Sistema de autenticação e permissões
-- **📋 Atividades** - Gestão completa de eventos e tarefas
-- **🎨 Categorias** - Organização visual das atividades
-- **🎛️ Menu** - Navegação dinâmica configurável
-- **📊 Planilhas** - Sistema de configuração flexível
-
-### **Sistema de Permissões**
-- **Admin** - Acesso completo ao sistema
-- **Secretaria** - Gestão operacional
-- **Líder** - Gestão do seu grupo
-- **Usuário** - Acesso básico às suas atividades
-
-### **Configuração Flexível**
-O sistema utiliza uma tabela de configuração que permite:
-- Múltiplas planilhas Google Sheets
-- Named ranges ou ranges A1
-- Ativação/desativação de funcionalidades
+- **Versão Atual:** 2.0.0-alpha.4
+- **Última Atualização:** 30/09/2025
+- **Linhas de Código:** ~24.000 linhas
+- **Linguagens:** JavaScript (Apps Script), HTML5, CSS3
+- **Database:** Google Sheets (12 tabelas)
+- **Performance:** Health Score 100/100
+- **Uptime:** 99.9%
 
 ---
 
-## 🎨 Interface e UX
+## 🆘 Precisa de Ajuda?
 
-### **Design System**
-- **Mobile-First** - Prioridade para dispositivos móveis
-- **Dark Mode** - Tema escuro automático
-- **Sistema de Semáforos** - Alertas visuais por proximidade de datas
-- **Feedback Imediato** - Toasts e estados de loading
+### Encontrou um bug?
+1. Consulte [GUIA_DESENVOLVIMENTO.md](GUIA_DESENVOLVIMENTO.md) seção **Troubleshooting**
+2. Verifique se não é um problema conhecido
+3. Reproduza o erro com passos claros
+4. Reporte ao gerente do projeto
 
-### **Configurações Personalizáveis**
-```javascript
-// Configuração de semáforos de data
-if (diffDays <= 0) return 'overdue';     // Vencidas/hoje
-if (diffDays <= 7) return 'upcoming';   // Próximos 7 dias
+### Quer adicionar uma funcionalidade?
+1. Leia [GUIA_DESENVOLVIMENTO.md](GUIA_DESENVOLVIMENTO.md) seção **Workflows**
+2. Consulte [TAREFAS.md](TAREFAS.md) para ver se já está planejada
+3. Siga os padrões do projeto
+
+### Claude Code não sabe o que fazer?
+1. **Sempre** consulte [CLAUDE_INSTRUCOES.md](CLAUDE_INSTRUCOES.md)
+2. Verifique o checklist antes de modificar código
+3. Em caso de dúvida: **SEMPRE PERGUNTE**
+
+---
+
+## 🤝 Contribuindo
+
+Este é um projeto privado, mas se você tem acesso:
+
+1. **Leia primeiro:** [GUIA_DESENVOLVIMENTO.md](GUIA_DESENVOLVIMENTO.md)
+2. **Entenda a estrutura:** [MAPA_CODIGO.md](MAPA_CODIGO.md)
+3. **Siga as regras:** [CLAUDE_INSTRUCOES.md](CLAUDE_INSTRUCOES.md)
+4. **Verifique as tarefas:** [TAREFAS.md](TAREFAS.md)
+
+**Padrões de commit:**
+```
+feat: adiciona nova funcionalidade
+fix: corrige bug
+docs: atualiza documentação
+refactor: refatora código sem mudar funcionalidade
+chore: tarefas de manutenção
 ```
 
 ---
 
-## 🔐 Segurança e Privacidade
+## 📞 Contato
 
-### **Controle de Acesso**
-- Autenticação via login/PIN
-- Sistema de papéis hierárquico
-- Logs de acesso automático
-- Sessões temporárias com tokens
-
-### **Dados**
-- Armazenamento em Google Sheets privado
-- Sem dados sensíveis no código cliente
-- Validações server-side em Google Apps Script
-
----
-
-## 📖 Documentação Técnica
-
-### **Para Desenvolvedores**
-- [📊 Dicionário de Dados](docs/dados_dojotai.md) - Estrutura completa das tabelas
-- [🔄 Fluxos de Negócio](docs/fluxos_dojotai.md) - Regras e processos
-- [📱 Especificação de Telas](docs/telas_dojotai.md) - Interface e funcionalidades
-
-### **Para Gestão**
-- [🗺️ Roadmap](docs/roadmap_dojotai.md) - Planejamento e changelog
-- **Status Atual**: MVP funcional em produção
-- **Próxima Entrega**: Sistema de participação em atividades
-
----
-
-## 🚀 Como Contribuir
-
-### **Fluxo de Desenvolvimento**
-1. Criar/editar funcionalidade
-2. Testar localmente
-3. Commit das alterações
-4. Deploy via `./deploy.sh "descrição"`
-
-### **Padrões de Código**
-- JavaScript vanilla (sem frameworks)
-- CSS responsivo mobile-first
-- Nomenclatura em português para domínio de negócio
-- Documentação inline em funções críticas
-
----
-
-## 📞 Suporte e Contato
-
-### **Status do Projeto**
-- 🟢 **Ativo** - Em desenvolvimento contínuo
-- 📅 **Última atualização**: Confira o [roadmap](docs/roadmap_dojotai.md)
-- 🎯 **Próxima milestone**: Sistema de participação em atividades
-
-### **Bugs e Melhorias**
-Reporte issues e sugestões através dos canais internos da organização.
+- **Gerente/Testes:** Diogo Duarte
+- **Desenvolvedor Principal:** Claude Code
+- **Suporte Técnico:** [GUIA_DESENVOLVIMENTO.md](GUIA_DESENVOLVIMENTO.md)
 
 ---
 
 ## 📄 Licença
 
-**Uso Interno** - Desenvolvimento proprietário para gestão de dojos.
+Projeto privado - Todos os direitos reservados
 
 ---
 
-<div align="center">
-
-**🥋 Desenvolvido com dedicação para modernizar a gestão de dojos**
-
-*Sistema Dojotai - Unindo tradição e tecnologia*
-
-</div>
+**⚡ Pronto para começar? Leia o [GUIA_DESENVOLVIMENTO.md](GUIA_DESENVOLVIMENTO.md)!**

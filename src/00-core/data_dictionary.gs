@@ -474,6 +474,14 @@ const DATA_DICTIONARY = {
         customValidation: 'validateMultipleCategorias'
       },
 
+      // Soft delete - marca registro como deletado sem apagar fisicamente
+      deleted: {
+        type: 'TEXT',
+        required: false,
+        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
+        default: ''
+      },
+
       // Tags/etiquetas da atividade para filtros e categorização flexível
       tags: {
         type: 'TEXT',
@@ -484,14 +492,6 @@ const DATA_DICTIONARY = {
           pattern: '^[a-zA-Z0-9_,\\s]*$',
           maxLength: 200
         }
-      },
-
-      // Soft delete - marca registro como deletado sem apagar fisicamente
-      deleted: {
-        type: 'TEXT',
-        required: false,
-        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
-        default: ''
       }
     }
   },
@@ -1387,9 +1387,9 @@ const DATA_DICTIONARY = {
   },
 
   // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  // │                               12. TABELA: NOTIFICACOES                                        │
-  // │ 🔔 Sistema de notificações para usuários                                                      │
-  // │ 📂 Arquivo: Sistema - Notificacoes | Planilha: notificacoes | Referência: notificacoes       │
+  // │                               12. TABELA: NOTIFICACOES  (em breve)                             │
+  // │ 🔔 Sistema de notificações para usuários                                                       │
+  // │ 📂 Arquivo: Sistema - Notificacoes | Planilha: notificacoes | Referência: notificacoes         │
   // └────────────────────────────────────────────────────────────────────────────────────────────────┘
   notificacoes: {
     tableName: 'notificacoes',
@@ -1486,7 +1486,7 @@ const DATA_DICTIONARY = {
   },
 
   // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  // │                               13. TABELA: PREFERENCIAS                                        │
+  // │                               13. TABELA: PREFERENCIAS    (em breve)                           │
   // │ ⚙️ Preferências personalizadas dos usuários                                                   │
   // │ 📂 Arquivo: Sistema - Preferencias | Planilha: preferencias | Referência: preferencias       │
   // └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -1567,7 +1567,7 @@ const DATA_DICTIONARY = {
   },
 
   // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  // │                                14. TABELA: HISTORICO                                          │
+  // │                                14. TABELA: HISTORICO     (em breve)                            │
   // │ 📚 Auditoria e histórico de ações do sistema                                                  │
   // │ 📂 Arquivo: Sistema - Historico | Planilha: historico | Referência: historico                │
   // └────────────────────────────────────────────────────────────────────────────────────────────────┘
