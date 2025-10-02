@@ -11,52 +11,29 @@
 
 /**
  * Lista todos os usuários ativos do sistema
+ * Refatorado para usar listActiveUsers (já migrado para DatabaseManager)
  * @returns {Object} Resultado com lista de usuários
  */
 function listUsuariosApi() {
   try {
     console.log('📋 Listando usuários para seleção...');
 
-    // Buscar usuários ativos usando readTableByNome_
-    const { values } = readTableByNome_('usuarios');
+    // Usar função já migrada para DatabaseManager
+    const result = listActiveUsers();
 
-    if (!values || values.length <= 1) {
+    if (!result || !result.ok) {
       return {
         ok: false,
-        error: 'Nenhum usuário encontrado',
+        error: result?.error || 'Nenhum usuário encontrado',
         items: []
       };
     }
 
-    // Converter para objetos
-    const headers = values[0];
-    const dataRows = values.slice(1);
-
-    const usuarios = dataRows
-      .map(row => {
-        const obj = {};
-        headers.forEach((header, index) => {
-          obj[header] = row[index];
-        });
-        return obj;
-      })
-      .filter(user => user.deleted !== 'x'); // Filtrar apenas ativos
-
-    if (!usuarios || usuarios.length === 0) {
-      return {
-        ok: false,
-        error: 'Nenhum usuário encontrado',
-        items: []
-      };
-    }
-
-    // Mapear e ordenar alfabeticamente por nome
-    const usuariosList = usuarios
-      .map(user => ({
-        uid: user.uid,
-        nome: user.nome || `Usuário ${user.uid}`
-      }))
-      .sort((a, b) => a.nome.localeCompare(b.nome));
+    // Mapear para formato da API (uid e nome)
+    const usuariosList = result.users.map(user => ({
+      uid: user.uid,
+      nome: user.nome || `Usuário ${user.uid}`
+    }));
 
     console.log(`✅ ${usuariosList.length} usuários carregados`);
 
@@ -68,6 +45,7 @@ function listUsuariosApi() {
 
   } catch (error) {
     console.error('❌ Erro ao listar usuários:', error);
+    Logger.error('UsuariosAPI', 'Error listing users', { error: error.message });
     return {
       ok: false,
       error: error.message || 'Erro interno do servidor',
@@ -78,45 +56,29 @@ function listUsuariosApi() {
 
 /**
  * Lista categorias de atividades
+ * Refatorado para usar _listCategoriasAtividadesCore (já migrado para DatabaseManager)
  * @returns {Object} Resultado com lista de categorias
  */
 function listCategoriasAtividadesApi() {
   try {
     console.log('📋 Listando categorias de atividades...');
 
-    // Buscar categorias usando readTableByNome_
-    const { values } = readTableByNome_('categorias_atividades');
+    // Usar função já migrada para DatabaseManager
+    const result = _listCategoriasAtividadesCore();
 
-    if (!values || values.length <= 1) {
+    if (!result || !result.ok) {
       return {
         ok: false,
-        error: 'Nenhuma categoria encontrada',
+        error: result?.error || 'Erro ao buscar categorias',
         items: []
       };
     }
 
-    // Converter para objetos
-    const headers = values[0];
-    const dataRows = values.slice(1);
-
-    const categorias = dataRows
-      .map(row => {
-        const obj = {};
-        headers.forEach((header, index) => {
-          obj[header] = row[index];
-        });
-        return obj;
-      })
-      .filter(cat => cat.deleted !== 'x' && cat.status === 'Ativo'); // Filtrar apenas ativas
-
-
-    // Mapear e ordenar alfabeticamente por nome
-    const categoriasList = categorias
-      .map(cat => ({
-        id: cat.id,
-        nome: cat.nome || `Categoria ${cat.id}`
-      }))
-      .sort((a, b) => a.nome.localeCompare(b.nome));
+    // Mapear para formato simplificado da API (apenas id e nome)
+    const categoriasList = result.items.map(cat => ({
+      id: cat.id,
+      nome: cat.nome || `Categoria ${cat.id}`
+    }));
 
     console.log(`✅ ${categoriasList.length} categorias carregadas`);
 
@@ -128,6 +90,7 @@ function listCategoriasAtividadesApi() {
 
   } catch (error) {
     console.error('❌ Erro ao listar categorias:', error);
+    Logger.error('UsuariosAPI', 'Error listing categories', { error: error.message });
     return {
       ok: false,
       error: error.message || 'Erro interno do servidor',
