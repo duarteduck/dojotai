@@ -442,14 +442,17 @@ class ValidationEngine {
     for (const fk of foreignKeys) {
       const fieldValue = data[fk.field];
 
+      // Converter para string se não for null/undefined
+      const fieldValueStr = fieldValue != null ? String(fieldValue).trim() : '';
+
       // Se campo é obrigatório e está vazio
-      if (fk.required && (!fieldValue || fieldValue.trim() === '')) {
+      if (fk.required && !fieldValueStr) {
         errors.push(`Campo ${fk.field} é obrigatório`);
         continue;
       }
 
       // Se campo está vazio mas não é obrigatório, pular validação
-      if (!fieldValue || fieldValue.trim() === '') {
+      if (!fieldValueStr) {
         continue;
       }
 
@@ -2202,9 +2205,11 @@ const DatabaseManager = {
             break;
 
           case 'criado_em':
-          case 'marcado_em':
             fields[fieldName] = this._formatTimestamp(new Date());
             break;
+
+          // marcado_em removido do auto-fill: deve ser preenchido apenas
+          // ao marcar participação, não na criação do registro
 
           case 'created_at':
             fields.created_at = this._formatTimestamp(new Date());
@@ -2212,7 +2217,10 @@ const DatabaseManager = {
 
           default:
             // Para outros campos gerados, usar padrão baseado no tipo
-            if (fieldDef?.type === 'DATETIME') {
+            // EXCETO campos que devem ser preenchidos em momentos específicos
+            const skipAutoFill = ['marcado_em', 'marcado_por', 'confirmado_em', 'atualizado_em'];
+
+            if (fieldDef?.type === 'DATETIME' && !skipAutoFill.includes(fieldName)) {
               fields[fieldName] = this._formatTimestamp(new Date());
             }
             break;

@@ -395,176 +395,193 @@ function addExtraMember(activityId, memberId, uid) {
  * @param {string} uid - UID do usuário
  * @returns {Object} { ok: boolean, created: number }
  */
-function saveTargetsDirectly(activityId, memberIds, uid) {
+async function saveTargetsDirectly(activityId, memberIds, uid) {
   try {
     if (!activityId || !memberIds || !Array.isArray(memberIds)) {
       return { ok: false, error: 'Parâmetros inválidos.' };
     }
 
-    // Usa o mesmo padrão de acesso que activities.gs
-    const { values, headerIndex, ctx } = readTableByNome_('participacoes');
+    // ===== ETAPA 1: MIGRAÇÃO PARCIAL - Leitura via DatabaseManager =====
+    // Buscar participações existentes da atividade usando DatabaseManager
+    Logger.info('DEBUG-Participacoes', 'Buscando participações', { activityId });
 
-    if (!values || values.length === 0) {
-      return { ok: false, error: 'Tabela "participacoes" não encontrada ou vazia.' };
-    }
+    const queryResult = DatabaseManager.query('participacoes', {
+      id_atividade: activityId.toString().trim(),
+      tipo: 'alvo'
+    }, false); // Sem cache - dados dinâmicos
 
-    // Campos obrigatórios conforme o padrão existente
-    const required = ['id', 'id_atividade', 'id_membro', 'tipo'];
-    const missing = required.filter(k => headerIndex[k] === undefined);
-    if (missing.length) {
-      return { ok: false, error: 'Colunas faltando na tabela Participacoes: ' + missing.join(', ') };
-    }
+    Logger.info('DEBUG-Participacoes', 'Query result type', {
+      isArray: Array.isArray(queryResult),
+      hasData: queryResult?.data ? 'sim' : 'nao'
+    });
+
+    const participacoes = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
+
+    Logger.info('DEBUG-Participacoes', 'Participações encontradas', {
+      count: participacoes.length,
+      ids: participacoes.map(p => p.id)
+    });
 
     // Verifica alvos existentes e identifica mudanças
     const existingTargets = [];
     const existingMemberIds = [];
 
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r] || [];
-      const rowActivityId = String(row[headerIndex['id_atividade']] || '').trim();
-      if (rowActivityId === activityId.toString().trim()) {
-        const memberId = String(row[headerIndex['id_membro']] || '').trim();
-        const tipo = String(row[headerIndex['tipo']] || '').trim();
-        const status = String(row[headerIndex['status_participacao']] || '').trim().toLowerCase();
+    participacoes.forEach(part => {
+      // DatabaseManager já filtra soft delete automaticamente (deleted !== 'x')
+      const memberId = String(part.id_membro || '').trim();
 
-        // Só considerar alvos ativos (não deletados - campo 'deleted' vazio)
-        const deleted = String(row[headerIndex['deleted']] || '').trim().toLowerCase();
-        if (tipo === 'alvo' && deleted !== 'x') {
-          existingMemberIds.push(memberId);
-          existingTargets.push({
-            rowIndex: r,
-            memberId: memberId,
-            id: String(row[headerIndex['id']] || '').trim()
-          });
-        }
+      if (memberId) {
+        existingMemberIds.push(memberId);
+        existingTargets.push({
+          id: String(part.id || '').trim(),
+          memberId: memberId,
+          // Manter dados originais para compatibilidade com código legado
+          participacao: part
+        });
       }
-    }
+    });
 
     const newMemberIds = memberIds.filter(id => !existingMemberIds.includes(id.toString()));
     const removedTargets = existingTargets.filter(target => !memberIds.includes(target.memberId));
 
+    console.log('📊 DEBUG: Análise de mudanças:', {
+      memberIdsRecebidos: memberIds,
+      existingMemberIds: existingMemberIds,
+      existingTargets: existingTargets,
+      newMemberIds: newMemberIds,
+      removedTargets: removedTargets
+    });
+
     // Se não há mudanças, retornar
     if (newMemberIds.length === 0 && removedTargets.length === 0) {
+      console.log('ℹ️ DEBUG: Nenhuma mudança detectada');
       return { ok: true, created: 0, deleted: 0, message: 'Nenhuma alteração necessária nos alvos.' };
     }
 
+    // ===== ETAPA 2: MIGRAÇÃO PARCIAL - Soft Delete via DatabaseManager =====
     // Marcar alvos removidos como 'deleted'
+    let deletedCount = 0;
     if (removedTargets.length > 0) {
-      // Usar o contexto já obtido de readTableByNome_
-      const sheet = ctx.sheet;
-
-      // Marcar como deleted (usar campo 'deleted' com valor 'x')
-      const deletedColIndex = headerIndex['deleted'] + 1; // +1 para índice baseado em 1
-      const nowStr = nowString_();
-
-      if (deletedColIndex === 0) {
-        return { ok: false, error: 'Campo "deleted" não encontrado na tabela participações' };
-      }
+      console.log('🗑️ DEBUG: Iniciando soft delete de alvos:', removedTargets);
 
       removedTargets.forEach(target => {
-        // rowIndex é baseado no array values (0=header, 1=primeira linha de dados, etc.)
-        // Precisa usar ctx.range.getRow() para obter a posição inicial da planilha
-        const startRow = ctx.range.getRow();
-        const sheetRowNumber = startRow + target.rowIndex;
+        try {
+          console.log('🗑️ DEBUG: Deletando alvo:', { id: target.id, memberId: target.memberId });
 
-        if (target.rowIndex > 0 && sheetRowNumber > startRow) { // Garantir que não é o cabeçalho
-          sheet.getRange(sheetRowNumber, deletedColIndex).setValue('x');
+          // Usar DatabaseManager.delete() para soft delete automático
+          const deleteResult = DatabaseManager.delete('participacoes', target.id);
+
+          console.log('🗑️ DEBUG: Resultado do delete:', deleteResult);
+
+          if (deleteResult && deleteResult.success) {
+            deletedCount++;
+            Logger.info('Participacoes', 'Alvo removido (soft delete)', {
+              participacaoId: target.id,
+              membroId: target.memberId,
+              atividadeId: activityId
+            });
+          } else {
+            console.error('❌ DEBUG: Falha ao deletar:', deleteResult);
+            Logger.warn('Participacoes', 'Falha ao remover alvo', {
+              participacaoId: target.id,
+              error: deleteResult?.error
+            });
+          }
+        } catch (err) {
+          console.error('❌ DEBUG: Exceção ao deletar:', err);
+          Logger.error('Participacoes', 'Erro ao deletar alvo', {
+            participacaoId: target.id,
+            error: err.message
+          });
         }
       });
 
+      console.log('🗑️ DEBUG: Total deletado:', deletedCount);
     }
 
-    // Gera novos IDs seguindo o padrão
-    let maxId = 0;
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r] || [];
-      const id = String(row[headerIndex['id']] || '');
-      const match = id.match(/^PART-(\d+)$/);
-      if (match) {
-        maxId = Math.max(maxId, parseInt(match[1], 10));
+    // ===== ETAPA 3: MIGRAÇÃO COMPLETA - INSERT via DatabaseManager =====
+    let createdCount = 0;
+    if (newMemberIds.length > 0) {
+      Logger.info('DEBUG-Participacoes', 'Iniciando insert de alvos', {
+        count: newMemberIds.length,
+        memberIds: newMemberIds
+      });
+
+      for (const memberId of newMemberIds) {
+        try {
+          // Criar objeto de dados para inserção
+          const novoAlvo = {
+            id_atividade: activityId,
+            id_membro: memberId,
+            tipo: 'alvo',
+            confirmou: '',
+            confirmado_em: '',
+            participou: '',
+            chegou_tarde: '',
+            saiu_cedo: '',
+            justificativa: '',
+            observacoes: '',
+            // marcado_em: NÃO enviar - deve ficar vazio até marcar participação
+            // marcado_por: NÃO enviar - deve ficar vazio até marcar participação
+            status_participacao: ''
+          };
+
+          Logger.info('DEBUG-Participacoes', 'Inserindo alvo', {
+            memberId,
+            activityId
+          });
+
+          // Usar DatabaseManager.insert() - gera ID automaticamente (async)
+          const insertResult = await DatabaseManager.insert('participacoes', novoAlvo);
+
+          Logger.info('DEBUG-Participacoes', 'Resultado insert completo', {
+            memberId,
+            insertResult: JSON.stringify(insertResult)
+          });
+
+          if (insertResult && insertResult.success) {
+            createdCount++;
+            Logger.info('Participacoes', 'Alvo adicionado', {
+              participacaoId: insertResult.id,
+              membroId: memberId,
+              atividadeId: activityId
+            });
+          } else {
+            Logger.warn('Participacoes', 'Falha ao adicionar alvo', {
+              membroId: memberId,
+              insertResultCompleto: JSON.stringify(insertResult),
+              error: insertResult?.error
+            });
+          }
+        } catch (err) {
+          Logger.error('Participacoes', 'Erro ao inserir alvo', {
+            membroId: memberId,
+            error: err.message
+          });
+        }
       }
+
+      Logger.info('DEBUG-Participacoes', 'Insert concluído', { createdCount });
     }
 
-    const nowStr = nowString_();
-    const rowsToAdd = [];
-
-    newMemberIds.forEach((memberId, index) => {
-      const newId = `PART-${String(maxId + index + 1).padStart(4, '0')}`;
-      const rowArray = new Array(Object.keys(headerIndex).length);
-
-      rowArray[headerIndex['id']] = newId;
-      rowArray[headerIndex['id_atividade']] = activityId;
-      rowArray[headerIndex['id_membro']] = memberId;
-      rowArray[headerIndex['tipo']] = 'alvo';
-      rowArray[headerIndex['confirmou']] = '';
-      rowArray[headerIndex['confirmado_em']] = '';
-      rowArray[headerIndex['participou']] = '';
-      rowArray[headerIndex['chegou_tarde']] = '';
-      rowArray[headerIndex['saiu_cedo']] = '';
-      rowArray[headerIndex['justificativa']] = '';
-      rowArray[headerIndex['observacoes']] = '';
-      rowArray[headerIndex['marcado_em']] = '';
-      rowArray[headerIndex['marcado_por']] = '';
-
-      rowsToAdd.push(rowArray);
+    Logger.info('DEBUG-Participacoes', 'Finalizando saveTargetsDirectly', {
+      createdCount,
+      deletedCount,
+      returning: 'success'
     });
-
-    // Usa o contexto da tabela para escrita, igual ao activities.gs
-    const ref = getPlanRef_('participacoes');
-    const ctxPlan = getContextFromRef_(ref);
-
-    let sheet;
-    if (ctxPlan.namedRange) {
-      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
-        ? SpreadsheetApp.openById(ref.ssid)
-        : SpreadsheetApp.getActiveSpreadsheet();
-
-      try {
-        const rng = ss.getRangeByName(ctxPlan.namedRange);
-        sheet = rng.getSheet();
-      } catch (e) {
-        return { ok: false, error: 'Erro ao acessar named range: ' + e.message };
-      }
-    } else {
-      const ss = (ref.ssid && ref.ssid !== 'ACTIVE')
-        ? SpreadsheetApp.openById(ref.ssid)
-        : SpreadsheetApp.getActiveSpreadsheet();
-
-      // Tenta o nome configurado primeiro, depois variações
-      const sheetNames = [
-        ctxPlan.planilha,
-        'participacoes',
-        'Participacoes',
-        'participações',
-        'Participações'
-      ];
-
-      for (const name of sheetNames) {
-        sheet = ss.getSheetByName(name);
-        if (sheet) break;
-      }
-    }
-
-    if (!sheet) {
-      return { ok: false, error: 'Aba de participações não encontrada na planilha de destino.' };
-    }
-
-    // Adiciona as novas linhas no final da planilha
-    const currentLastRow = sheet.getLastRow();
-    const startRow = currentLastRow + 1;
-
-    if (rowsToAdd.length > 0) {
-      sheet.getRange(startRow, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
-    }
 
     return {
       ok: true,
-      created: newMemberIds.length,
-      deleted: removedTargets ? removedTargets.length : 0,
-      message: `Alvos atualizados: ${newMemberIds.length} adicionados, ${removedTargets ? removedTargets.length : 0} removidos`
+      created: createdCount, // ETAPA 3: Usando contador do DatabaseManager.insert()
+      deleted: deletedCount, // ETAPA 2: Usando contador do DatabaseManager.delete()
+      message: `Alvos atualizados: ${createdCount} adicionados, ${deletedCount} removidos`
     };
 
   } catch (err) {
+    Logger.error('Participacoes', 'ERRO FATAL em saveTargetsDirectly', {
+      error: err.message,
+      stack: err.stack
+    });
     return { ok: false, error: 'Erro saveTargetsDirectly: ' + (err && err.message ? err.message : err) };
   }
 }

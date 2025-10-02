@@ -440,7 +440,7 @@ function getUsersMapReadOnly_() {
 /**
  * Atualiza atividade por ID (PATCH parcial baseado em cabeçalho).
  */
-function updateActivityWithTargets(input, uidEditor) {
+async function updateActivityWithTargets(input, uidEditor) {
   try {
     if (!input || !input.id) return { ok:false, error:'ID não informado.' };
     var patch = input.patch || {};
@@ -499,7 +499,7 @@ function updateActivityWithTargets(input, uidEditor) {
     if (input.alvos && Array.isArray(input.alvos)) {
       console.log('🎯 Salvando alvos para atividade:', input.id, 'Alvos:', input.alvos);
       try {
-        var resultAlvos = saveTargetsDirectly(input.id, input.alvos, uidEditor);
+        var resultAlvos = await saveTargetsDirectly(input.id, input.alvos, uidEditor);
         if (!resultAlvos.ok) {
           console.error('❌ Erro ao salvar alvos:', resultAlvos.error);
           return { ok:false, error:'Erro ao salvar alvos: ' + resultAlvos.error };
