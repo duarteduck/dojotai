@@ -132,32 +132,25 @@ function validateSession(sessionId) {
   try {
     Logger.debug('SessionManager', 'Validando sessão', { sessionId });
 
-    // Ler tabela de sessões usando sistema padrão
-    const sessionsData = readTableByNome_('sessoes');
-    if (!sessionsData || !sessionsData.values) {
-      return { ok: false, error: 'Erro ao acessar tabela de sessões' };
-    }
+    // Buscar sessão pelo campo session_id usando query()
+    const queryResult = DatabaseManager.query('sessoes', { session_id: sessionId }, false);
+    const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
 
-    // Encontrar sessão pelo ID
-    const sessionRow = sessionsData.values.slice(1).find(row => {
-      const sessionIdIndex = sessionsData.headerIndex.session_id;
-      return row[sessionIdIndex] === sessionId;
-    });
-
-    if (!sessionRow) {
+    if (!sessions || sessions.length === 0) {
       Logger.debug('SessionManager', 'Sessão não encontrada', { sessionId });
       return { ok: false, error: 'Sessão não encontrada' };
     }
 
+    const session = sessions[0];
+
     // Verificar se está ativa
-    const active = sessionRow[sessionsData.headerIndex.active];
-    if (active !== 'sim') {
+    if (session.active !== 'sim') {
       Logger.debug('SessionManager', 'Sessão inativa', { sessionId });
       return { ok: false, error: 'Sessão inativa' };
     }
 
     // Verificar se não expirou
-    const expiresAt = new Date(sessionRow[sessionsData.headerIndex.expires_at]);
+    const expiresAt = new Date(session.expires_at);
     const now = new Date();
 
     if (now > expiresAt) {
@@ -165,17 +158,17 @@ function validateSession(sessionId) {
       return { ok: false, error: 'Sessão expirada' };
     }
 
-    // Atualizar last_activity
-    const updateResult = DatabaseManager.update('sessoes', sessionId, {
+    // Atualizar last_activity usando o PRIMARY KEY (id, ex: SES-0055)
+    DatabaseManager.update('sessoes', session.id, {
       last_activity: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
     });
 
     const sessionData = {
-      id: sessionRow[sessionsData.headerIndex.session_id],
-      user_id: sessionRow[sessionsData.headerIndex.user_id],
-      expires_at: sessionRow[sessionsData.headerIndex.expires_at],
-      created_at: sessionRow[sessionsData.headerIndex.created_at],
-      active: sessionRow[sessionsData.headerIndex.active] === 'sim'
+      id: session.session_id,
+      user_id: session.user_id,
+      expires_at: session.expires_at,
+      created_at: session.created_at,
+      active: session.active === 'sim'
     };
 
     Logger.debug('SessionManager', 'Sessão válida', { sessionId, userId: sessionData.user_id });
@@ -203,21 +196,19 @@ function destroySession(sessionId) {
   try {
     Logger.info('SessionManager', 'Destruindo sessão', { sessionId });
 
-    // Primeiro, encontrar a sessão usando session_id (não id)
-    const sessionsQuery = DatabaseManager.query('sessoes', { session_id: sessionId });
+    // Buscar sessão pelo campo session_id usando query()
+    const queryResult = DatabaseManager.query('sessoes', { session_id: sessionId }, false);
+    const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
 
-    if (!sessionsQuery || sessionsQuery.length === 0) {
+    if (!sessions || sessions.length === 0) {
       Logger.warn('SessionManager', 'Sessão não encontrada', { sessionId });
       return { ok: false, error: 'Sessão não encontrada' };
     }
 
-    const session = sessionsQuery[0];
+    const session = sessions[0];
 
-    // Para sessões antigas sem campo id, usar session_id como fallback
-    const recordId = session.id || session.session_id;
-
-    // Atualizar usando o ID real da linha
-    const updateResult = DatabaseManager.update('sessoes', recordId, {
+    // Atualizar usando o PRIMARY KEY (id)
+    const updateResult = DatabaseManager.update('sessoes', session.id, {
       active: '',
       destroyed_at: Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
     });
@@ -256,25 +247,29 @@ function getSessionStats() {
   try {
     Logger.debug('SessionManager', 'Obtendo estatísticas das sessões');
 
-    const sessionsData = readTableByNome_('sessoes');
-    if (!sessionsData || !sessionsData.values) {
+    // Usar DatabaseManager (retorna apenas registros não deletados)
+    const queryResult = DatabaseManager.query('sessoes', {}, false);
+
+    // DatabaseManager.query() pode retornar array ou {data, pagination}
+    const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
+
+    if (!sessions) {
       return { error: 'Erro ao acessar tabela de sessões' };
     }
 
     const now = new Date();
     const stats = {
-      total_sessions: sessionsData.values.length - 1, // -1 para header
+      total_sessions: sessions.length,
       active_sessions: 0,
       expired_sessions: 0,
       inactive_sessions: 0
     };
 
     // Processar cada sessão
-    sessionsData.values.slice(1).forEach(row => {
-      const active = row[sessionsData.headerIndex.active];
-      const expiresAt = new Date(row[sessionsData.headerIndex.expires_at]);
+    sessions.forEach(session => {
+      const expiresAt = new Date(session.expires_at);
 
-      if (active === 'sim') {
+      if (session.active === 'sim') {
         if (now <= expiresAt) {
           stats.active_sessions++;
         } else {
@@ -317,8 +312,13 @@ function cleanupExpiredSessions() {
   try {
     Logger.info('SessionManager', 'Iniciando limpeza de sessões expiradas');
 
-    const sessionsData = readTableByNome_('sessoes');
-    if (!sessionsData || !sessionsData.values) {
+    // Usar DatabaseManager para buscar todas as sessões ativas
+    const queryResult = DatabaseManager.query('sessoes', { active: 'sim' }, false);
+
+    // DatabaseManager.query() pode retornar array ou {data, pagination}
+    const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
+
+    if (!sessions) {
       return { ok: false, error: 'Erro ao acessar tabela de sessões' };
     }
 
@@ -326,14 +326,13 @@ function cleanupExpiredSessions() {
     let cleanedCount = 0;
 
     // Processar cada sessão ativa
-    sessionsData.values.slice(1).forEach(row => {
-      const sessionId = row[sessionsData.headerIndex.session_id];
-      const active = row[sessionsData.headerIndex.active];
-      const expiresAt = new Date(row[sessionsData.headerIndex.expires_at]);
+    sessions.forEach(session => {
+      const expiresAt = new Date(session.expires_at);
 
-      // Se ativa mas expirada, desativar
-      if (active === 'sim' && now > expiresAt) {
-        const updateResult = DatabaseManager.update('sessoes', sessionId, {
+      // Se expirada, desativar
+      if (now > expiresAt) {
+        // Atualizar usando o PRIMARY KEY (id)
+        const updateResult = DatabaseManager.update('sessoes', session.id, {
           active: '',
           destroyed_at: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
         });
