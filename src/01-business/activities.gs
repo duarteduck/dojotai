@@ -16,112 +16,33 @@ function listActivitiesApi() {
   }
 }
 
-function completeActivity(id, uid) {
-  try {
-    if (!id) return { ok:false, error:'ID da atividade não informado.' };
+// ============================================================================
+// FUNÇÃO REMOVIDA: completeActivity() - activities.gs:19-54
+//
+// Motivo: Função obsoleta/duplicada
+// - Versão migrada existe em usuarios_api.gs:512
+// - Versão migrada usa DatabaseManager.update() com validação e logs
+// - Esta versão usava acesso direto à planilha (sheet.getRange().setValue())
+// - Usava nowString_() para preencher atualizado_em manualmente
+//
+// Removido em: Migração #2 - Fase 1, Tarefa 1.1
+// Data: 02/10/2025
+// ============================================================================
 
-    const ctx = getActivitiesCtx_();
-
-    // Lê toda a tabela (até a última linha usada)
-    const values = getFullTableValues_(ctx);
-    if (!values || !values.length) return { ok:false, error:'A tabela de atividades está vazia.' };
-
-    const header = values[0].map(h => (h||'').toString().trim().toLowerCase());
-    const idxId   = header.indexOf('id');
-    const idxStat = header.indexOf('status');
-    const idxAtuU = header.indexOf('atualizado_uid');
-    const idxAtuE = header.indexOf('atualizado_em');
-
-    for (let i=1;i<values.length;i++) {
-      const r = values[i];
-      if ((r[idxId]||'').toString().trim() === id.toString().trim()) {
-        const rowNumber = ctx.startRow + i;
-        const nowStr = nowString_();
-        
-        // Marca como concluída e registra quem fez a ação
-        ctx.sheet.getRange(rowNumber, idxStat + 1).setValue('Concluida');
-        ctx.sheet.getRange(rowNumber, idxAtuU + 1).setValue(uid || '');
-        ctx.sheet.getRange(rowNumber, idxAtuE + 1).setValue(nowStr);
-        
-        const users = getUsersMapReadOnly_();
-        return { ok:true, status: 'concluida', atualizadoPorNome: users[(uid||'').toString().trim()]?.nome || '' };
-      }
-    }
-    return { ok:false, error:'Atividade não encontrada.' };
-  } catch (err) {
-    return { ok:false, error:'Erro completeActivity: ' + (err && err.message ? err.message : err) };
-  }
-}
-
-function createActivity(payload, uidCriador) {
-  try {
-    const titulo = (payload && payload.titulo || '').toString().trim();
-    const descricao = (payload && payload.descricao || '').toString().trim();
-    const data = (payload && payload.data || '').toString().trim();
-    const atribuido_uid = (payload && payload.atribuido_uid || '').toString().trim();
-    // Compatibilidade: aceita tanto campo novo quanto antigo
-    const categorias_ids = (payload && (payload.categorias_ids || payload.categoria_atividade_id) || '').toString().trim();
-    const tags = (payload && payload.tags || '').toString().trim(); // Tags livres
-
-    if (!titulo) return { ok:false, error:'Informe um título.' };
-
-    // Validar múltiplas categorias se informadas
-    if (categorias_ids) {
-      const validationResult = CategoriaManager.validateMultipleCategorias(categorias_ids);
-      if (!validationResult.isValid) {
-        return { ok:false, error: validationResult.error };
-      }
-    }
-
-    const ctx = getActivitiesCtx_();
-
-    // Lê base para saber cabeçalho e IDs existentes
-    const all = getFullTableValues_(ctx);
-    if (!all || !all.length) return { ok:false, error:'Estrutura da tabela de atividades não encontrada.' };
-
-    const header = all[0].map(h => (h||'').toString().trim().toLowerCase());
-    const idxId   = header.indexOf('id');
-    const idxTit  = header.indexOf('titulo');
-    const idxDesc = header.indexOf('descricao');
-    const idxData = header.indexOf('data');
-    const idxStat = header.indexOf('status');
-    const idxAtuU = header.indexOf('atualizado_uid');
-    const idxCri  = header.indexOf('criado_em');
-    const idxAtuE = header.indexOf('atualizado_em');
-    const idxAtrU = header.indexOf('atribuido_uid');
-    const idxCategorias = header.indexOf('categorias_ids'); // NOVO: múltiplas categorias
-    const idxTags = header.indexOf('tags'); // NOVO: tags livres
-
-    if ([idxId,idxTit,idxDesc,idxData,idxStat,idxAtuU,idxCri,idxAtuE,idxAtrU].some(i => i < 0)) {
-      return { ok:false, error:'Cabeçalho da aba Atividades está diferente do esperado. Certifique-se de que há as colunas: id, titulo, descricao, data, status, atualizado_uid, criado_em, atualizado_em, atribuido_uid, categorias_ids, tags' };
-    }
-
-    const ids = all.slice(1).map(r => (r[idxId]||'').toString());
-    const nextId = generateSequentialId_('ACT-', ids, 4);
-
-    const nowStr = nowString_();
-    const rowArray = [];
-    rowArray[idxId]   = nextId;
-    rowArray[idxTit]  = titulo;
-    rowArray[idxDesc] = descricao;
-    rowArray[idxData] = data || '';
-    rowArray[idxStat] = 'Pendente';
-    rowArray[idxAtuU] = ''; // VAZIO na criação
-    rowArray[idxCri]  = nowStr;
-    rowArray[idxAtuE] = ''; // VAZIO na criação
-    rowArray[idxAtrU] = atribuido_uid || (uidCriador || '');
-    if (idxCategorias >= 0) rowArray[idxCategorias] = categorias_ids || ''; // NOVO: múltiplas categorias
-    if (idxTags >= 0) rowArray[idxTags] = tags || ''; // NOVO: tags livres
-
-    // Próxima linha após a última linha usada na aba
-    const targetRow = ctx.sheet.getLastRow() + 1;
-    ctx.sheet.getRange(targetRow, ctx.startCol, 1, header.length).setValues([rowArray]);
-
-    return { ok:true, id: nextId };
-  } catch (err) {
-    return { ok:false, error:'Erro createActivity: ' + (err && err.message ? err.message : err) };
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: createActivity() - activities.gs:32-100
+//
+// Motivo: Função obsoleta/duplicada
+// - Versão migrada existe em usuarios_api.gs:108
+// - Versão migrada usa DatabaseManager.insert() com validação automática
+// - Esta versão usava acesso direto à planilha (sheet.getRange().setValues())
+// - Usava generateSequentialId_() para gerar IDs manualmente (linha 76)
+// - Usava nowString_() para preencher criado_em manualmente (linha 78)
+// - DatabaseManager faz tudo isso automaticamente
+//
+// Removido em: Migração #2 - Fase 1, Tarefa 1.2
+// Data: 02/10/2025
+// ============================================================================
 
 /** Core da listagem (usado pela API pública) */
 function _listActivitiesCore() {
@@ -530,22 +451,17 @@ async function updateActivityWithTargets(input, uidEditor) {
 /**
  * Retorna uma única atividade por ID, com os mesmos campos de listActivitiesApi().
  */
-function getActivityById(id) {
-  try {
-    if (!id) return { ok:false, error:'ID não informado.' };
-    var res = _listActivitiesCore();
-    if (!res || !res.ok) return { ok:false, error: (res && res.error) || 'Falha ao listar.' };
-    var items = res.items || [];
-    for (var i=0;i<items.length;i++){
-      var it = items[i];
-      if ((it.id||'').toString() === id.toString()) {
-        return { ok:true, item: it };
-      }
-    }
-    return { ok:false, error:'Atividade não encontrada.' };
-  } catch (err) {
-    return { ok:false, error:'Erro getActivityById: ' + (err && err.message ? err.message : err) };
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: getActivityById() - activities.gs:509-525
+//
+// Motivo: Função duplicada e ineficiente
+// - Versão migrada existe em usuarios_api.gs:283
+// - Versão migrada usa DatabaseManager.findById() (busca direta O(1))
+// - Esta versão chamava _listActivitiesCore() + loop manual (O(n) - ineficiente)
+// - Versão migrada tem retry automático e invalidação de cache
+//
+// Removido em: Migração #2 - Fase 1, Tarefa 2.1
+// Data: 02/10/2025
+// ============================================================================
 
 

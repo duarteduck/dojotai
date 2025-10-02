@@ -1,13 +1,17 @@
 // categorias_atividades.gs - ARQUIVO NOVO - Criar este arquivo completo
 
-function listCategoriasAtividadesApi() {
-  try {
-    const result = _listCategoriasAtividadesCore();
-    return JSON.parse(JSON.stringify(result));
-  } catch (err) {
-    return { ok: false, error: 'Erro listCategoriasAtividadesApi: ' + (err && err.message ? err.message : err) };
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: listCategoriasAtividadesApi() - activities_categories.gs:3-10
+//
+// Motivo: Função duplicada - wrapper simples sem valor agregado
+// - Versão migrada existe em usuarios_api.gs:62
+// - Versão migrada tem logs, mapeamento de campos e validação
+// - Esta versão apenas chamava _listCategoriasAtividadesCore() e serializava
+// - _listCategoriasAtividadesCore() continua disponível para uso interno
+//
+// Removido em: Migração #2 - Fase 1, Tarefa 2.2
+// Data: 02/10/2025
+// ============================================================================
 
 function _listCategoriasAtividadesCore() {
   try {

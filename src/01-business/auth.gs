@@ -64,23 +64,20 @@ async function loginUser(login, pin, deviceInfo = {}) {
   }
 }
 
-/**
- * Validar sessão existente
- * @param {string} sessionId - ID da sessão
- * @returns {Object} Resultado da validação
- */
-async function validateSession(sessionId) {
-  try {
-    if (typeof SessionManager === 'undefined') {
-      return { ok: false, error: 'SessionManager não disponível' };
-    }
-
-    return validateSession(sessionId);
-  } catch (err) {
-    Logger.error('Auth', 'Session validation error', { sessionId, error: err.message });
-    return { ok: false, error: 'validateSession: ' + (err && err.message || err) };
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: validateSession() - auth.gs:72-83
+//
+// Motivo: Função duplicada e com BUG de recursão infinita
+// - Versão correta existe em session_manager.gs:131
+// - Esta versão chamava a si mesma (linha 78), causando recursão infinita
+// - Wrapper desnecessário - validateSession() já está disponível globalmente
+//
+// Bug encontrado: return validateSession(sessionId) chamava a si mesma
+// Deveria chamar a função de session_manager.gs, mas ela já está disponível
+//
+// Removido em: Correção de bug - Sessão inválida
+// Data: 02/10/2025
+// ============================================================================
 
 /**
  * Logout com destruição de sessão

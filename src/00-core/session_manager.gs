@@ -134,18 +134,25 @@ function validateSession(sessionId) {
 
     // Buscar sessão pelo campo session_id usando query()
     const queryResult = DatabaseManager.query('sessoes', { session_id: sessionId }, false);
+    console.log('🔍 validateSession - queryResult:', JSON.stringify(queryResult));
+
     const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
+    console.log('🔍 validateSession - sessions:', JSON.stringify(sessions));
 
     if (!sessions || sessions.length === 0) {
       Logger.debug('SessionManager', 'Sessão não encontrada', { sessionId });
+      console.log('❌ Sessão não encontrada');
       return { ok: false, error: 'Sessão não encontrada' };
     }
 
     const session = sessions[0];
+    console.log('🔍 validateSession - session encontrada:', JSON.stringify(session));
+    console.log('🔍 validateSession - session.active:', session.active);
 
     // Verificar se está ativa
     if (session.active !== 'sim') {
-      Logger.debug('SessionManager', 'Sessão inativa', { sessionId });
+      Logger.debug('SessionManager', 'Sessão inativa', { sessionId, active: session.active });
+      console.log('❌ Sessão inativa - session.active:', session.active);
       return { ok: false, error: 'Sessão inativa' };
     }
 

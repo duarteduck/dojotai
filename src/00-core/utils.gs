@@ -179,16 +179,19 @@ function nowString_() {
   return Utilities.formatDate(new Date(), APP.TZ, APP.TS_FORMAT);
 }
 
-function generateSequentialId_(prefix, existingIds, minDigits) {
-  let max = 0;
-  (existingIds || []).forEach(id => {
-    const s = String(id || '');
-    if (!s.startsWith(prefix)) return;
-    const m = s.slice(prefix.length).match(/^\d+$/);
-    if (m) max = Math.max(max, parseInt(m[0], 10));
-  });
-  return prefix + String(max + 1).padStart(minDigits || 3, '0');
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: generateSequentialId_() - utils.gs:182-191
+//
+// Motivo: Não é mais usada - DatabaseManager gera IDs automaticamente
+// - Última função que usava era createActivity() em activities.gs (removida)
+// - DatabaseManager._generateId() faz o mesmo automaticamente
+// - Mantém nowString_() pois ainda é usada em 5 lugares:
+//   - updateActivityWithTargets() (activities.gs:418)
+//   - Funções de participação (participacoes.gs: 103, 185, 247, 657)
+//
+// Removido em: Migração #2 - Fase 1, Limpeza Final
+// Data: 02/10/2025
+// ============================================================================
 
 function findRowById_(values, headerIndex, idField, idValue) {
   const c = headerIndex[idField];
