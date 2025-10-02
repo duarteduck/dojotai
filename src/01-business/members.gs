@@ -175,28 +175,32 @@ function searchMembers(filters) {
 }
 
 /**
- * Vincula membro com usuário
- * @param {string} memberId - ID do membro
+ * Vincula membro com usuário (migrado para DatabaseManager)
+ *
+ * Permite vincular um membro do dojo (aluno/praticante) com uma conta de usuário do sistema.
+ * Útil para quando alunos tiverem login próprio e precisarem ver suas atividades/presenças.
+ *
+ * @param {string} memberId - ID do membro (codigo_sequencial)
  * @param {string} usuarioUid - UID do usuário
  * @param {string} editorUid - UID de quem está fazendo a vinculação
- * @returns {Object} { ok: boolean, error?: string }
+ * @returns {Object} { ok: boolean, message?: string, error?: string }
  */
-function linkMemberToUser(memberId, usuarioUid, editorUid) {
+async function linkMemberToUser(memberId, usuarioUid, editorUid) {
   try {
     if (!memberId || !usuarioUid) {
       return { ok: false, error: 'ID do membro e UID do usuário são obrigatórios.' };
     }
 
-    // Verifica se o usuário existe e está ativo
+    // Verifica se o usuário existe e está ativo (usa função já migrada)
     const users = getUsersMapReadOnly_();
     if (!users[usuarioUid]) {
       return { ok: false, error: 'Usuário não encontrado ou inativo.' };
     }
 
-    // Verifica se o usuário já está vinculado a outro membro
+    // Verifica se o usuário já está vinculado a outro membro (usa função já migrada)
     const existingMembers = _listMembersCore();
     if (existingMembers.ok && existingMembers.items) {
-      const alreadyLinked = existingMembers.items.find(m => 
+      const alreadyLinked = existingMembers.items.find(m =>
         m.usuario_uid === usuarioUid && m.id !== memberId
       );
       if (alreadyLinked) {
@@ -204,49 +208,47 @@ function linkMemberToUser(memberId, usuarioUid, editorUid) {
       }
     }
 
-    const ctx = getMembersCtx_();
-    const values = getFullTableValuesMembros_(ctx);
-    if (!values || !values.length) return { ok: false, error: 'Tabela vazia.' };
-
-    const header = values[0].map(h => (h || '').toString().trim().toLowerCase());
-    const headerIndex = {};
-    header.forEach((name, i) => headerIndex[name] = i);
-
-    // Encontra a linha do membro
-    let rowIndex = -1;
-    for (let i = 1; i < values.length; i++) {
-      const r = values[i];
-      if ((r[headerIndex['codigo_sequencial']] || '').toString().trim() === memberId.toString().trim()) {
-        rowIndex = i;
-        break;
-      }
-    }
-    
-    if (rowIndex === -1) return { ok: false, error: 'Membro não encontrado.' };
-
-    const sh = ctx.sheet;
-    const rowNumber = ctx.startRow + rowIndex;
-
-    // Adiciona ou atualiza a vinculação
-    if (headerIndex['usuario_uid'] !== undefined) {
-      sh.getRange(rowNumber, headerIndex['usuario_uid'] + 1).setValue(usuarioUid);
-    }
-    
-    // Atualiza timestamp se existir a coluna
-    if (headerIndex['atualizado_em'] !== undefined) {
-      sh.getRange(rowNumber, headerIndex['atualizado_em'] + 1).setValue(nowString_());
+    // Buscar membro específico para pegar o PRIMARY KEY (id)
+    const member = existingMembers.items?.find(m => m.id === memberId);
+    if (!member) {
+      return { ok: false, error: 'Membro não encontrado.' };
     }
 
-    // Também atualiza o nome do usuário para sincronizar
+    // Atualizar usando DatabaseManager
+    const updateResult = await DatabaseManager.update('membros', member.id, {
+      usuario_uid: usuarioUid
+      // atualizado_em é preenchido automaticamente pelo DatabaseManager
+    });
+
+    if (!updateResult || !updateResult.success) {
+      return {
+        ok: false,
+        error: updateResult?.error || 'Erro ao vincular membro com usuário'
+      };
+    }
+
     const userName = users[usuarioUid].nome;
-    const memberName = values[rowIndex][headerIndex['nome']];
-    
-    // Se quiser sincronizar o nome (opcional)
-    // sh.getRange(rowNumber, headerIndex['nome'] + 1).setValue(userName);
+    const memberName = member.nome;
 
-    return { ok: true, message: `Membro ${memberName} vinculado com usuário ${userName}` };
-    
+    Logger.info('Members', 'Member linked to user', {
+      memberId,
+      memberName,
+      usuarioUid,
+      userName,
+      editorUid
+    });
+
+    return {
+      ok: true,
+      message: `Membro ${memberName} vinculado com usuário ${userName}`
+    };
+
   } catch (err) {
+    Logger.error('Members', 'Error linking member to user', {
+      memberId,
+      usuarioUid,
+      error: err.message
+    });
     return { ok: false, error: 'Erro linkMemberToUser: ' + (err && err.message ? err.message : err) };
   }
 }

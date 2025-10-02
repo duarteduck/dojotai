@@ -405,34 +405,37 @@ if (typeof trimValuesByRequired_ !== 'function') {
   };
 }
 
-/** Lê a tabela 'usuarios' via Tabela Planilhas e devolve um mapa */
+/**
+ * Retorna mapa de usuários ativos para lookups rápidos O(1)
+ * Refatorado para usar listActiveUsers() (já migrado para DatabaseManager)
+ *
+ * @returns {Object} Mapa: { "U001": {nome: "João", login: "joao"}, ... }
+ *
+ * PERFORMANCE: Conversão array→mapa é O(n) mas rápida (~0.1ms para 50 usuários).
+ * Lookups no mapa são O(1), muito mais rápidos que find() no array O(n).
+ * Cache vem do DatabaseManager (via listActiveUsers), dados sempre atualizados.
+ */
 function getUsersMapReadOnly_() {
   try {
-    const { values, headerIndex } = readTableByNome_('usuarios');
-    if (!values || values.length < 2) return {};
+    // Usar função já migrada (cache do DatabaseManager)
+    const result = listActiveUsers();
 
-    const cUid   = headerIndex['uid'];
-    const cNome  = headerIndex['nome'];
-    const cLogin = headerIndex['login'];
-    const cStat  = headerIndex['status'];
-
-    const map = {};
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r] || [];
-
-      // aceita Ativo/ACTIVE/1/true/sim (ignora inativos)
-      const st = (cStat != null ? String(row[cStat] || '').trim().toLowerCase() : 'ativo');
-      if (['inativo','0','false','no','nao','não'].includes(st)) continue;
-
-      const uid   = cUid   != null ? String(row[cUid]   || '').trim() : '';
-      const nome  = cNome  != null ? String(row[cNome]  || '').trim() : '';
-      const login = cLogin != null ? String(row[cLogin] || '').trim() : '';
-
-      if (!uid) continue;
-      map[uid] = { nome: (nome || login || uid), login: login };
+    if (!result || !result.ok || !result.users) {
+      return {};
     }
+
+    // Converter array em mapa para lookups O(1)
+    const map = {};
+    result.users.forEach(user => {
+      map[user.uid] = {
+        nome: user.nome || user.login || user.uid,
+        login: user.login
+      };
+    });
+
     return map;
   } catch (e) {
+    Logger.error('Activities', 'Error creating users map', { error: e.message });
     return {};
   }
 }
