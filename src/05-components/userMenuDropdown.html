@@ -14,7 +14,7 @@
         transition: var(--transition);
     }
 
-    .user-info:hover {
+    .user-info:hover:not(.active) {
         opacity: 0.9;
     }
 
@@ -392,7 +392,16 @@
         // Executar ação
         if (acao === 'route') {
             // Navegar para página
-            navigateToPage(destino);
+            // Remove '#/' do destino se existir
+            const page = destino.replace(/^#?\/?/, '');
+
+            // Verificar se navigateToPage existe no escopo global
+            if (typeof navigateToPage === 'function') {
+                navigateToPage(page);
+            } else {
+                console.warn('Função navigateToPage não encontrada. Tentando window.location...');
+                window.location.hash = '#/' + page;
+            }
         } else if (acao === 'function') {
             // Executar função
             if (typeof window[destino] === 'function') {
@@ -400,7 +409,7 @@
             } else {
                 console.warn('Função não encontrada:', destino);
             }
-        } else if (acao === 'url') {
+        } else if (acao === 'url' || acao === 'external') {
             // Abrir URL
             window.open(destino, '_blank');
         }

@@ -15,91 +15,74 @@ function listMembersApi() {
 
 /**
  * Core da listagem de membros
+ * MIGRADO para DatabaseManager
  */
 function _listMembersCore() {
   try {
-    const { values, headerIndex } = readTableByNome_('membros');
-    
-    if (!values || values.length < 2) {
+    // Migrado para DatabaseManager - Query com cache habilitado (membros mudam raramente)
+    const queryResult = DatabaseManager.query('membros', {}, true);
+    const membros = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
+
+    if (!membros || membros.length === 0) {
       return { ok: true, items: [] };
     }
 
-    // Campos obrigatórios baseados na estrutura existente
-    const required = ['codigo_sequencial', 'nome', 'status'];
-    const missing = required.filter(k => headerIndex[k] === undefined);
-    if (missing.length) {
-      return { ok: false, error: 'Colunas faltando na tabela Membros: ' + missing.join(', ') };
-    }
-
     const items = [];
-    
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r] || [];
-      
-      // Verifica se a linha tem conteúdo
-      if (!row[headerIndex['codigo_sequencial']] && !row[headerIndex['nome']]) continue;
-      
+
+    membros.forEach(m => {
+      // Validar campos obrigatórios
+      if (!m.codigo_sequencial && !m.nome) return;
+      if (!m.codigo_sequencial || !m.nome) return;
+
       const member = {
         // Campos obrigatórios mapeados
-        id: String(row[headerIndex['codigo_sequencial']] || '').trim(),
-        codigo_sequencial: String(row[headerIndex['codigo_sequencial']] || '').trim(), // Campo correto do dicionário
-        codigo_mestre: String(row[headerIndex['codigo_mestre']] || '').trim(),
-        nome: String(row[headerIndex['nome']] || '').trim(),
-        nome_completo: String(row[headerIndex['nome']] || '').trim(), // alias
-        nome_exibicao: String(row[headerIndex['nome']] || '').trim(), // alias
-        status: String(row[headerIndex['status']] || 'Ativo').trim(),
-        
+        id: String(m.codigo_sequencial || '').trim(),
+        codigo_sequencial: String(m.codigo_sequencial || '').trim(),
+        codigo_mestre: String(m.codigo_mestre || '').trim(),
+        nome: String(m.nome || '').trim(),
+        nome_completo: String(m.nome || '').trim(), // alias
+        nome_exibicao: String(m.nome || '').trim(), // alias
+        status: String(m.status || 'Ativo').trim(),
+
         // Campos de organização
-        dojo: String(row[headerIndex['dojo']] || '').trim(),
-        categoria_grupo: String(row[headerIndex['categoria_grupo']] || '').trim(),
-        categoria_membro: String(row[headerIndex['categoria_membro']] || '').trim(),
-        buntai: String(row[headerIndex['buntai']] || '').trim(),
-        ordenacao: Number(row[headerIndex['ordenacao']] || 999),
-        cargo: String(row[headerIndex['cargo']] || '').trim(),
-        
+        dojo: String(m.dojo || '').trim(),
+        categoria_grupo: String(m.categoria_grupo || '').trim(),
+        categoria_membro: String(m.categoria_membro || '').trim(),
+        buntai: String(m.buntai || '').trim(),
+        ordenacao: Number(m.ordenacao || 999),
+        cargo: String(m.cargo || '').trim(),
+
         // Dados pessoais
-        sexo: String(row[headerIndex['sexo']] || '').trim(),
-        data_nascimento: row[headerIndex['data_nascimento']] || '',
-        idade: Number(row[headerIndex['idade']] || 0),
-        grau_omitama: String(row[headerIndex['grau_omitama']] || '').trim(),
-        numero_seminario_basico: String(row[headerIndex['numero_seminario_basico']] || '').trim()
+        sexo: String(m.sexo || '').trim(),
+        data_nascimento: m.data_nascimento || '',
+        idade: Number(m.idade || 0),
+        grau_omitama: String(m.grau_omitama || '').trim(),
+        numero_seminario_basico: String(m.numero_seminario_basico || '').trim(),
+
+        // Campos opcionais (sempre incluir, DatabaseManager já traz se existir)
+        telefone: String(m.telefone || '').trim(),
+        email: String(m.email || '').trim(),
+        endereco: String(m.endereco || '').trim(),
+        usuario_uid: String(m.usuario_uid || '').trim(),
+        criado_em: m.criado_em || '',
+        atualizado_em: m.atualizado_em || ''
       };
 
-      // Campos opcionais (se existirem na planilha)
-      if (headerIndex['telefone'] !== undefined) {
-        member.telefone = String(row[headerIndex['telefone']] || '').trim();
-      }
-      if (headerIndex['email'] !== undefined) {
-        member.email = String(row[headerIndex['email']] || '').trim();
-      }
-      if (headerIndex['endereco'] !== undefined) {
-        member.endereco = String(row[headerIndex['endereco']] || '').trim();
-      }
-      if (headerIndex['usuario_uid'] !== undefined) {
-        member.usuario_uid = String(row[headerIndex['usuario_uid']] || '').trim();
-      }
-      if (headerIndex['criado_em'] !== undefined) {
-        member.criado_em = row[headerIndex['criado_em']] || '';
-      }
-      if (headerIndex['atualizado_em'] !== undefined) {
-        member.atualizado_em = row[headerIndex['atualizado_em']] || '';
-      }
-
-      // Validações básicas
-      if (!member.id || !member.nome) continue;
-      
       items.push(member);
-    }
+    });
 
     // Ordenação: por ordenacao primeiro, depois por nome
     items.sort((a, b) => {
       if (a.ordenacao !== b.ordenacao) return a.ordenacao - b.ordenacao;
       return a.nome.localeCompare(b.nome, 'pt-BR');
     });
-    
+
     return { ok: true, items };
-    
+
   } catch (err) {
+    Logger.error('Members', 'Erro ao listar membros', {
+      error: err && err.message ? err.message : err
+    });
     return { ok: false, error: 'Erro _listMembersCore: ' + (err && err.message ? err.message : err) };
   }
 }
