@@ -48,169 +48,47 @@ function listParticipacoes(activityId) {
   }
 }
 
-/**
- * Calcula o status de participação baseado nas regras
- */
-function calculateStatusParticipacao(participacao) {
-  if (participacao.participou === 'nao') {
-    return participacao.justificativa ? 'ausente_justificado' : 'ausente';
-  }
+// ============================================================================
+// FUNÇÃO REMOVIDA: calculateStatusParticipacao() - participacoes.gs:51-73
+//
+// Motivo: Padrão inconsistente com data_dictionary.gs
+// - Função retornava: 'ausente_justificado', 'chegou_tarde', etc (minúsculo com underscore)
+// - Dicionário define: 'Confirmado', 'Presente', 'Ausente', 'Justificado' (PascalCase)
+// - Função não estava sendo utilizada em nenhum lugar do sistema
+//
+// Removido em: Limpeza de Código - Fase de Correção de Participações
+// Data: 03/10/2025
+// Linhas removidas: 23 (incluindo JSDoc)
+// Próximo passo: Recriar dentro do padrão correto quando necessário
+// ============================================================================
 
-  if (participacao.participou === 'sim') {
-    if (participacao.chegou_tarde === 'sim' && participacao.saiu_cedo === 'sim') {
-      return 'chegou_tarde_saiu_cedo';
-    }
-    if (participacao.chegou_tarde === 'sim') {
-      return 'chegou_tarde';
-    }
-    if (participacao.saiu_cedo === 'sim') {
-      return 'saiu_cedo';
-    }
-    return 'presente_completo';
-  }
+// ============================================================================
+// FUNÇÃO REMOVIDA: defineTargets() - participacoes.gs:65-131
+//
+// Motivo: Substituída por saveTargetsDirectly() que é mais robusta
+// - saveTargetsDirectly() tem suporte async, soft delete, logs detalhados
+// - defineTargets() era versão antiga sem detecção de alvos removidos
+// - Função não estava sendo utilizada no frontend (app_migrated.html)
+//
+// Removido em: Limpeza de Código - Fase de Correção de Participações
+// Data: 03/10/2025
+// Linhas removidas: 67 (incluindo JSDoc)
+// Substituída por: saveTargetsDirectly() (linha 345+)
+// ============================================================================
 
-  return 'pendente';
-}
-
-/**
- * Define alvos para uma atividade usando DatabaseManager
- * @param {string} activityId - ID da atividade
- * @param {Array} memberIds - Array de IDs dos membros
- * @param {string} uid - UID do usuário que está definindo
- * @returns {Object} { ok: boolean, created: number }
- */
-function defineTargets(activityId, memberIds, uid) {
-  try {
-    if (!activityId || !memberIds || !Array.isArray(memberIds)) {
-      return { ok: false, error: 'Parâmetros inválidos.' };
-    }
-
-    console.log('🔧 [BACKEND] defineTargets chamada para atividade:', activityId, 'membros:', memberIds);
-
-    // Verifica duplicatas existentes
-    const existing = listParticipacoes(activityId);
-    if (!existing.ok) return existing;
-
-    const existingMemberIds = existing.items.map(p => p.id_membro);
-    const newMemberIds = memberIds.filter(id => !existingMemberIds.includes(id.toString()));
-
-    if (newMemberIds.length === 0) {
-      return { ok: true, created: 0, message: 'Todos os membros já estão na lista.' };
-    }
-
-    console.log('🔧 [BACKEND] Novos membros a adicionar:', newMemberIds);
-
-    const nowStr = nowString_();
-    const createdIds = [];
-
-    // Cria as novas participações usando DatabaseManager
-    for (const memberId of newMemberIds) {
-      const participacaoData = {
-        id_atividade: activityId,
-        id_membro: memberId.toString(),
-        tipo: 'alvo',
-        confirmou: '',
-        confirmado_em: '',
-        participou: '',
-        chegou_tarde: '',
-        saiu_cedo: '',
-        justificativa: '',
-        observacoes: '',
-        marcado_em: nowStr,
-        marcado_por: uid || ''
-      };
-
-      const result = DatabaseManager.create('participacoes', participacaoData);
-
-      if (result.ok) {
-        createdIds.push(result.id);
-        console.log('🔧 [BACKEND] Participação criada:', result.id, 'para membro:', memberId);
-      } else {
-        console.error('❌ [BACKEND] Erro ao criar participação para membro:', memberId, result.error);
-        return { ok: false, error: 'Erro ao criar participação para membro ' + memberId + ': ' + result.error };
-      }
-    }
-
-    console.log('✅ [BACKEND] Alvos definidos com sucesso:', createdIds.length);
-    return { ok: true, created: createdIds.length, ids: createdIds };
-
-  } catch (err) {
-    console.error('❌ [BACKEND] Erro defineTargets:', err);
-    return { ok: false, error: 'Erro defineTargets: ' + (err && err.message ? err.message : err) };
-  }
-}
-
-/**
- * Marca participação de um membro usando DatabaseManager
- * @param {string} activityId - ID da atividade
- * @param {string} memberId - ID do membro
- * @param {Object} dados - Dados da participação
- * @param {string} uid - UID do usuário
- * @returns {Object} { ok: boolean }
- */
-function markParticipacao(activityId, memberId, dados, uid) {
-  try {
-    if (!activityId || !memberId || !dados) {
-      return { ok: false, error: 'Parâmetros inválidos.' };
-    }
-
-    console.log('🔧 [BACKEND] markParticipacao chamada:', activityId, memberId);
-
-    // Busca todas as participações da atividade
-    const filters = {
-      id_atividade: activityId.toString(),
-      id_membro: memberId.toString()
-    };
-
-    const participacoes = DatabaseManager.query('participacoes', filters, false);
-
-    if (!participacoes || participacoes.length === 0) {
-      return { ok: false, error: 'Participação não encontrada.' };
-    }
-
-    // Busca a participação ativa (não deletada)
-    const participacao = participacoes.find(p => p.deleted !== 'x');
-
-    if (!participacao) {
-      return { ok: false, error: 'Participação ativa não encontrada.' };
-    }
-
-    console.log('🔧 [BACKEND] Participação encontrada:', participacao.id);
-
-    // Prepara os dados para atualização
-    const updateData = {
-      participou: dados.participou || '',
-      justificativa: dados.justificativa || '',
-      observacoes: dados.observacoes || '',
-      marcado_em: nowString_(),
-      marcado_por: uid || ''
-    };
-
-    // Se não participou, limpa chegou_tarde e saiu_cedo
-    if (dados.participou === 'nao') {
-      updateData.chegou_tarde = '';
-      updateData.saiu_cedo = '';
-    } else {
-      updateData.chegou_tarde = dados.chegou_tarde || '';
-      updateData.saiu_cedo = dados.saiu_cedo || '';
-    }
-
-    // Atualiza usando DatabaseManager
-    const result = DatabaseManager.update('participacoes', participacao.id, updateData);
-
-    if (result.ok) {
-      console.log('✅ [BACKEND] Participação marcada com sucesso:', participacao.id);
-      return { ok: true };
-    } else {
-      console.error('❌ [BACKEND] Erro ao marcar participação:', result.error);
-      return { ok: false, error: result.error };
-    }
-
-  } catch (err) {
-    console.error('❌ [BACKEND] Erro markParticipacao:', err);
-    return { ok: false, error: 'Erro markParticipacao: ' + (err && err.message ? err.message : err) };
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: markParticipacao() - participacoes.gs:79-141
+//
+// Motivo: Substituída por updateParticipacaoById() que é mais direta
+// - updateParticipacaoById() busca por ID específico da participação (PART-XXXX)
+// - markParticipacao() fazia busca por activityId + memberId (método antigo)
+// - Mesma funcionalidade, mas updateParticipacaoById() é mais eficiente
+//
+// Removido em: Limpeza de Código - Fase de Correção de Participações
+// Data: 03/10/2025
+// Linhas removidas: 63 (incluindo JSDoc)
+// Substituída por: updateParticipacaoById() (linha 509+)
+// ============================================================================
 
 // ============================================================================
 // FUNÇÃO REMOVIDA: confirmarParticipacao() - participacoes.gs:215-260
@@ -326,33 +204,19 @@ function getParticipacaoStats(activityId) {
   }
 }
 
-/**
- * Adiciona membro extra (não estava nos alvos originais)
- * @param {string} activityId - ID da atividade
- * @param {string} memberId - ID do membro
- * @param {string} uid - UID do usuário
- * @returns {Object} { ok: boolean }
- */
-function addExtraMember(activityId, memberId, uid) {
-  try {
-    if (!activityId || !memberId) {
-      return { ok: false, error: 'Parâmetros inválidos.' };
-    }
-
-    // Verifica se já existe
-    const existing = listParticipacoes(activityId);
-    if (!existing.ok) return existing;
-
-    const exists = existing.items.find(p => p.id_membro === memberId);
-    if (exists) {
-      return { ok: false, error: 'Membro já está na lista de participações.' };
-    }
-
-    return defineTargets(activityId, [memberId], uid);
-  } catch (err) {
-    return { ok: false, error: 'Erro addExtraMember: ' + (err && err.message ? err.message : err) };
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: addExtraMember() - participacoes.gs:330-355
+//
+// Motivo: Funcionalidade duplicada/redundante
+// - Apenas um wrapper para defineTargets() ou saveTargetsDirectly()
+// - Mesma funcionalidade já existe de forma mais robusta em saveTargetsDirectly()
+// - Função não estava sendo utilizada em nenhum lugar do sistema
+//
+// Removido em: Limpeza de Código - Fase de Correção de Participações
+// Data: 03/10/2025
+// Linhas removidas: 26 (incluindo JSDoc)
+// Próximo passo: Usar saveTargetsDirectly() diretamente quando necessário
+// ============================================================================
 
 /**
  * Função alternativa para salvar alvos diretamente na planilha
@@ -569,16 +433,37 @@ function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
     console.log('🔧 [BACKEND] - dados:', JSON.stringify(dados, null, 2));
     console.log('🔧 [BACKEND] - uid:', uid);
 
-    // Se dados.id estiver presente, usar busca por ID da tabela
+    // Sempre usar busca por ID da tabela (padrão atual)
     if (dados && dados.id) {
       console.log('🔧 [BACKEND] Usando busca por ID da tabela:', dados.id);
       return updateParticipacaoById(dados.id, dados, uid);
     }
 
-    // Lógica antiga (fallback) - busca por activityId + memberId usando DatabaseManager
-    console.log('🔧 [BACKEND] Usando busca por activityId + memberId (fallback)');
-    console.log('🔧 [BACKEND] - dados.id não encontrado, usando fallback');
-    return markParticipacao(activityId, memberId, dados, uid);
+    // Fallback para busca por activityId + memberId (casos legados)
+    console.log('⚠️ [BACKEND] FALLBACK: dados.id não fornecido, buscando por activityId + memberId');
+
+    // Buscar participação por filtros
+    const filters = {
+      id_atividade: activityId.toString(),
+      id_membro: memberId.toString()
+    };
+
+    const participacoes = DatabaseManager.query('participacoes', filters, false);
+
+    if (!participacoes || participacoes.length === 0) {
+      return { ok: false, error: 'Participação não encontrada.' };
+    }
+
+    const participacao = participacoes.find(p => p.deleted !== 'x');
+
+    if (!participacao || !participacao.id) {
+      return { ok: false, error: 'Participação ativa não encontrada.' };
+    }
+
+    console.log('🔧 [BACKEND] Participação encontrada via fallback:', participacao.id);
+
+    // Usar updateParticipacaoById com o ID encontrado
+    return updateParticipacaoById(participacao.id, dados, uid);
 
   } catch (err) {
     return { ok: false, error: 'Erro saveParticipacaoDirectly: ' + (err && err.message ? err.message : err) };
