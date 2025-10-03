@@ -1502,7 +1502,7 @@ const DatabaseManager = {
       const updatedRecord = {
         ...currentRecord,
         ...data,
-        updated_at: this._formatTimestamp(new Date())
+        atualizado_em: this._formatTimestamp(new Date())
       };
 
       // Validar Foreign Keys do registro atualizado

@@ -212,52 +212,19 @@ function markParticipacao(activityId, memberId, dados, uid) {
   }
 }
 
-/**
- * Confirma participação do próprio membro
- * @param {string} activityId - ID da atividade
- * @param {string} memberId - ID do membro
- * @param {string} confirmou - 'sim' ou 'nao'
- * @param {string} uid - UID do usuário
- * @returns {Object} { ok: boolean }
- */
-function confirmarParticipacao(activityId, memberId, confirmou, uid) {
-  try {
-    if (!activityId || !memberId || !confirmou) {
-      return { ok: false, error: 'Parâmetros inválidos.' };
-    }
-
-    const ctx = getParticipacaesCtx_();
-    const values = getFullTableValues_(ctx);
-
-    if (!values || !values.length) {
-      return { ok: false, error: 'Tabela de participações vazia.' };
-    }
-
-    const header = values[0].map(h => (h||'').toString().trim().toLowerCase());
-    const idxIdAtiv = header.indexOf('id_atividade');
-    const idxIdMembro = header.indexOf('id_membro');
-    const idxConfirmou = header.indexOf('confirmou');
-    const idxConfirmadoEm = header.indexOf('confirmado_em');
-
-    // Encontra a linha da participação
-    for (let i = 1; i < values.length; i++) {
-      const row = values[i];
-      if (row[idxIdAtiv] == activityId && row[idxIdMembro] == memberId) {
-        const rowNumber = ctx.startRow + i;
-        const nowStr = nowString_();
-
-        ctx.sheet.getRange(rowNumber, idxConfirmou + 1).setValue(confirmou);
-        ctx.sheet.getRange(rowNumber, idxConfirmadoEm + 1).setValue(nowStr);
-
-        return { ok: true };
-      }
-    }
-
-    return { ok: false, error: 'Participação não encontrada.' };
-  } catch (err) {
-    return { ok: false, error: 'Erro confirmarParticipacao: ' + (err && err.message ? err.message : err) };
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: confirmarParticipacao() - participacoes.gs:215-260
+//
+// Motivo: Função não está em uso - não há chamadas no frontend ou backend
+// - Usa acesso direto à planilha (sheet.getRange().setValue())
+// - Usa nowString_() (linha 247)
+// - Funcionalidade substituída por markParticipacao() (já migrado para DatabaseManager)
+//
+// Removido em: Migração #2 - Fase 1, Limpeza de Código Obsoleto
+// Data: 02/10/2025
+// Linhas removidas: 46 (incluindo JSDoc)
+// Benefício: Remove 1 uso de nowString_() + código obsoleto
+// ============================================================================
 
 /**
  * Busca membros por critérios para definição de alvos

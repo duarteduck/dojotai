@@ -398,8 +398,7 @@ async function updateActivity(activityData) {
       delete updateData.categorias; // Remover campo temporário
     }
 
-    // Campos de auditoria para update
-    updateData.atualizado_em = Utilities.formatDate(new Date(), APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss');
+    // Campo atualizado_em preenchido automaticamente pelo DatabaseManager
 
     console.log('📝 Dados preparados para atualização:', updateData);
 
@@ -492,11 +491,10 @@ async function completeActivity(activityId) {
     console.log('👤 Usuário logado:', usuario.uid);
 
     // Dados para atualização - apenas campos necessários
-    const agora = Utilities.formatDate(new Date(), APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss');
+    // Campo atualizado_em preenchido automaticamente pelo DatabaseManager
     const updateData = {
       status: 'Concluída',
-      atualizado_uid: usuario.uid,
-      atualizado_em: agora
+      atualizado_uid: usuario.uid
     };
 
     console.log('📝 Dados de atualização:', updateData);

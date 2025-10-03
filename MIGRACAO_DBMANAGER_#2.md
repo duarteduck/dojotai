@@ -893,15 +893,126 @@ Todos os testes foram executados com sucesso:
 
 ### **Fase 1:** ✅ **CONCLUÍDA**
 
-### **Fase 2: Verificação de Uso** (Planejada)
-- [ ] Verificar se `updateActivityWithTargets()` (activities.gs:446) está em uso
-- [ ] Verificar se `confirmarParticipacao()` (participacoes.gs:223) está em uso
-- [ ] Decidir: Remover ou Migrar cada uma
+### **Fase 2: Verificação de Uso** ✅ **CONCLUÍDA**
 
-### **Fase 3: Otimização** (Planejada)
-- [ ] Remover `updateData.atualizado_em` de `updateActivity()` (usuarios_api.gs:453)
-- [ ] Remover `const agora` e `atualizado_em` de `completeActivity()` (usuarios_api.gs:546, 550)
-- [ ] DatabaseManager já preenche automaticamente
+**Data:** 02/10/2025 21:30
+**Status:** ✅ Concluída
+
+#### **Análise Realizada:**
+
+**2.1 - `updateActivityWithTargets()` (activities.gs:367)**
+- ✅ **EM USO** - Chamada no frontend (`app_migrated.html:5442`)
+- 📝 **Decisão:** MIGRAR na Fase 4
+- 🎯 **Função:** Atualiza atividade (PATCH) + salva alvos
+- ⚠️ **Problema:** Usa acesso direto à planilha + `nowString_()`
+
+**2.2 - `confirmarParticipacao()` (participacoes.gs:223)**
+- ❌ **NÃO ESTÁ EM USO** - Nenhuma chamada encontrada
+- 📝 **Decisão:** REMOVER (adicionado à Fase 1)
+- 🗑️ **Ação:** Função removida (38 linhas)
+- ✅ **Benefício:** Remove 1 uso de `nowString_()`
+
+#### **Arquivos Modificados:**
+- `src/01-business/participacoes.gs` (linhas 215-260) - Função removida e documentada
+
+---
+
+### **Fase 3: Otimização de Funções Migradas** ✅ **CONCLUÍDA**
+
+**Data:** 02/10/2025 21:45
+**Status:** ✅ Concluída
+
+#### **Problema Crítico Descoberto:**
+
+**DatabaseManager tinha inconsistência de nomenclatura:**
+- ✅ **INSERT:** Usava `criado_em` (português) - CORRETO
+- ❌ **UPDATE:** Usava `updated_at` (inglês) - INCORRETO
+- 📋 **Planilhas reais:** Usam `atualizado_em` (português)
+
+**Análise do Dicionário de Dados:**
+- **Tabelas principais (português):** `usuarios`, `atividades`, `notificacoes`, `historico`, `preferencias`
+  - Campos: `criado_em` + `atualizado_em`
+- **Tabelas de sistema (inglês):** `sessoes`, `performance_logs`, `system_health`, `system_logs`
+  - Campos: `created_at` (apenas criação, sem campo de atualização)
+
+**Resultado do bug:**
+- Campo `atualizado_em` ficava **vazio/null** nas tabelas principais
+- DatabaseManager tentava criar campo `updated_at` inexistente
+
+#### **3.1 - Correção do DatabaseManager**
+
+**Arquivo:** `src/00-core/database_manager.gs`
+**Linha:** 1505
+
+```javascript
+// ❌ ANTES (INCORRETO):
+updated_at: this._formatTimestamp(new Date())
+
+// ✅ DEPOIS (CORRETO):
+atualizado_em: this._formatTimestamp(new Date())
+```
+
+**Impacto:**
+- ✅ Agora preenche `atualizado_em` corretamente em todas as tabelas principais
+- ✅ Consistente com INSERT que já usava `criado_em`
+
+---
+
+#### **3.2 - Otimização de `updateActivity()`**
+
+**Arquivo:** `src/02-api/activities_api.gs`
+**Linha:** 401-402
+
+```javascript
+// ❌ REMOVIDO (redundante):
+// Campos de auditoria para update
+updateData.atualizado_em = Utilities.formatDate(new Date(), APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss');
+
+// ✅ SUBSTITUÍDO POR:
+// Campo atualizado_em preenchido automaticamente pelo DatabaseManager
+```
+
+**Benefício:** DatabaseManager agora gerencia o timestamp automaticamente
+
+---
+
+#### **3.3 - Otimização de `completeActivity()`**
+
+**Arquivo:** `src/02-api/activities_api.gs`
+**Linhas:** 493-498
+
+```javascript
+// ❌ REMOVIDO (redundante):
+const agora = Utilities.formatDate(new Date(), APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss');
+const updateData = {
+  status: 'Concluída',
+  atualizado_uid: usuario.uid,
+  atualizado_em: agora  // ← REDUNDANTE
+};
+
+// ✅ OTIMIZADO:
+// Campo atualizado_em preenchido automaticamente pelo DatabaseManager
+const updateData = {
+  status: 'Concluída',
+  atualizado_uid: usuario.uid
+};
+```
+
+**Benefício:** Código mais limpo, sem duplicação de lógica
+
+---
+
+#### **Arquivos Modificados (Fase 3):**
+1. `src/00-core/database_manager.gs` (linha 1505) - Correção crítica
+2. `src/02-api/activities_api.gs` (linha 401-402) - Remoção de código redundante
+3. `src/02-api/activities_api.gs` (linhas 493-498) - Remoção de código redundante
+
+#### **Resultados da Fase 3:**
+- ✅ Bug crítico corrigido no DatabaseManager
+- ✅ Código redundante removido (3 linhas)
+- ✅ Única fonte de verdade para timestamps
+- ✅ Consistência em todas operações (INSERT/UPDATE)
+- ✅ Menos manutenção futura
 
 ### ✅ **Reorganização de Arquivos** - EXECUTADA
 
