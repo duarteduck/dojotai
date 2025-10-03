@@ -310,4 +310,272 @@ Frontend (exibe icone + nome)
 
 ---
 
-**Próximas Correções:** _A definir_
+<a name="ui-003"></a>
+## ✅ UI-003 - Remoção do Botão Editar em Atividades Concluídas
+
+**Data:** 02/10/2025 20:15
+**Tipo:** Melhoria de UI/UX
+**Prioridade:** Média
+**Status:** ✅ Concluído
+
+### 📝 Descrição do Problema
+
+Atividades concluídas ainda exibiam o botão "✏️ Editar", permitindo edição de atividades já finalizadas.
+
+### ✅ Solução Implementada
+
+Aplicada a mesma lógica do botão "Concluir" para o botão "Editar" - ocultar quando `statusInfo.text === 'Concluída'`.
+
+**Arquivo modificado:** `app_migrated.html`
+
+**Código alterado (linha 3120):**
+```javascript
+// ANTES
+<button class="btn btn-outline" onclick="editActivity('${activity.id}')" ...>
+    ${activity.status === 'Realizada' ? '📊 Relatório' : '✏️ Editar'}
+</button>
+
+// DEPOIS
+${statusInfo.text !== 'Concluída' ? `<button class="btn btn-outline" onclick="editActivity('${activity.id}')" ...>✏️ Editar</button>` : ''}
+```
+
+### 📊 Comportamento dos Botões
+
+**Atividade Pendente/Agendada:**
+- 👥 Participantes
+- ✏️ Editar
+- ✅ Concluir
+
+**Atividade Concluída:**
+- 👥 Participantes (apenas)
+
+### ✅ Benefícios
+
+1. **Integridade de dados** - Impede edição de atividades finalizadas
+2. **Interface mais clara** - Botões contextualmente relevantes
+3. **Padrão consistente** - Mesma lógica aplicada em todos os botões de ação
+
+---
+
+<a name="ui-004"></a>
+## ✅ UI-004 - Remoção de Confirmação de Logout
+
+**Data:** 02/10/2025 20:20
+**Tipo:** Melhoria de UX
+**Prioridade:** Baixa
+**Status:** ✅ Concluído
+
+### 📝 Descrição do Problema
+
+Sistema exibia popup de confirmação "Deseja realmente sair do sistema?" ao clicar em Sair, criando fricção desnecessária.
+
+### ✅ Solução Implementada
+
+Removida a validação `confirm()` da função `logout()`.
+
+**Arquivo modificado:** `app_migrated.html`
+
+**Código alterado (linha 6990-7065):**
+```javascript
+// ANTES
+async function logout() {
+    if (confirm('Deseja realmente sair do sistema?')) {
+        console.log('🚪 Iniciando processo de logout...');
+        // ... resto do código (4 espaços extras de indentação)
+    }
+}
+
+// DEPOIS
+async function logout() {
+    console.log('🚪 Iniciando processo de logout...');
+    // ... resto do código (indentação corrigida)
+}
+```
+
+### ✅ Benefícios
+
+1. **UX mais fluida** - Logout imediato sem fricção
+2. **Padrão moderno** - Aplicações web modernas não pedem confirmação para logout
+3. **Código mais limpo** - Menos aninhamento e indentação
+
+---
+
+<a name="ui-005"></a>
+## ✅ UI-005 - Sistema de Notificações Toast
+
+**Data:** 02/10/2025 20:30
+**Tipo:** Feature + Melhoria de UX
+**Prioridade:** Alta
+**Status:** ✅ Concluído
+
+### 📝 Descrição do Problema
+
+Sistema utilizava `alert()` nativo do navegador para todas as mensagens:
+- **28 alerts** espalhados pelo código
+- Interrompe fluxo do usuário (modal bloqueante)
+- Visual não personalizável
+- Experiência ruim em mobile
+
+### ✅ Solução Implementada
+
+Implementado sistema completo de notificações Toast não-intrusivas.
+
+**Arquivo modificado:** `app_migrated.html`
+
+#### 1. CSS do Sistema Toast (linhas 1744-1840)
+
+```css
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: white;
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    max-width: 500px;
+    animation: toastSlideIn 0.3s ease;
+    border-left: 4px solid var(--primary);
+}
+
+/* Tipos de toast com cores específicas */
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+.toast.warning { border-left-color: #f59e0b; }
+.toast.info { border-left-color: var(--primary); }
+
+/* Animações */
+@keyframes toastSlideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toastSlideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(400px); opacity: 0; }
+}
+```
+
+#### 2. Container HTML (linha 7833)
+
+```html
+<div id="toast-container" class="toast-container"></div>
+```
+
+#### 3. Função showToast (linhas 4747-4779)
+
+```javascript
+function showToast(message, type = 'info') {
+    console.log(`🍞 Toast [${type}]: ${message}`);
+
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    // Ícones por tipo
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+
+    // Criar elemento do toast
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    `;
+
+    container.appendChild(toast);
+
+    // Remover automaticamente após 5 segundos
+    setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+```
+
+#### 4. Substituições Realizadas
+
+**28 alerts convertidos** com tipos apropriados:
+
+**Success (7 ocorrências):**
+- ✅ Atividade marcada como concluída
+- ✅ Atividade criada com sucesso
+- ✅ Atividade atualizada com sucesso
+- ✅ Alvos salvos com sucesso
+- ✅ Participações salvas com sucesso
+
+**Error (12 ocorrências):**
+- ❌ Erro ao marcar atividade como concluída
+- ❌ Erro ao criar/atualizar atividade
+- ❌ Erro ao conectar com o servidor
+- ❌ Erro ao salvar alvos/participações
+- ❌ Erro de comunicação persistente
+
+**Warning (9 ocorrências):**
+- ⚠️ Nome da atividade é obrigatório
+- ⚠️ Selecione pelo menos uma categoria
+- ⚠️ Data e horário são obrigatórios
+- ⚠️ Selecione um responsável
+- ⚠️ Selecione pelo menos um membro como alvo
+- ⚠️ Sistema em modo de desenvolvimento
+- ⚠️ Atividade criada mas erro ao salvar alvos
+
+### 📊 Características do Sistema
+
+1. **Posicionamento:** Canto superior direito
+2. **Auto-fechamento:** 5 segundos (configurável)
+3. **Fechamento manual:** Botão X
+4. **Múltiplos toasts:** Empilhamento vertical
+5. **Animações:** Slide in/out suaves
+6. **4 tipos:** success, error, warning, info
+7. **Ícones intuitivos:** ✅ ❌ ⚠️ ℹ️
+8. **Cores contextuais:** Border colorida por tipo
+9. **Não-intrusivo:** Não bloqueia interação
+10. **Responsivo:** Funciona em mobile
+
+### ✅ Benefícios
+
+1. **UX moderna** - Notificações não-intrusivas padrão de mercado
+2. **Feedback visual** - Cores e ícones contextualizam mensagens
+3. **Múltiplas notificações** - Sistema suporta empilhamento
+4. **Mobile-friendly** - Funciona perfeitamente em touch
+5. **Acessibilidade** - Fechamento automático ou manual
+6. **Consistência** - Design alinhado com o sistema
+7. **Produtividade** - Não interrompe fluxo de trabalho
+
+### 🧪 Como Testar
+
+**Console do navegador (F12):**
+```javascript
+showToast('Teste de sucesso!', 'success');
+showToast('Teste de erro!', 'error');
+showToast('Teste de aviso!', 'warning');
+showToast('Teste de info!', 'info');
+```
+
+**Ações reais:**
+- Criar atividade sem preencher campos → Toast warning
+- Criar atividade completa → Toast success
+- Concluir atividade → Toast success
+- Editar atividade → Toast success
+- Salvar alvos → Toast success
+
+---
+
+**Próximas Correções:** _Retomar lista de pendências anterior_
