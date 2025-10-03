@@ -22,10 +22,11 @@ function listCategoriasAtividadesApi() {
       };
     }
 
-    // Mapear para formato simplificado da API (apenas id e nome)
+    // Mapear para formato da API (id, nome, icone)
     const categoriasList = result.items.map(cat => ({
       id: cat.id,
-      nome: cat.nome || `Categoria ${cat.id}`
+      nome: cat.nome || `Categoria ${cat.id}`,
+      icone: cat.icone || '📋'
     }));
 
     console.log(`✅ ${categoriasList.length} categorias carregadas`);

@@ -371,6 +371,12 @@
             transition: var(--transition);
             text-decoration: none;
             white-space: nowrap;
+            outline: none;
+        }
+
+        .btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
         }
 
         .btn-primary {
@@ -956,29 +962,6 @@
 
         /* ===== SISTEMA DE FILTROS COM MODAL ===== */
 
-        /* Botão principal de filtros */
-        .btn-filtros {
-            padding: 10px 18px;
-            background: #8b5cf6;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
-            transition: all 0.2s;
-        }
-
-        .btn-filtros:hover {
-            background: #7c3aed;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px rgba(139, 92, 246, 0.4);
-        }
-
         /* Botão limpar filtros */
         .btn-limpar-filtros {
             padding: 8px 14px;
@@ -1050,15 +1033,17 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(3px);
             cursor: pointer;
         }
 
         .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            right: auto !important;
+            transform: translate(-50%, -50%) !important;
             background: white;
             border-radius: 16px;
             padding: 0;
@@ -1068,6 +1053,8 @@
             overflow: hidden;
             box-shadow: 0 20px 25px rgba(0,0,0,0.15);
             animation: slideIn 0.3s ease-out;
+            z-index: 1001;
+            margin: 0 !important;
         }
 
         .modal-header {
@@ -1916,7 +1903,7 @@
                 <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 24px;">
 
                     <!-- Botão principal "Filtros" -->
-                    <button id="btn-filtros" class="btn-filtros">
+                    <button id="btn-filtros" class="btn btn-primary" style="border: none !important; outline: none !important;">
                         <span>🔍</span>
                         <span id="filtros-text">Filtros</span>
                     </button>
@@ -1935,85 +1922,6 @@
                         <button class="btn btn-primary" id="btn-nova-atividade">
                             <span>➕</span>
                             <span>Nova Atividade</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal de Filtros -->
-            <div id="modal-filtros" class="modal-filtros" style="display: none;">
-                <!-- Backdrop -->
-                <div class="modal-backdrop"></div>
-
-                <!-- Caixa do Modal -->
-                <div class="modal-content">
-                    <!-- Cabeçalho -->
-                    <div class="modal-header">
-                        <h3>Filtros</h3>
-                        <button id="btn-fechar-modal" class="btn-fechar-modal">×</button>
-                    </div>
-
-                    <!-- Conteúdo do Modal -->
-                    <div class="modal-body">
-                        <!-- Seção: Status -->
-                        <div class="filter-group">
-                            <h4>Status</h4>
-                            <div class="filter-options">
-                                <label class="filter-option">
-                                    <input type="checkbox" data-filter="status" data-value="pendente">
-                                    <span>📋 Pendentes</span>
-                                </label>
-                                <label class="filter-option">
-                                    <input type="checkbox" data-filter="status" data-value="concluida">
-                                    <span>✅ Concluídas</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Seção: Categorias -->
-                        <div class="filter-group">
-                            <h4>Categorias</h4>
-                            <div class="filter-options" id="categorias-filter-options">
-                                <!-- Carregadas dinamicamente -->
-                            </div>
-                        </div>
-
-                        <!-- Seção: Período -->
-                        <div class="filter-group">
-                            <h4>Período</h4>
-                            <div class="filter-options">
-                                <label class="filter-option">
-                                    <input type="checkbox" data-filter="periodo" data-value="atrasadas">
-                                    <span>⏰ Atrasadas</span>
-                                </label>
-                                <label class="filter-option">
-                                    <input type="checkbox" data-filter="periodo" data-value="hoje">
-                                    <span>📅 Hoje</span>
-                                </label>
-                                <label class="filter-option">
-                                    <input type="checkbox" data-filter="periodo" data-value="proximos_10">
-                                    <span>🔜 Próximos 10 dias</span>
-                                </label>
-                                <label class="filter-option">
-                                    <input type="checkbox" data-filter="periodo" data-value="mes_atual">
-                                    <span>📆 Mês atual</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Seção: Responsável -->
-                        <div class="filter-group">
-                            <h4>Responsável</h4>
-                            <div class="filter-options" id="responsavel-filter-options">
-                                <!-- Carregadas dinamicamente -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Rodapé -->
-                    <div class="modal-footer">
-                        <button id="btn-aplicar-filtros" class="btn-aplicar-filtros">
-                            Aplicar Filtros
                         </button>
                     </div>
                 </div>
@@ -2885,6 +2793,11 @@
 
             // Configurar filtros
             setupActivityFilters();
+
+            // Aplicar filtros padrão (Pendente + Usuário logado)
+            if (typeof aplicarFiltrosPadrao === 'function') {
+                aplicarFiltrosPadrao();
+            }
 
             // Carregar atividades
             loadActivities();
@@ -7245,12 +7158,77 @@
             carregarCategorias();
             carregarResponsaveis();
 
+            // NÃO aplicar filtros aqui - será aplicado ao abrir a tela de atividades
+
             // Event listeners para checkboxes
             document.addEventListener('change', function(e) {
                 if (e.target.type === 'checkbox' && e.target.dataset.filter) {
                     handleCheckboxChange(e.target);
                 }
             });
+        }
+
+        // Aplicar filtros padrão (Status: Pendente + Responsável: Usuário logado)
+        function aplicarFiltrosPadrao() {
+            console.log('🔍 Aplicando filtros padrão');
+
+            // Buscar usuário do localStorage (chaves separadas)
+            const userUid = localStorage.getItem('uid');
+            const userName = localStorage.getItem('userName');
+
+            const currentUser = userUid ? { uid: userUid, nome: userName } : null;
+
+            console.log('🔍 Usuário do localStorage:', currentUser);
+            console.log('🔍 responsaveisDisponiveis:', responsaveisDisponiveis);
+
+            // 1. Status: Pendente
+            filtrosState.status = ['pendente'];
+            const checkboxPendente = document.querySelector('input[data-filter="status"][data-value="pendente"]');
+            if (checkboxPendente) {
+                checkboxPendente.checked = true;
+                console.log('✅ Checkbox Pendente marcado');
+            }
+
+            // 2. Responsável: Usuário logado
+            if (currentUser && currentUser.uid) {
+                const userUid = currentUser.uid;
+                console.log('🔍 UID do usuário logado:', userUid);
+
+                filtrosState.responsavel = [userUid];
+
+                // Aguardar um pouco para garantir que os checkboxes foram criados
+                setTimeout(() => {
+                    const checkboxUser = document.querySelector(`input[data-filter="responsavel"][data-value="${userUid}"]`);
+                    console.log('🔍 Checkbox do usuário encontrado:', checkboxUser);
+
+                    if (checkboxUser) {
+                        checkboxUser.checked = true;
+                        console.log('✅ Checkbox do usuário logado marcado');
+                    } else {
+                        console.warn('⚠️ Checkbox do usuário não encontrado. Tentando por nome...');
+                        // Tentar buscar por nome se não encontrou por uid
+                        const checkboxByName = Array.from(document.querySelectorAll('input[data-filter="responsavel"]'))
+                            .find(cb => {
+                                const userName = cb.nextElementSibling?.textContent;
+                                return userName && userName.includes(currentUser.nome);
+                            });
+                        if (checkboxByName) {
+                            checkboxByName.checked = true;
+                            filtrosState.responsavel = [checkboxByName.dataset.value];
+                            console.log('✅ Checkbox do usuário marcado por nome');
+                        }
+                    }
+
+                    atualizarContadorFiltros();
+                    renderizarChips();
+                    aplicarFiltros();
+                }, 300);
+            } else {
+                console.warn('⚠️ Usuário logado não encontrado no localStorage');
+                atualizarContadorFiltros();
+                renderizarChips();
+                aplicarFiltros();
+            }
         }
 
         // Abrir modal de filtros
@@ -7675,6 +7653,85 @@
 
     <!-- ===== USER MENU DROPDOWN COMPONENT ===== -->
     <?!= include('src/05-components/userMenuDropdown'); ?>
+
+    <!-- Modal de Filtros (fora de containers para centralizar) -->
+    <div id="modal-filtros" class="modal-filtros" style="display: none;">
+        <!-- Backdrop -->
+        <div class="modal-backdrop"></div>
+
+        <!-- Caixa do Modal -->
+        <div class="modal-content">
+            <!-- Cabeçalho -->
+            <div class="modal-header">
+                <h3>Filtros</h3>
+                <button id="btn-fechar-modal" class="btn-fechar-modal">×</button>
+            </div>
+
+            <!-- Conteúdo do Modal -->
+            <div class="modal-body">
+                <!-- Seção: Status -->
+                <div class="filter-group">
+                    <h4>Status</h4>
+                    <div class="filter-options">
+                        <label class="filter-option">
+                            <input type="checkbox" data-filter="status" data-value="pendente">
+                            <span>📋 Pendentes</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" data-filter="status" data-value="concluida">
+                            <span>✅ Concluídas</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Seção: Categorias -->
+                <div class="filter-group">
+                    <h4>Categorias</h4>
+                    <div class="filter-options" id="categorias-filter-options">
+                        <!-- Carregadas dinamicamente -->
+                    </div>
+                </div>
+
+                <!-- Seção: Período -->
+                <div class="filter-group">
+                    <h4>Período</h4>
+                    <div class="filter-options">
+                        <label class="filter-option">
+                            <input type="checkbox" data-filter="periodo" data-value="atrasadas">
+                            <span>⏰ Atrasadas</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" data-filter="periodo" data-value="hoje">
+                            <span>📅 Hoje</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" data-filter="periodo" data-value="proximos_10">
+                            <span>🔜 Próximos 10 dias</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" data-filter="periodo" data-value="mes_atual">
+                            <span>📆 Mês atual</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Seção: Responsável -->
+                <div class="filter-group">
+                    <h4>Responsável</h4>
+                    <div class="filter-options" id="responsavel-filter-options">
+                        <!-- Carregadas dinamicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rodapé -->
+            <div class="modal-footer">
+                <button id="btn-aplicar-filtros" class="btn-aplicar-filtros">
+                    Aplicar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
