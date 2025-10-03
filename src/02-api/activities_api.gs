@@ -331,126 +331,18 @@ function getActivityById(activityId, retryCount = 0) {
   }
 }
 
-/**
- * Atualiza uma atividade existente
- * @param {Object} activityData - Dados da atividade para atualizar
- * @returns {Object} Resultado da operação
- */
-async function updateActivity(activityData) {
-  try {
-    console.log('🔄 Atualizando atividade - dados recebidos:', activityData);
-
-    if (!activityData || !activityData.id) {
-      return {
-        ok: false,
-        error: 'ID da atividade é obrigatório para atualização'
-      };
-    }
-
-    const activityId = activityData.id;
-
-    // Validação dos dados obrigatórios
-    if (!activityData.titulo) {
-      return {
-        ok: false,
-        error: 'Título da atividade é obrigatório'
-      };
-    }
-
-    if (!activityData.data) {
-      return {
-        ok: false,
-        error: 'Data da atividade é obrigatória'
-      };
-    }
-
-    // Preparar dados para atualização (remover ID dos dados)
-    const updateData = { ...activityData };
-    delete updateData.id; // Remover ID dos dados de update
-
-    // Tratar data - converter para formato DATETIME (yyyy-MM-dd HH:mm:ss)
-    let dataFormatted = updateData.data;
-    if (dataFormatted.includes('T')) {
-      const [datePart, timePart] = dataFormatted.split('T');
-      if (timePart && timePart.trim() !== '') {
-        const timeFormatted = timePart.includes(':') ? timePart : timePart + ':00';
-        dataFormatted = `${datePart} ${timeFormatted}:00`;
-      } else {
-        dataFormatted = `${datePart} 00:00:00`;
-      }
-    } else {
-      dataFormatted = `${dataFormatted} 00:00:00`;
-    }
-    updateData.data = dataFormatted;
-
-    // Processar categorias (múltiplas seleções)
-    if (updateData.categorias && updateData.categorias.length > 0) {
-      let categoriasIds;
-      if (Array.isArray(updateData.categorias)) {
-        const cleanedCategories = updateData.categorias
-          .map(cat => cat ? cat.toString().trim() : '')
-          .filter(cat => cat.length > 0);
-        categoriasIds = cleanedCategories.join(',');
-      } else {
-        categoriasIds = updateData.categorias.toString().trim();
-      }
-      updateData.categorias_ids = categoriasIds;
-      delete updateData.categorias; // Remover campo temporário
-    }
-
-    // Campo atualizado_em preenchido automaticamente pelo DatabaseManager
-
-    console.log('📝 Dados preparados para atualização:', updateData);
-
-    // Usar DatabaseManager para atualizar
-    console.log('🔄 Chamando DatabaseManager.update...');
-    const result = await DatabaseManager.update('atividades', activityId, updateData);
-    console.log('📋 Resultado DatabaseManager.update:', result);
-
-    if (result && result.success === true) {
-      console.log('✅ Atividade atualizada com sucesso no banco');
-
-      // Forçar limpeza de cache para garantir dados atualizados
-      try {
-        if (typeof CacheManager !== 'undefined') {
-          CacheManager.invalidate('atividades');
-          console.log('🗑️ Cache de atividades invalidado após update');
-        }
-      } catch (cacheError) {
-        console.warn('⚠️ Erro ao invalidar cache:', cacheError.message);
-      }
-
-      return {
-        ok: true,
-        message: 'Atividade atualizada com sucesso'
-      };
-    } else {
-      console.error('❌ DatabaseManager.update falhou:', result);
-
-      // Log estruturado se Logger estiver disponível
-      if (typeof Logger !== 'undefined') {
-        Logger.error('UpdateActivity', 'Falha ao atualizar atividade no banco', {
-          activityId: activityId,
-          updateData: updateData,
-          result: result
-        });
-      }
-
-      return {
-        ok: false,
-        error: result?.error || 'Erro ao atualizar atividade no banco de dados'
-      };
-    }
-
-  } catch (error) {
-    console.error('❌ Erro ao atualizar atividade:', error);
-    console.error('❌ Stack trace:', error.stack);
-    return {
-      ok: false,
-      error: error.message || 'Erro interno do servidor'
-    };
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: updateActivity() - activities_api.gs:335-453
+//
+// Motivo: Função órfã/não utilizada - substituída por updateActivityWithTargets()
+// - Frontend usa apenas updateActivityWithTargets() (app_migrated.html:5442)
+// - Esta função não suportava alvos (targets)
+// - Funcionalidade consolidada em updateActivityWithTargets()
+//
+// Removido em: Migração #2 - Fase 4, Consolidação de funções de update
+// Data: 02/10/2025
+// Linhas removidas: 119 (incluindo JSDoc)
+// ============================================================================
 
 /**
  * Marca uma atividade como concluída

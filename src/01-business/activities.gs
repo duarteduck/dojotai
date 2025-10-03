@@ -364,85 +364,83 @@ function getUsersMapReadOnly_() {
 /**
  * Atualiza atividade por ID (PATCH parcial baseado em cabeçalho).
  */
+/**
+ * Atualiza atividade com suporte a alvos (PATCH)
+ * Migrado para DatabaseManager - Migração #2, Fase 4
+ * @param {Object} input - Objeto com {id, patch, alvos}
+ * @param {string} uidEditor - UID do usuário que está editando
+ * @returns {Object} {ok: boolean, atualizadoPorNome?: string, error?: string}
+ */
 async function updateActivityWithTargets(input, uidEditor) {
   try {
-    if (!input || !input.id) return { ok:false, error:'ID não informado.' };
-    var patch = input.patch || {};
+    if (!input || !input.id) {
+      return { ok: false, error: 'ID não informado.' };
+    }
 
-    // Validar categoria se for alterada
+    const patch = input.patch || {};
+
+    // Validar categorias se fornecidas
     if (patch.categorias_ids !== undefined && patch.categorias_ids !== '') {
-      // Validar cada categoria na lista (separadas por vírgula)
       const categoriasArray = patch.categorias_ids.split(',').map(id => id.trim()).filter(id => id);
       for (const catId of categoriasArray) {
         const catValida = validateCategoriaAtividade_(catId);
         if (!catValida) {
-          return { ok:false, error:'Categoria de atividade inválida: ' + catId };
+          return { ok: false, error: 'Categoria de atividade inválida: ' + catId };
         }
       }
     }
 
-    var ctx = getActivitiesCtx_();
-    var values = getFullTableValues_(ctx);
-    if (!values || !values.length) return { ok:false, error:'Tabela vazia.' };
+    // Preparar dados para update (apenas campos fornecidos - PATCH)
+    const updateData = {};
+    if (patch.titulo !== undefined) updateData.titulo = patch.titulo;
+    if (patch.descricao !== undefined) updateData.descricao = patch.descricao;
+    if (patch.data !== undefined) updateData.data = patch.data;
+    if (patch.atribuido_uid !== undefined) updateData.atribuido_uid = patch.atribuido_uid;
+    if (patch.categorias_ids !== undefined) updateData.categorias_ids = patch.categorias_ids;
+    if (uidEditor) updateData.atualizado_uid = uidEditor;
+    // atualizado_em preenchido automaticamente pelo DatabaseManager
 
-    var header = values[0].map(function(h){ return (h||'').toString().trim().toLowerCase(); });
-    var idx = {};
-    header.forEach(function(h,i){ idx[h]=i; });
+    console.log('🔄 updateActivityWithTargets - Atualizando:', input.id, updateData);
 
-    if (idx['id'] == null) return { ok:false, error:'Cabeçalho sem coluna id.' };
+    // Atualizar usando DatabaseManager
+    const updateResult = await DatabaseManager.update('atividades', input.id, updateData);
 
-    // encontra linha (1-based include header)
-    var rowIndex = -1;
-    for (var i=1;i<values.length;i++){
-      var r = values[i];
-      if ((r[idx['id']]||'').toString().trim() === input.id.toString().trim()) { rowIndex = i; break; }
-    }
-    if (rowIndex === -1) return { ok:false, error:'Atividade não encontrada.' };
-
-    var sh = ctx.sheet;
-    var rowNumber = ctx.startRow + rowIndex; // posição real na planilha
-
-    function setIfPresent(colName, value){
-      var c = idx[colName];
-      if (c == null) return;
-      sh.getRange(rowNumber, c+1).setValue(value);
+    if (!updateResult || !updateResult.success) {
+      console.error('❌ Erro ao atualizar atividade:', updateResult?.error);
+      return { ok: false, error: updateResult?.error || 'Erro ao atualizar atividade' };
     }
 
-    if (patch.titulo != null)        setIfPresent('titulo', patch.titulo);
-    if (patch.descricao != null)     setIfPresent('descricao', patch.descricao);
-    if (patch.data != null)          setIfPresent('data', patch.data);
-    if (patch.atribuido_uid != null) setIfPresent('atribuido_uid', patch.atribuido_uid);
-    if (patch.categorias_ids != null) setIfPresent('categorias_ids', patch.categorias_ids); // NOVO
-
-    // SEMPRE preenche os campos de auditoria quando há alteração
-    var now = nowString_ ? nowString_() : (new Date()).toISOString();
-    setIfPresent('atualizado_em', now);
-    if (uidEditor) setIfPresent('atualizado_uid', uidEditor);
+    console.log('✅ Atividade atualizada com sucesso');
 
     // Salvar alvos se fornecidos
     if (input.alvos && Array.isArray(input.alvos)) {
       console.log('🎯 Salvando alvos para atividade:', input.id, 'Alvos:', input.alvos);
       try {
-        var resultAlvos = await saveTargetsDirectly(input.id, input.alvos, uidEditor);
+        const resultAlvos = await saveTargetsDirectly(input.id, input.alvos, uidEditor);
         if (!resultAlvos.ok) {
           console.error('❌ Erro ao salvar alvos:', resultAlvos.error);
-          return { ok:false, error:'Erro ao salvar alvos: ' + resultAlvos.error };
+          return { ok: false, error: 'Erro ao salvar alvos: ' + resultAlvos.error };
         }
         console.log('✅ Alvos salvos com sucesso');
-      } catch(e) {
+      } catch (e) {
         console.error('❌ Exceção ao salvar alvos:', e);
-        return { ok:false, error:'Exceção ao salvar alvos: ' + e.toString() };
+        return { ok: false, error: 'Exceção ao salvar alvos: ' + e.toString() };
       }
     }
 
-    // retorna nome de quem atualizou (se possível)
-    var atualizadoPorNome = '';
+    // Buscar nome de quem atualizou
+    let atualizadoPorNome = '';
     try {
-      var users = getUsersMapReadOnly_ && getUsersMapReadOnly_();
-      if (users && uidEditor && users[uidEditor] && users[uidEditor].nome) atualizadoPorNome = users[uidEditor].nome;
-    } catch(e){}
+      const users = getUsersMapReadOnly_ && getUsersMapReadOnly_();
+      if (users && uidEditor && users[uidEditor] && users[uidEditor].nome) {
+        atualizadoPorNome = users[uidEditor].nome;
+      }
+    } catch (e) {
+      console.warn('⚠️ Não foi possível buscar nome do usuário:', e);
+    }
 
-    return { ok:true, atualizadoPorNome: atualizadoPorNome };
+    return { ok: true, atualizadoPorNome: atualizadoPorNome };
+
   } catch (err) {
     return { ok:false, error:'Erro updateActivity: ' + (err && err.message ? err.message : err) };
   }
