@@ -1740,6 +1740,104 @@
         .h-full {
             height: 100%;
         }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10001;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            max-width: 500px;
+            animation: toastSlideIn 0.3s ease;
+            border-left: 4px solid var(--primary);
+        }
+
+        .toast.success {
+            border-left-color: var(--success);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+
+        .toast.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast.info {
+            border-left-color: var(--primary);
+        }
+
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-message {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .toast-close:hover {
+            background-color: var(--light);
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toastSlideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.removing {
+            animation: toastSlideOut 0.3s ease;
+        }
     </style>
 </head>
 <body data-theme="light">
@@ -3117,7 +3215,7 @@
                                 <!-- Botões de ação -->
                                 <div class="activity-actions" style="display: flex; gap: var(--spacing-xs); justify-content: center;">
                                     <button class="btn btn-primary" onclick="openParticipants('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">👥 Participantes</button>
-                                    <button class="btn btn-outline" onclick="editActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">${activity.status === 'Realizada' ? '📊 Relatório' : '✏️ Editar'}</button>
+                                    ${statusInfo.text !== 'Concluída' ? `<button class="btn btn-outline" onclick="editActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✏️ Editar</button>` : ''}
                                     ${statusInfo.text !== 'Concluída' ? `<button class="btn btn-complete" onclick="completeActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✅ Concluir</button>` : ''}
                                 </div>
                             </div>
@@ -3183,11 +3281,12 @@
 
                             if (response && response.ok) {
                                 console.log('✅ Atividade marcada como concluída com sucesso:', response);
+                                showToast('Atividade marcada como concluída com sucesso!', 'success');
                                 // Recarrega a lista de atividades
                                 loadActivities();
                             } else {
                                 console.error('❌ Erro ao marcar atividade como concluída:', response);
-                                alert('Erro ao marcar atividade como concluída: ' + (response.error || 'Erro desconhecido'));
+                                showToast('Erro ao marcar atividade como concluída: ' + (response.error || 'Erro desconhecido'), 'error');
                             }
                         })
                         .withFailureHandler((error) => {
@@ -3196,14 +3295,14 @@
                             button.innerHTML = originalContent;
 
                             console.error('❌ Erro ao marcar atividade como concluída:', error);
-                            alert('Erro ao marcar atividade como concluída: ' + error.message);
+                            showToast('Erro ao marcar atividade como concluída: ' + error.message, 'error');
                         })
                         .completeActivity(activityId);
                 } else {
                     // Restaurar botão se API não disponível
                     button.disabled = false;
                     button.innerHTML = originalContent;
-                    alert('❌ Erro: Sistema não conseguiu conectar com o servidor.');
+                    showToast('Erro: Sistema não conseguiu conectar com o servidor.', 'error');
                 }
 
             } catch (error) {
@@ -3212,7 +3311,7 @@
                 button.innerHTML = originalContent;
 
                 console.error('❌ Erro ao marcar atividade como concluída:', error);
-                alert('Erro ao marcar atividade como concluída.');
+                showToast('Erro ao marcar atividade como concluída.', 'error');
             }
         }
 
@@ -4646,11 +4745,38 @@
             }
         }
 
-        // Função auxiliar para mostrar toast (se não existir)
+        // Sistema de Toast Notifications
         function showToast(message, type = 'info') {
-            console.log(`🍞 Toast: ${message}`);
-            // Implementação simples de toast se necessário
-            alert(message);
+            console.log(`🍞 Toast [${type}]: ${message}`);
+
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            // Ícones por tipo
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            // Criar elemento do toast
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || icons.info}</span>
+                <span class="toast-message">${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            // Adicionar ao container
+            container.appendChild(toast);
+
+            // Remover automaticamente após 5 segundos
+            setTimeout(() => {
+                toast.classList.add('removing');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
         }
 
         function loadActivityModalData() {
@@ -5063,7 +5189,7 @@
                                 return;
                             } else {
                                 showEditActivityDataLoading(false);
-                                alert('❌ Erro de comunicação persistente com o servidor. Tente novamente mais tarde.');
+                                showToast('Erro de comunicação persistente com o servidor. Tente novamente mais tarde.', 'error');
                                 return;
                             }
                         }
@@ -5159,19 +5285,19 @@
                         } else {
                             console.error('Erro ao carregar atividade:', result);
                             showEditActivityDataLoading(false);
-                            alert('❌ Erro ao carregar atividade: ' + (result?.error || 'Erro desconhecido'));
+                            showToast('Erro ao carregar atividade: ' + (result?.error || 'Erro desconhecido'), 'error');
                         }
                     })
                     .withFailureHandler(function(error) {
                         console.error('Erro na API ao carregar atividade:', error);
                         showEditActivityDataLoading(false);
-                        alert('❌ Erro ao conectar com o servidor.');
+                        showToast('Erro ao conectar com o servidor.', 'error');
                     })
                     .getActivityById(activityId);
             } else {
                 console.log('⚠️ API não disponível, usando fallback');
                 showEditActivityDataLoading(false);
-                alert('⚠️ Sistema em modo de desenvolvimento. API não disponível.');
+                showToast('Sistema em modo de desenvolvimento. API não disponível.', 'warning');
             }
         }
 
@@ -5264,22 +5390,22 @@
 
             // Validação básica
             if (!formData.titulo) {
-                alert('Nome da atividade é obrigatório');
+                showToast('Nome da atividade é obrigatório', 'warning');
                 return;
             }
 
             if (!selectedCategories.length) {
-                alert('Selecione pelo menos uma categoria');
+                showToast('Selecione pelo menos uma categoria', 'warning');
                 return;
             }
 
             if (!formData.data || formData.data === 'T') {
-                alert('Data e horário são obrigatórios');
+                showToast('Data e horário são obrigatórios', 'warning');
                 return;
             }
 
             if (!formData.atribuido_uid) {
-                alert('Selecione um responsável pela atividade');
+                showToast('Selecione um responsável pela atividade', 'warning');
                 return;
             }
 
@@ -5294,7 +5420,7 @@
                         showEditActivitySaveLoading(false);
 
                         if (result && result.ok) {
-                            alert('✅ Atividade atualizada com sucesso!');
+                            showToast('Atividade atualizada com sucesso!', 'success');
                             closeEditActivityModal();
 
                             // Aguardar um pouco antes de recarregar para garantir consistência
@@ -5302,7 +5428,7 @@
                                 loadActivities(); // Recarregar lista
                             }, 300);
                         } else {
-                            alert('❌ Erro ao atualizar atividade: ' + (result.error || 'Erro desconhecido'));
+                            showToast('Erro ao atualizar atividade: ' + (result.error || 'Erro desconhecido'), 'error');
                             closeEditActivityModal(); // Fechar mesmo com erro
                         }
                     })
@@ -5310,7 +5436,7 @@
                         // Esconder loading
                         showEditActivitySaveLoading(false);
                         console.error('Erro na API:', error);
-                        alert('❌ Erro ao conectar com o servidor. Tente novamente.');
+                        showToast('Erro ao conectar com o servidor. Tente novamente.', 'error');
                         closeEditActivityModal(); // Fechar mesmo com erro
                     })
                     .updateActivityWithTargets({
@@ -5328,7 +5454,7 @@
 
             // Não há API disponível - esconder loading e mostrar erro
             showEditActivitySaveLoading(false);
-            alert('❌ Erro: Sistema não conseguiu conectar com o servidor.\nVerifique sua conexão e tente novamente.');
+            showToast('Erro: Sistema não conseguiu conectar com o servidor. Verifique sua conexão e tente novamente.', 'error');
             closeEditActivityModal(); // Fechar mesmo com erro
         }
 
@@ -5355,22 +5481,22 @@
 
             // Validação básica
             if (!formData.titulo) {
-                alert('Nome da atividade é obrigatório');
+                showToast('Nome da atividade é obrigatório', 'warning');
                 return;
             }
 
             if (!selectedCategories.length) {
-                alert('Selecione pelo menos uma categoria');
+                showToast('Selecione pelo menos uma categoria', 'warning');
                 return;
             }
 
             if (!formData.data || formData.data === 'T') {
-                alert('Data e horário são obrigatórios');
+                showToast('Data e horário são obrigatórios', 'warning');
                 return;
             }
 
             if (!formData.atribuido_uid) {
-                alert('Selecione um responsável pela atividade');
+                showToast('Selecione um responsável pela atividade', 'warning');
                 return;
             }
 
@@ -5392,13 +5518,13 @@
                             } else {
                                 // Sem alvos, finalizar processo
                                 showCreateActivityLoading(false);
-                                alert('✅ Atividade criada com sucesso!');
+                                showToast('Atividade criada com sucesso!', 'success');
                                 closeActivityModal();
                                 loadActivities();
                             }
                         } else {
                             showCreateActivityLoading(false);
-                            alert('❌ Erro ao criar atividade: ' + (result.error || 'Erro desconhecido'));
+                            showToast('Erro ao criar atividade: ' + (result.error || 'Erro desconhecido'), 'error');
                         }
                     })
                     .withFailureHandler(function(error) {
@@ -5406,7 +5532,7 @@
                         showCreateActivityLoading(false);
 
                         console.error('Erro na API:', error);
-                        alert('❌ Erro ao conectar com o servidor. Tente novamente.');
+                        showToast('Erro ao conectar com o servidor. Tente novamente.', 'error');
                     })
                     .createActivity(formData, uid);
                 return;
@@ -5414,7 +5540,7 @@
 
             // Não há API disponível - esconder loading e mostrar erro
             showCreateActivityLoading(false);
-            alert('❌ Erro: Sistema não conseguiu conectar com o servidor.\nVerifique sua conexão e tente novamente.');
+            showToast('Erro: Sistema não conseguiu conectar com o servidor. Verifique sua conexão e tente novamente.', 'error');
             console.error('Erro: Google Apps Script não disponível');
         }
 
@@ -6784,12 +6910,12 @@
             const targetActivityId = activityId || currentActivityId;
 
             if (!targetActivityId) {
-                alert('ID da atividade não encontrado. Salve a atividade primeiro.');
+                showToast('ID da atividade não encontrado. Salve a atividade primeiro.', 'warning');
                 return;
             }
 
             if (selectedTargets.size === 0) {
-                alert('Selecione pelo menos um membro como alvo.');
+                showToast('Selecione pelo menos um membro como alvo.', 'warning');
                 return;
             }
 
@@ -6803,7 +6929,7 @@
                 google.script.run
                     .withSuccessHandler((result) => {
                         if (result && result.ok) {
-                            alert(`✅ ${result.created || 0} alvos salvos com sucesso!`);
+                            showToast(`${result.created || 0} alvos salvos com sucesso!`, 'success');
                             toggleTargetsSection(mode, targetActivityId); // Fechar seção
 
                             // Se modo edição, recarregar alvos existentes
@@ -6813,12 +6939,12 @@
                                 }, 500);
                             }
                         } else {
-                            alert('❌ Erro ao salvar alvos: ' + (result?.error || 'Erro desconhecido'));
+                            showToast('Erro ao salvar alvos: ' + (result?.error || 'Erro desconhecido'), 'error');
                         }
                     })
                     .withFailureHandler((error) => {
                         console.error('❌ Erro na API de salvar alvos:', error);
-                        alert('❌ Erro ao conectar com o servidor: ' + error.message);
+                        showToast('Erro ao conectar com o servidor: ' + error.message, 'error');
                     })
                     .saveTargetsDirectly(targetActivityId, memberIds, uid);
             }
@@ -6938,7 +7064,7 @@
                 // Sem alvos, finalizar processo
                 console.log('⚠️ Nenhum alvo selecionado, finalizando sem salvar');
                 showCreateActivityLoading(false);
-                alert('✅ Atividade criada com sucesso!');
+                showToast('Atividade criada com sucesso!', 'success');
                 closeActivityModal();
                 loadActivities();
                 return;
@@ -6965,10 +7091,10 @@
                     if (result && result.ok) {
                         const totalCreated = result.created || 0;
                         console.log('✅ Sucesso! Alvos criados:', totalCreated);
-                        alert(`✅ Atividade criada com sucesso!\n🎯 ${totalCreated} alvos definidos.`);
+                        showToast(`Atividade criada com sucesso! ${totalCreated} alvos definidos.`, 'success');
                     } else {
                         console.error('⚠️ Backend retornou erro:', result);
-                        alert(`✅ Atividade criada!\n⚠️ Erro ao salvar alvos: ${result?.error || 'Erro desconhecido'}`);
+                        showToast(`Atividade criada! Erro ao salvar alvos: ${result?.error || 'Erro desconhecido'}`, 'warning');
                     }
 
                     closeActivityModal();
@@ -6977,7 +7103,7 @@
                 .withFailureHandler((error) => {
                     showCreateActivityLoading(false);
                     console.error('❌ Erro na chamada ao backend:', error);
-                    alert(`✅ Atividade criada!\n❌ Erro ao salvar alvos: ${error.message || error}`);
+                    showToast(`Atividade criada! Erro ao salvar alvos: ${error.message || error}`, 'warning');
                     closeActivityModal();
                     loadActivities();
                 })
@@ -6988,82 +7114,80 @@
 
         // Função de logout com destruição de sessão
         async function logout() {
-            if (confirm('Deseja realmente sair do sistema?')) {
-                console.log('🚪 Iniciando processo de logout...');
+            console.log('🚪 Iniciando processo de logout...');
 
-                // Mostrar loading overlay
-                showLogoutLoading(true);
+            // Mostrar loading overlay
+            showLogoutLoading(true);
 
-                try {
-                    // Obter sessionId atual
-                    const sessionId = localStorage.getItem('sessionId');
-                    console.log('🔍 SessionId para logout:', sessionId);
+            try {
+                // Obter sessionId atual
+                const sessionId = localStorage.getItem('sessionId');
+                console.log('🔍 SessionId para logout:', sessionId);
 
-                    // Destruir sessão no servidor se existe sessionId
-                    if (sessionId && typeof google !== 'undefined' && google.script && google.script.run) {
-                        console.log('🔄 Destruindo sessão no servidor...');
+                // Destruir sessão no servidor se existe sessionId
+                if (sessionId && typeof google !== 'undefined' && google.script && google.script.run) {
+                    console.log('🔄 Destruindo sessão no servidor...');
 
-                        try {
-                            await new Promise((resolve, reject) => {
-                                google.script.run
-                                    .withSuccessHandler((result) => {
-                                        console.log('✅ Resultado do logout no servidor:', result);
-                                        if (result && result.ok) {
-                                            console.log('✅ Sessão destruída com sucesso no servidor');
-                                        } else {
-                                            console.warn('⚠️ Logout no servidor retornou erro:', result?.error);
-                                        }
-                                        resolve(result);
-                                    })
-                                    .withFailureHandler((error) => {
-                                        console.error('❌ Erro ao destruir sessão no servidor:', error);
-                                        // Continuar com logout local mesmo se falhar no servidor
-                                        resolve(null);
-                                    })
-                                    .logoutUser(sessionId);
-                            });
-                        } catch (serverError) {
-                            console.warn('⚠️ Erro na chamada do servidor, continuando com logout local:', serverError);
-                        }
-                    } else {
-                        console.log('📝 Sem sessionId ou Google Script indisponível, fazendo logout local apenas');
+                    try {
+                        await new Promise((resolve, reject) => {
+                            google.script.run
+                                .withSuccessHandler((result) => {
+                                    console.log('✅ Resultado do logout no servidor:', result);
+                                    if (result && result.ok) {
+                                        console.log('✅ Sessão destruída com sucesso no servidor');
+                                    } else {
+                                        console.warn('⚠️ Logout no servidor retornou erro:', result?.error);
+                                    }
+                                    resolve(result);
+                                })
+                                .withFailureHandler((error) => {
+                                    console.error('❌ Erro ao destruir sessão no servidor:', error);
+                                    // Continuar com logout local mesmo se falhar no servidor
+                                    resolve(null);
+                                })
+                                .logoutUser(sessionId);
+                        });
+                    } catch (serverError) {
+                        console.warn('⚠️ Erro na chamada do servidor, continuando com logout local:', serverError);
                     }
-
-                } catch (error) {
-                    console.warn('⚠️ Erro durante logout no servidor, continuando com limpeza local:', error);
+                } else {
+                    console.log('📝 Sem sessionId ou Google Script indisponível, fazendo logout local apenas');
                 }
 
-                // Limpar TODOS os dados de sessão local
-                console.log('🧹 Limpando dados locais...');
-                localStorage.removeItem('sessionId');
-                localStorage.removeItem('uid');
-                localStorage.removeItem('userName');
-                localStorage.removeItem('user');
-                sessionStorage.clear();
-
-                // Esconder todo o conteúdo da aplicação
-                console.log('🔄 Ocultando interface da aplicação...');
-                const appContent = document.querySelector('.app-container');
-                const header = document.querySelector('.app-header');
-                const navTabs = document.querySelector('.nav-tabs');
-                const mobileNav = document.querySelector('.mobile-nav');
-                const pageContents = document.querySelectorAll('.page-content');
-
-                if (appContent) appContent.style.display = 'none';
-                if (header) header.style.display = 'none';
-                if (navTabs) navTabs.style.display = 'none';
-                if (mobileNav) mobileNav.style.display = 'none';
-                pageContents.forEach(page => page.style.display = 'none');
-
-                // Mostrar tela de login novamente
-                console.log('🔄 Redirecionando para tela de login...');
-                showLogin();
-
-                // Esconder loading overlay
-                showLogoutLoading(false);
-
-                console.log('✅ Logout completo realizado com sucesso!');
+            } catch (error) {
+                console.warn('⚠️ Erro durante logout no servidor, continuando com limpeza local:', error);
             }
+
+            // Limpar TODOS os dados de sessão local
+            console.log('🧹 Limpando dados locais...');
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('uid');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+
+            // Esconder todo o conteúdo da aplicação
+            console.log('🔄 Ocultando interface da aplicação...');
+            const appContent = document.querySelector('.app-container');
+            const header = document.querySelector('.app-header');
+            const navTabs = document.querySelector('.nav-tabs');
+            const mobileNav = document.querySelector('.mobile-nav');
+            const pageContents = document.querySelectorAll('.page-content');
+
+            if (appContent) appContent.style.display = 'none';
+            if (header) header.style.display = 'none';
+            if (navTabs) navTabs.style.display = 'none';
+            if (mobileNav) mobileNav.style.display = 'none';
+            pageContents.forEach(page => page.style.display = 'none');
+
+            // Mostrar tela de login novamente
+            console.log('🔄 Redirecionando para tela de login...');
+            showLogin();
+
+            // Esconder loading overlay
+            showLogoutLoading(false);
+
+            console.log('✅ Logout completo realizado com sucesso!');
         }
     </script>
 
@@ -7732,6 +7856,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
 </body>
 </html>
