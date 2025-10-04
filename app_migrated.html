@@ -4321,40 +4321,36 @@
                                 margin-bottom: 12px;
                                 ${participation.deleted === 'x' ? 'opacity: 0.5; background: #fee; border-color: var(--danger);' : ''}
                             ">
-                                <!-- Info do participante -->
-                                <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                                    <div style="
-                                        width: 40px;
-                                        height: 40px;
-                                        background: var(--primary-light);
-                                        border-radius: 50%;
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                        margin-right: 12px;
-                                        font-weight: 600;
-                                        color: var(--primary);
-                                    ">
-                                        ${memberName.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
+                                <!-- Linha 1: Nome + Checkbox Participou -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                    <div style="display: flex; align-items: center;">
+                                        <div style="
+                                            width: 40px;
+                                            height: 40px;
+                                            background: var(--primary-light);
+                                            border-radius: 50%;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            margin-right: 12px;
+                                            font-weight: 600;
+                                            color: var(--primary);
+                                            flex-shrink: 0;
+                                        ">
+                                            ${memberName.charAt(0).toUpperCase()}
+                                        </div>
                                         <h5 style="margin: 0; font-weight: 600; color: var(--text);">
                                             ${memberName}
                                         </h5>
-                                        <small style="color: #6b7280;">
-                                            ${participation.tipo || 'Alvo'}
-                                        </small>
                                     </div>
-                                </div>
 
-                                <!-- Checkbox Participou -->
-                                <div style="margin-bottom: 12px;">
                                     <label style="
                                         display: flex;
                                         align-items: center;
                                         cursor: pointer;
                                         font-weight: 500;
                                         color: #374151;
+                                        white-space: nowrap;
                                     ">
                                         <input
                                             type="checkbox"
@@ -4370,22 +4366,28 @@
                                                 accent-color: var(--primary);
                                             "
                                         >
-                                        Participou da atividade
+                                        Participou
                                     </label>
                                 </div>
 
-                                <!-- Sub-opções (chegou tarde / saiu cedo) -->
-                                <div id="options-${participation.id}" style="
-                                    margin-left: 26px;
-                                    display: ${participation.participou === 'sim' ? 'block' : 'none'};
-                                ">
-                                    <div style="margin-bottom: 8px;">
+                                <!-- Linha 2: -- (esquerda) + Checkboxes lado a lado (direita, alinhados abaixo do Participou) -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-left: 52px;">
+                                    <div style="color: #6b7280; font-size: 14px;">
+                                        --
+                                    </div>
+
+                                    <div id="options-${participation.id}" style="
+                                        display: ${participation.participou === 'sim' ? 'flex' : 'none'};
+                                        gap: 16px;
+                                        flex-wrap: nowrap;
+                                    ">
                                         <label style="
                                             display: flex;
                                             align-items: center;
                                             cursor: pointer;
                                             font-size: 14px;
                                             color: #6b7280;
+                                            white-space: nowrap;
                                         ">
                                             <input
                                                 type="checkbox"
@@ -4400,14 +4402,14 @@
                                             >
                                             Chegou tarde
                                         </label>
-                                    </div>
-                                    <div>
+
                                         <label style="
                                             display: flex;
                                             align-items: center;
                                             cursor: pointer;
                                             font-size: 14px;
                                             color: #6b7280;
+                                            white-space: nowrap;
                                         ">
                                             <input
                                                 type="checkbox"
@@ -4423,6 +4425,33 @@
                                             Saiu cedo
                                         </label>
                                     </div>
+                                </div>
+
+                                <!-- Campo Observações -->
+                                <div style="padding-left: 52px;">
+                                    <label style="
+                                        display: block;
+                                        font-size: 14px;
+                                        color: #6b7280;
+                                        margin-bottom: 6px;
+                                    ">
+                                        Observações
+                                    </label>
+                                    <textarea
+                                        id="observacoes-${participation.id}"
+                                        placeholder="Adicione observações sobre a participação..."
+                                        style="
+                                            width: 100%;
+                                            min-height: 60px;
+                                            padding: 8px 12px;
+                                            border: 1px solid #d1d5db;
+                                            border-radius: 6px;
+                                            font-size: 14px;
+                                            font-family: inherit;
+                                            resize: vertical;
+                                            color: #374151;
+                                        "
+                                    >${participation.observacoes || ''}</textarea>
                                 </div>
                             </div>
                         `;
@@ -4573,7 +4602,7 @@
             const optionsDiv = document.getElementById(`options-${participationId}`);
 
             if (checkbox.checked) {
-                optionsDiv.style.display = 'block';
+                optionsDiv.style.display = 'flex';
             } else {
                 optionsDiv.style.display = 'none';
                 // Limpar subcampos quando desmarcar participação
@@ -4614,14 +4643,16 @@
 
                     const chegouTardeCheckbox = item.querySelector(`#chegou-tarde-${participationId}`);
                     const saiuCedoCheckbox = item.querySelector(`#saiu-cedo-${participationId}`);
+                    const observacoesTextarea = item.querySelector(`#observacoes-${participationId}`);
 
                     const participationData = {
                         tableId: tableId, // ID da tabela para update direto
                         participationId: participationId,
                         memberId: memberId,
                         participou: participouCheckbox.checked ? 'sim' : 'nao',
-                        chegou_tarde: (participouCheckbox.checked && chegouTardeCheckbox && chegouTardeCheckbox.checked) ? 'sim' : 'nao',
-                        saiu_cedo: (participouCheckbox.checked && saiuCedoCheckbox && saiuCedoCheckbox.checked) ? 'sim' : 'nao'
+                        chegou_tarde: (chegouTardeCheckbox && chegouTardeCheckbox.checked) ? 'sim' : 'nao',
+                        saiu_cedo: (saiuCedoCheckbox && saiuCedoCheckbox.checked) ? 'sim' : 'nao',
+                        observacoes: observacoesTextarea ? observacoesTextarea.value.trim() : ''
                     };
 
                     participationUpdates.push(participationData);
@@ -4636,7 +4667,8 @@
                         console.log('💾 Salvando participação ID:', data.tableId, 'com dados:', {
                             participou: data.participou,
                             chegou_tarde: data.chegou_tarde,
-                            saiu_cedo: data.saiu_cedo
+                            saiu_cedo: data.saiu_cedo,
+                            observacoes: data.observacoes
                         });
 
                         google.script.run
@@ -4646,8 +4678,9 @@
                                 id: data.tableId, // ID específico da tabela participações
                                 participou: data.participou,
                                 chegou_tarde: data.chegou_tarde,
-                                saiu_cedo: data.saiu_cedo
-                            });
+                                saiu_cedo: data.saiu_cedo,
+                                observacoes: data.observacoes
+                            }, '');
                     });
                 });
 
@@ -4661,7 +4694,7 @@
                 }
 
                 // Mostrar mensagem de sucesso
-                showToast('✅ Participações salvas com sucesso!', 'success');
+                showToast('Participações salvas com sucesso!', 'success');
 
                 // Fechar modal após 1 segundo
                 setTimeout(() => {
@@ -4670,7 +4703,7 @@
 
             } catch (error) {
                 console.error('❌ Erro ao salvar participações:', error);
-                showToast('❌ Erro ao salvar participações: ' + (error.message || error), 'error');
+                showToast('Erro ao salvar participações: ' + (error.message || error), 'error');
             } finally {
                 // Restaurar botão
                 saveBtn.disabled = false;
@@ -4730,14 +4763,14 @@
                     }
 
                     // Mostrar mensagem de sucesso
-                    showToast('✅ Participações salvas com sucesso!', 'success');
+                    showToast('Participações salvas com sucesso!', 'success');
                 } else {
                     throw new Error(result?.error || 'Erro ao salvar participações');
                 }
 
             } catch (error) {
                 console.error('❌ Erro ao salvar participações:', error);
-                showToast('❌ Erro ao salvar participações: ' + (error.message || error), 'error');
+                showToast('Erro ao salvar participações: ' + (error.message || error), 'error');
             } finally {
                 // Restaurar botão
                 saveBtn.disabled = false;
@@ -7673,7 +7706,7 @@
             const optionsDiv = document.getElementById(`options-${participationId}`);
 
             if (checkbox.checked) {
-                optionsDiv.style.display = 'block';
+                optionsDiv.style.display = 'flex';
             } else {
                 optionsDiv.style.display = 'none';
                 // Desmarcar sub-opções quando "participou" é desmarcado
@@ -7747,7 +7780,7 @@
                     throw new Error(`${failures.length} participações falharam ao salvar`);
                 }
 
-                showToast('✅ Participações salvas com sucesso!', 'success');
+                showToast('Participações salvas com sucesso!', 'success');
 
                 // Fechar modal após um tempo
                 setTimeout(() => {
@@ -7760,7 +7793,7 @@
 
             } catch (error) {
                 console.error('❌ Erro ao salvar participações:', error);
-                showToast('❌ Erro ao salvar participações: ' + (error.message || error), 'error');
+                showToast('Erro ao salvar participações: ' + (error.message || error), 'error');
             } finally {
                 // Restaurar botão
                 saveBtn.disabled = false;

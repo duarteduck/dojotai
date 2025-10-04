@@ -425,7 +425,7 @@ async function saveTargetsDirectly(activityId, memberIds, uid) {
  * @param {string} uid - UID do usuário
  * @returns {Object} { ok: boolean }
  */
-function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
+async function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
   try {
     console.log('🔧 [BACKEND] saveParticipacaoDirectly chamada com:');
     console.log('🔧 [BACKEND] - activityId:', activityId);
@@ -436,7 +436,7 @@ function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
     // Sempre usar busca por ID da tabela (padrão atual)
     if (dados && dados.id) {
       console.log('🔧 [BACKEND] Usando busca por ID da tabela:', dados.id);
-      return updateParticipacaoById(dados.id, dados, uid);
+      return await updateParticipacaoById(dados.id, dados, uid);
     }
 
     // Fallback para busca por activityId + memberId (casos legados)
@@ -462,8 +462,8 @@ function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
 
     console.log('🔧 [BACKEND] Participação encontrada via fallback:', participacao.id);
 
-    // Usar updateParticipacaoById com o ID encontrado
-    return updateParticipacaoById(participacao.id, dados, uid);
+    // Usar updateParticipacaoById com o ID encontrado (await porque é async)
+    return await updateParticipacaoById(participacao.id, dados, uid);
 
   } catch (err) {
     return { ok: false, error: 'Erro saveParticipacaoDirectly: ' + (err && err.message ? err.message : err) };
@@ -477,7 +477,7 @@ function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
  * @param {string} uid - UID do usuário
  * @returns {Object} { ok: boolean }
  */
-function updateParticipacaoById(participacaoId, dados, uid) {
+async function updateParticipacaoById(participacaoId, dados, uid) {
   try {
     if (!participacaoId || !dados) {
       return { ok: false, error: 'Parâmetros inválidos para updateParticipacaoById.' };
@@ -485,13 +485,15 @@ function updateParticipacaoById(participacaoId, dados, uid) {
 
     console.log('🔧 [BACKEND] updateParticipacaoById chamada com ID:', participacaoId);
 
-    // Busca a participação pelo ID usando DatabaseManager
-    const participacao = DatabaseManager.findByField('participacoes', 'id', participacaoId);
+    // Busca a participação pelo ID usando DatabaseManager.query com filtro
+    const participacoes = DatabaseManager.query('participacoes', { id: participacaoId }, true);
 
-    if (!participacao) {
+    if (!participacoes || participacoes.length === 0) {
       console.error('🔧 [BACKEND] Participação não encontrada para ID:', participacaoId);
       return { ok: false, error: 'Participação não encontrada para o ID: ' + participacaoId };
     }
+
+    const participacao = participacoes[0];
 
     // Verifica se a participação não está deletada
     if (participacao.deleted === 'x') {
@@ -510,12 +512,21 @@ function updateParticipacaoById(participacaoId, dados, uid) {
       marcado_por: uid || ''
     };
 
+    // Atualizar status_participacao automaticamente baseado em participou
+    if (dados.participou === 'sim') {
+      updateData.status_participacao = 'Presente';
+    } else if (dados.participou === 'nao') {
+      updateData.status_participacao = 'Ausente';
+    } else {
+      updateData.status_participacao = ''; // Pendente/não definido
+    }
+
     console.log('🔧 [BACKEND] Dados para atualização:', updateData);
 
-    // Atualiza usando DatabaseManager
-    const result = DatabaseManager.update('participacoes', participacaoId, updateData);
+    // Atualiza usando DatabaseManager (await porque é async)
+    const result = await DatabaseManager.update('participacoes', participacaoId, updateData);
 
-    if (result.ok) {
+    if (result.success) {
       console.log('✅ [BACKEND] Participação atualizada com sucesso para ID:', participacaoId);
       return { ok: true, message: 'Participação atualizada com sucesso.' };
     } else {
