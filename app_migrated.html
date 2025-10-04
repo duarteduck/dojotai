@@ -1239,6 +1239,82 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* ===== AUTOCOMPLETE SUGGESTIONS ===== */
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            max-height: 320px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            margin-top: 4px;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--gray-light);
+            transition: background var(--transition-fast);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .suggestion-item .member-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--primary);
+            flex-shrink: 0;
+            font-size: var(--font-size-sm);
+        }
+
+        .suggestion-item .member-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .suggestion-item .member-name {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+            font-size: var(--font-size-md);
+        }
+
+        .suggestion-item .member-dojo {
+            font-size: var(--font-size-sm);
+            color: var(--text-light);
+        }
+
+        .suggestion-item.no-results {
+            cursor: default;
+            text-align: center;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        .suggestion-item.no-results:hover {
+            background: white;
+        }
+
         /* Modal Styles - FUNDO CINZA 100% NAVEGADOR */
         .modal {
             position: fixed;
@@ -3802,6 +3878,26 @@
                                 <!-- Lista de participantes -->
                                 <div id="participantsList" style="display: none;"></div>
 
+                                <!-- Campo de busca para adicionar membros extras -->
+                                <div id="addExtraMemberSection" style="display: none; margin-top: 24px; padding: 16px; background: var(--bg-secondary); border-radius: 8px; border: 1px dashed var(--border-color);">
+                                    <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text); font-size: var(--font-size-md);">
+                                        ➕ Adicionar Membro Extra
+                                    </label>
+                                    <small style="color: var(--text-light); display: block; margin-bottom: 12px; font-size: var(--font-size-sm);">
+                                        Membros que participaram mas não eram alvos da atividade
+                                    </small>
+                                    <div style="position: relative;">
+                                        <input
+                                            type="text"
+                                            id="search-extra-member"
+                                            placeholder="🔍 Buscar membro por nome..."
+                                            autocomplete="off"
+                                            style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: var(--font-size-md); background: white;"
+                                        />
+                                        <div id="member-suggestions" class="autocomplete-suggestions" style="display: none;"></div>
+                                    </div>
+                                </div>
+
                                 <!-- Estado vazio -->
                                 <div id="participantsEmpty" style="display: none; text-align: center; padding: 40px; color: var(--text-light);">
                                     <p style="margin: 0;">Nenhum alvo definido para esta atividade ainda.</p>
@@ -4238,13 +4334,27 @@
                         // Mostrar lista de participações ativas
                         document.getElementById('participantsList').style.display = 'block';
                         renderParticipantsForModal(activeParticipations);
+
+                        // Mostrar campo de busca de membros extras
+                        document.getElementById('addExtraMemberSection').style.display = 'block';
+
+                        // Inicializar sistema de busca
+                        initExtraMemberSearch(activityId);
                     } else {
                         // Mostrar mensagem de sem alvos ativos
                         document.getElementById('participantsEmpty').style.display = 'block';
+
+                        // Ainda mostrar campo de busca mesmo sem alvos
+                        document.getElementById('addExtraMemberSection').style.display = 'block';
+                        initExtraMemberSearch(activityId);
                     }
                 } else {
                     // Mostrar mensagem de sem alvos
                     document.getElementById('participantsEmpty').style.display = 'block';
+
+                    // Ainda mostrar campo de busca mesmo sem alvos
+                    document.getElementById('addExtraMemberSection').style.display = 'block';
+                    initExtraMemberSearch(activityId);
                 }
 
             } catch (error) {
@@ -4468,6 +4578,146 @@
                     `;
                 })
                 .listMembersApi();
+        }
+
+        // ===== BUSCA E ADIÇÃO DE MEMBROS EXTRAS =====
+
+        let searchTimeout;
+        let currentActivityIdForExtraMember = null;
+        let extraMemberSearchInitialized = false;
+
+        function initExtraMemberSearch(activityId) {
+            currentActivityIdForExtraMember = activityId;
+            const searchInput = document.getElementById('search-extra-member');
+            const suggestionsContainer = document.getElementById('member-suggestions');
+
+            if (!searchInput) return;
+
+            // Evitar adicionar múltiplos event listeners
+            if (extraMemberSearchInitialized) return;
+            extraMemberSearchInitialized = true;
+
+            // Event listener para busca com debounce
+            searchInput.addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+                const searchTerm = e.target.value.trim();
+
+                if (searchTerm.length < 2) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+
+                // Debounce: aguarda 300ms após parar de digitar
+                searchTimeout = setTimeout(() => {
+                    searchMembersForExtra(searchTerm);
+                }, 300);
+            });
+
+            // Fechar sugestões ao clicar fora
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#addExtraMemberSection')) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+
+        function searchMembersForExtra(searchTerm) {
+            const suggestionsContainer = document.getElementById('member-suggestions');
+
+            // Mostrar loading
+            suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">🔄 Buscando...</div>';
+            suggestionsContainer.style.display = 'block';
+
+            // Buscar membros usando a função existente
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    showMemberSuggestions(result);
+                })
+                .withFailureHandler(function(error) {
+                    console.error('❌ Erro ao buscar membros:', error);
+                    suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">❌ Erro ao buscar membros</div>';
+                })
+                .searchMembersByCriteria(searchTerm, { status: 'ativo' });
+        }
+
+        function showMemberSuggestions(result) {
+            const suggestionsContainer = document.getElementById('member-suggestions');
+
+            if (!result || !result.ok || !result.items || result.items.length === 0) {
+                suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">Nenhum membro encontrado</div>';
+                suggestionsContainer.style.display = 'block';
+                return;
+            }
+
+            const members = result.items;
+            const html = members.map(member => `
+                <div class="suggestion-item" onclick="addExtraMember('${member.uid}', '${escapeHtml(member.nome)}', '${escapeHtml(member.dojo || '')}')">
+                    <div class="member-avatar">${member.nome.charAt(0).toUpperCase()}</div>
+                    <div class="member-info">
+                        <div class="member-name">${member.nome}</div>
+                        <div class="member-dojo">${member.dojo || 'Sem dojo'}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            suggestionsContainer.innerHTML = html;
+            suggestionsContainer.style.display = 'block';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        async function addExtraMember(memberId, memberName, memberDojo) {
+            const activityId = currentActivityIdForExtraMember;
+
+            if (!activityId) {
+                showToast('Erro: ID da atividade não encontrado', 'error');
+                return;
+            }
+
+            try {
+                console.log('➕ Adicionando membro extra:', memberName, 'à atividade:', activityId);
+
+                // Criar nova participação
+                const result = await new Promise((resolve, reject) => {
+                    google.script.run
+                        .withSuccessHandler(resolve)
+                        .withFailureHandler(reject)
+                        .saveParticipacaoDirectly(activityId, memberId, {
+                            participou: 'nao',
+                            chegou_tarde: 'nao',
+                            saiu_cedo: 'nao',
+                            observacoes: 'Adicionado manualmente como participante extra'
+                        }, ''); // TODO: passar UID real quando getCurrentUserUID() estiver implementado
+                });
+
+                console.log('✅ Resultado da criação:', result);
+
+                if (result && result.ok) {
+                    showToast(`${memberName} adicionado com sucesso!`, 'success');
+
+                    // Recarregar lista de participantes
+                    loadActivityForParticipants(activityId);
+
+                    // Limpar campo de busca e sugestões
+                    const searchInput = document.getElementById('search-extra-member');
+                    const suggestionsContainer = document.getElementById('member-suggestions');
+                    if (searchInput) searchInput.value = '';
+                    if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+                } else {
+                    throw new Error(result.message || 'Falha ao adicionar membro');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao adicionar membro extra:', error);
+                showToast('Erro ao adicionar membro: ' + (error.message || error), 'error');
+            }
         }
 
         function toggleParticipationOptions(checkbox) {
