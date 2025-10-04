@@ -289,7 +289,7 @@ if (dados.participou === 'sim') {
 | **Confirmação Prévia** | ❌ Não implementado | 0% | Função removida, decidir se reativa |
 | **Notificações** | ❌ Não implementado | 0% | Schema definido, implementação futura |
 | **Consistência** | ⚠️ Problemas | 70% | UID vazio, observações não chegam no backend |
-| **Limpeza de Código** | ✅ Concluída | 100% | 180+ linhas removidas, duplicações documentadas |
+| **Limpeza de Código** | ✅ Concluída | 100% | 678+ linhas removidas (backend + frontend), zero duplicações |
 | **UX/Interface** | ✅ Melhorado | 90% | Layout corrigido, toast corrigido, checkboxes OK |
 
 **Status Geral:** ⚠️ **85% Completo** - Funcional, backend completo, frontend com pequenos ajustes pendentes
@@ -375,7 +375,7 @@ if (dados.participou === 'sim') {
 
 ### **Fase 4: Limpeza de Código** 🧹 (Manutenção)
 
-- [x] **4.1** ✅ **CONCLUÍDO** - Remover funções legadas não utilizadas
+- [x] **4.1** ✅ **CONCLUÍDO (03/10/2025 23:30)** - Remover funções legadas não utilizadas
   - `calculateStatusParticipacao()` → ❌ REMOVIDA (padrão inconsistente)
   - `addExtraMember()` → ❌ REMOVIDA (duplicada)
   - `defineTargets()` → ❌ REMOVIDA (substituída por `saveTargetsDirectly()`)
@@ -383,7 +383,19 @@ if (dados.participou === 'sim') {
   - **Total:** 180+ linhas de código morto removidas
   - **Data:** 03/10/2025
 
-- [ ] **4.2** Documentar decisões sobre campos não usados
+- [x] **4.2** ✅ **CONCLUÍDO (04/10/2025 00:15)** - Remover duplicações do frontend
+  - `toggleParticipationOptions()` duplicada → ❌ REMOVIDA (13 linhas)
+  - `saveAllParticipations()` duplicada → ❌ REMOVIDA (86 linhas)
+  - `renderParticipantsList()` órfã → ❌ REMOVIDA (126 linhas)
+  - Sistema 1 de Filtros (inativo) → ❌ REMOVIDO (273 linhas)
+    - 11 funções de filtro removidas (loadCategoriesFilter, populateCategoriesFilter, etc.)
+    - Chamadas de inicialização removidas
+    - Sistema 2 (Português) mantido como único sistema ativo
+  - **Total:** 498 linhas de código redundante removidas (~6,3% do arquivo)
+  - **Documentação:** `DUPLICACOES_CODIGO.md` criada e atualizada
+  - **Data:** 04/10/2025
+
+- [ ] **4.3** Documentar decisões sobre campos não usados
   - `confirmou`, `confirmado_em` → Usar ou remover?
   - `status_participacao` → Recriar `calculateStatusParticipacao()` no padrão correto?
   - Tempo estimado: 1h
@@ -427,13 +439,29 @@ Para questões sobre este documento ou priorização das tarefas, contactar o de
 
 ---
 
-**Última atualização:** 03/10/2025 23:00
+**Última atualização:** 04/10/2025 00:15
 **Responsável pela análise:** Claude Code
-**Versão do documento:** 1.3
+**Versão do documento:** 1.4
 
 ---
 
 ## 📋 CHANGELOG
+
+### Versão 1.4 (04/10/2025 00:15) - LIMPEZA DE CÓDIGO CONCLUÍDA
+- ✅ **CONCLUÍDO:** Remoção completa de duplicações no frontend
+  - Removidas 3 funções duplicadas/órfãs (225 linhas)
+  - Removido Sistema 1 de Filtros inativo (273 linhas)
+  - Total: 498 linhas removidas do `app_migrated.html`
+- ✅ **DOCUMENTADO:** `DUPLICACOES_CODIGO.md` versão 1.2 (final)
+  - Análise completa de duplicações
+  - Documentação de todas as remoções
+  - Métricas de melhoria atualizadas
+- 📊 **ATUALIZADO:** Resumo executivo
+  - Limpeza de Código: 678+ linhas removidas (180 backend + 498 frontend)
+  - Zero duplicações restantes
+  - Manutenibilidade: 🟢 Alto
+- ✅ **CONCLUÍDO:** Fase 4.2 (Remover duplicações do frontend)
+- 📌 Sistema 2 de Filtros (Português) confirmado como único sistema ativo
 
 ### Versão 1.3 (03/10/2025 23:00) - ATUALIZAÇÃO IMPORTANTE
 - ✅ **CORRIGIDO:** Bug `DatabaseManager.findByField is not a function`
