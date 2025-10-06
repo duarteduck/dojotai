@@ -2507,7 +2507,17 @@
 
     <!-- Sistema de Estado da Aplicação -->
     <script>
-        console.log('🔧 [DEBUG] Definindo State diretamente...');
+        // ============================================================================
+        // CACHE GLOBAL: Categorias e Responsáveis
+        // Carregados UMA ÚNICA VEZ no DOMContentLoaded e reutilizados em toda a app
+        // ============================================================================
+        // NOTA: Quando implementar cadastro de categorias/usuários, invalidar cache:
+        //       window.cachedCategorias = null; carregarCategorias();
+        //       window.cachedResponsaveis = null; carregarResponsaveis();
+        // ============================================================================
+        window.cachedCategorias = null;
+        window.cachedResponsaveis = null;
+
         window.State = {
           get uid(){ return localStorage.getItem('uid'); },
           set uid(v){ localStorage.setItem('uid', v); },
@@ -2547,8 +2557,6 @@
           cache: { atividades: [] },
           ui: { minhas:false, nomeFiltro:"" }
         };
-        console.log('✅ [DEBUG] State definido com sucesso:', typeof window.State !== 'undefined');
-        console.log('✅ [DEBUG] State global acessível:', typeof State !== 'undefined');
     </script>
 
     <script>
@@ -3019,6 +3027,13 @@
         // ===== SISTEMA DE ATIVIDADES =====
         function initActivities() {
             console.log('🚀 Inicializando atividades no protótipo migrado');
+
+            // LAZY INIT: Inicializar sistema de filtros apenas na primeira vez
+            if (!filtrosSystemInitialized) {
+                console.log('⚡ Lazy init: Inicializando sistema de filtros pela primeira vez');
+                initFiltrosSystem();
+                filtrosSystemInitialized = true;
+            }
 
             // Configurar filtros
             setupActivityFilters();
@@ -4752,15 +4767,22 @@
             const select = document.getElementById(selectId);
             if (!select) return;
 
+            // Se cache existe, usar diretamente (instantâneo!)
+            if (window.cachedCategorias) {
+                populateSelect(select, window.cachedCategorias, 'id', 'nome', select.multiple ? null : 'Selecione uma categoria...');
+                return;
+            }
+
             // Mostrar loading no select
             select.innerHTML = '<option disabled selected>🔄 Carregando categorias...</option>';
 
-            // Tentar carregar da API real
+            // Carregar da API apenas se cache não existe ainda
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 try {
                     google.script.run
                         .withSuccessHandler(function(result) {
                             if (result && result.ok && result.items) {
+                                window.cachedCategorias = result.items; // Salvar no cache
                                 populateSelect(select, result.items, 'id', 'nome', select.multiple ? null : 'Selecione uma categoria...');
                             } else {
                                 loadCategoriesFallback(select);
@@ -4770,7 +4792,7 @@
                             console.error('Erro ao carregar categorias:', error);
                             loadCategoriesFallback(select);
                         })
-                        .listCategoriasAtividadesApi(); // Função correta da API
+                        .listCategoriasAtividadesApi();
                 } catch (error) {
                     console.warn('API listCategoriasAtividadesApi() não implementada ainda');
                     loadCategoriesFallback(select);
@@ -4793,15 +4815,22 @@
             const select = document.getElementById(selectId);
             if (!select) return;
 
+            // Se cache existe, usar diretamente (instantâneo!)
+            if (window.cachedResponsaveis) {
+                populateSelect(select, window.cachedResponsaveis, 'uid', 'nome', 'Selecione um responsável...');
+                return;
+            }
+
             // Mostrar loading
             select.innerHTML = '<option disabled selected>🔄 Carregando usuários...</option>';
 
-            // Tentar carregar da API real
+            // Carregar da API apenas se cache não existe ainda
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 try {
                     google.script.run
                         .withSuccessHandler(function(result) {
                             if (result && result.ok && result.items) {
+                                window.cachedResponsaveis = result.items; // Salvar no cache
                                 populateSelect(select, result.items, 'uid', 'nome', 'Selecione um responsável...');
                             } else {
                                 loadResponsibleUsersFallback(select);
@@ -4811,7 +4840,7 @@
                             console.error('Erro ao carregar usuários:', error);
                             loadResponsibleUsersFallback(select);
                         })
-                        .listUsuariosApi(); // Implementar esta função no backend
+                        .listUsuariosApi();
                 } catch (error) {
                     console.warn('API listUsuariosApi() não implementada ainda');
                     loadResponsibleUsersFallback(select);
@@ -5273,20 +5302,17 @@
 
         // ===== CARREGAMENTO DINÂMICO DO USUÁRIO =====
         function loadCurrentUser() {
-            console.log('👤 Carregando dados do usuário atual...');
-
             // Método 1: Tentar primeiro do localStorage (dados reais do login)
             try {
                 const uid = localStorage.getItem('uid');
                 const userName = localStorage.getItem('userName');
 
                 if (uid && userName) {
-                    console.log('✅ Usuário encontrado no localStorage:', { uid, userName });
                     updateUserMenuInfo({ uid, nome: userName });
                     return;
                 }
             } catch (error) {
-                console.warn('⚠️ Erro ao ler localStorage:', error);
+                console.error('Erro ao ler localStorage:', error);
             }
 
             // Método 2: Tentar via app_state (backup)
@@ -5295,34 +5321,26 @@
                 if (userStr) {
                     const user = JSON.parse(userStr);
                     if (user && user.nome) {
-                        console.log('✅ Usuário encontrado no app_state:', user);
                         updateUserMenuInfo(user);
                         return;
                     }
                 }
             } catch (error) {
-                console.warn('⚠️ Erro ao ler app_state:', error);
+                console.error('Erro ao ler app_state:', error);
             }
 
             // Método 3: Fallback para API apenas se necessário
-            console.log('🔄 Tentando obter usuário via API...');
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler(function(user) {
                         if (user && user.nome) {
-                            console.log('✅ Usuário carregado via API:', user);
                             updateUserMenuInfo(user);
-                        } else {
-                            console.log('⚠️ Usuário não encontrado via API, mantendo valores padrão');
                         }
                     })
                     .withFailureHandler(function(error) {
-                        console.error('❌ Erro ao carregar usuário via API:', error);
-                        // Manter valores padrão em caso de erro
+                        console.error('Erro ao carregar usuário via API:', error);
                     })
-                    .getCurrentLoggedUser(); // Usar a nova função mais robusta
-            } else {
-                console.log('⚠️ Google Script não disponível, mantendo valores padrão');
+                    .getCurrentLoggedUser();
             }
         }
 
@@ -5334,7 +5352,6 @@
 
                 if (userNameEl && user.nome) {
                     userNameEl.textContent = user.nome;
-                    console.log('✅ Nome do usuário atualizado:', user.nome);
                 }
 
                 if (userAvatarEl && user.nome) {
@@ -5345,7 +5362,6 @@
                         .map(n => n.charAt(0).toUpperCase())
                         .join('');
                     userAvatarEl.textContent = initials;
-                    console.log('✅ Avatar atualizado com iniciais:', initials);
                 }
 
                 if (userRoleEl) {
@@ -5363,44 +5379,52 @@
             }
         }
 
+        // ============================================================================
+        // PRE-LOAD: Carregar categorias e responsáveis no cache ao iniciar a aplicação
+        // ============================================================================
+        function preLoadCachedData() {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                // Carregar categorias em paralelo
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        if (result && result.ok && result.items) {
+                            window.cachedCategorias = result.items;
+                            console.log('⚡ Cache de categorias pré-carregado:', result.items.length);
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('❌ Erro ao pré-carregar categorias:', error);
+                    })
+                    .listCategoriasAtividadesApi();
+
+                // Carregar responsáveis em paralelo
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        if (result && result.ok && result.items) {
+                            window.cachedResponsaveis = result.items;
+                            console.log('⚡ Cache de responsáveis pré-carregado:', result.items.length);
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('❌ Erro ao pré-carregar responsáveis:', error);
+                    })
+                    .listUsuariosApi();
+            }
+        }
+
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', function() {
             loadTheme();
             initNavigation();
             loadCurrentUser(); // Carregar dados do usuário
 
-            // DEBUG: Verificar modais após carregamento
+            // PRE-CARREGAR categorias e responsáveis no cache ANTES do usuário abrir a tela
+            preLoadCachedData();
+
+            // Verificar modais após carregamento
             setTimeout(() => {
-                console.log('🔍 DEBUG: Verificando modais após DOM ready...');
                 const activityModal = document.getElementById('activityModal');
                 const editModal = document.getElementById('editActivityModal');
-
-                console.log('🔍 DEBUG: Modais encontrados:', {
-                    activityModal: !!activityModal,
-                    editModal: !!editModal
-                });
-
-                if (activityModal) {
-                    console.log('🔍 DEBUG: CSS activityModal inicial:', {
-                        display: getComputedStyle(activityModal).display,
-                        position: getComputedStyle(activityModal).position,
-                        width: getComputedStyle(activityModal).width,
-                        height: getComputedStyle(activityModal).height,
-                        background: getComputedStyle(activityModal).backgroundColor,
-                        innerHTML_length: activityModal.innerHTML.length
-                    });
-                }
-
-                if (editModal) {
-                    console.log('🔍 DEBUG: CSS editModal inicial:', {
-                        display: getComputedStyle(editModal).display,
-                        position: getComputedStyle(editModal).position,
-                        width: getComputedStyle(editModal).width,
-                        height: getComputedStyle(editModal).height,
-                        background: getComputedStyle(editModal).backgroundColor,
-                        innerHTML_length: editModal.innerHTML.length
-                    });
-                }
             }, 1000);
 
             // Verificar se há sessão ativa, senão mostrar login
@@ -5655,10 +5679,7 @@
             }
 
             // Atualizar informações do usuário no menu após login
-            console.log('👤 Atualizando dados do usuário no menu...');
             loadCurrentUser();
-
-            console.log('✅ Aplicação carregada e pronta para uso!');
         }
 
         // Função para mostrar/esconder loading de logout
@@ -6931,6 +6952,9 @@
         let categoriasDisponiveis = [];
         let responsaveisDisponiveis = [];
 
+        // Flag de controle: garantir que initFiltrosSystem só execute uma vez
+        let filtrosSystemInitialized = false;
+
         // Inicializar sistema de filtros
         function initFiltrosSystem() {
             console.log('🔍 Inicializando sistema de filtros');
@@ -6958,9 +6982,8 @@
                 }
             });
 
-            // Carregar dados dinâmicos
-            carregarCategorias();
-            carregarResponsaveis();
+            // NOTA: Dados de categorias e responsáveis são pré-carregados no DOMContentLoaded
+            // via preLoadCachedData() - não precisa carregar aqui!
 
             // NÃO aplicar filtros aqui - será aplicado ao abrir a tela de atividades
 
@@ -6976,63 +6999,55 @@
         function aplicarFiltrosPadrao() {
             console.log('🔍 Aplicando filtros padrão');
 
-            // Buscar usuário do localStorage (chaves separadas)
-            const userUid = localStorage.getItem('uid');
-            const userName = localStorage.getItem('userName');
-
-            const currentUser = userUid ? { uid: userUid, nome: userName } : null;
-
-            console.log('🔍 Usuário do localStorage:', currentUser);
-            console.log('🔍 responsaveisDisponiveis:', responsaveisDisponiveis);
-
-            // 1. Status: Pendente
+            // 1. Status: Pendente (sempre aplicar primeiro)
             filtrosState.status = ['pendente'];
             const checkboxPendente = document.querySelector('input[data-filter="status"][data-value="pendente"]');
             if (checkboxPendente) {
                 checkboxPendente.checked = true;
-                console.log('✅ Checkbox Pendente marcado');
             }
 
-            // 2. Responsável: Usuário logado
-            if (currentUser && currentUser.uid) {
-                const userUid = currentUser.uid;
-                console.log('🔍 UID do usuário logado:', userUid);
+            // Buscar usuário do localStorage
+            const userUid = localStorage.getItem('uid');
+            const userName = localStorage.getItem('userName');
+            const currentUser = userUid ? { uid: userUid, nome: userName } : null;
 
-                filtrosState.responsavel = [userUid];
-
-                // Aguardar um pouco para garantir que os checkboxes foram criados
-                setTimeout(() => {
-                    const checkboxUser = document.querySelector(`input[data-filter="responsavel"][data-value="${userUid}"]`);
-                    console.log('🔍 Checkbox do usuário encontrado:', checkboxUser);
-
-                    if (checkboxUser) {
-                        checkboxUser.checked = true;
-                        console.log('✅ Checkbox do usuário logado marcado');
-                    } else {
-                        console.warn('⚠️ Checkbox do usuário não encontrado. Tentando por nome...');
-                        // Tentar buscar por nome se não encontrou por uid
-                        const checkboxByName = Array.from(document.querySelectorAll('input[data-filter="responsavel"]'))
-                            .find(cb => {
-                                const userName = cb.nextElementSibling?.textContent;
-                                return userName && userName.includes(currentUser.nome);
-                            });
-                        if (checkboxByName) {
-                            checkboxByName.checked = true;
-                            filtrosState.responsavel = [checkboxByName.dataset.value];
-                            console.log('✅ Checkbox do usuário marcado por nome');
-                        }
-                    }
-
-                    atualizarContadorFiltros();
-                    renderizarChips();
-                    aplicarFiltros();
-                }, 300);
-            } else {
+            if (!currentUser || !currentUser.uid) {
                 console.warn('⚠️ Usuário logado não encontrado no localStorage');
                 atualizarContadorFiltros();
                 renderizarChips();
                 aplicarFiltros();
+                return;
             }
+
+            // 2. Responsável: Carregar dados e aplicar filtro COM CALLBACK
+            carregarResponsaveis(function() {
+                // ✅ Callback executado quando dados estão disponíveis (cache ou backend)
+                filtrosState.responsavel = [currentUser.uid];
+
+                // Marcar checkbox do responsável
+                setTimeout(() => {
+                    const checkboxUser = document.querySelector(`input[data-filter="responsavel"][data-value="${currentUser.uid}"]`);
+                    if (checkboxUser) {
+                        checkboxUser.checked = true;
+                    }
+
+                    // Atualizar UI e aplicar filtros
+                    atualizarContadorFiltros();
+                    renderizarChips(); // ✅ Agora renderiza COM dados disponíveis
+                    aplicarFiltros();
+                }, 100);
+            });
+        }
+
+        // Sincronizar checkboxes com filtrosState
+        function sincronizarCheckboxesComEstado() {
+            // Sincronizar Status (checkboxes estáticos)
+            filtrosState.status.forEach(statusValue => {
+                const checkbox = document.querySelector(`input[data-filter="status"][data-value="${statusValue}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+
+            // Categorias e Responsáveis são sincronizados em suas funções populate
         }
 
         // Abrir modal de filtros
@@ -7042,6 +7057,13 @@
             if (modal) {
                 modal.style.display = 'block';
                 document.body.style.overflow = 'hidden';
+
+                // Popular opções do modal (usa cache se disponível, instantâneo!)
+                carregarCategorias();
+                carregarResponsaveis();
+
+                // Sincronizar checkboxes de status com estado
+                sincronizarCheckboxesComEstado();
             }
         }
 
@@ -7198,14 +7220,25 @@
         }
 
         // Carregar categorias do backend
-        function carregarCategorias() {
+        function carregarCategorias(callback) {
+            // Se já existe cache, usar diretamente
+            if (window.cachedCategorias) {
+                categoriasDisponiveis = window.cachedCategorias;
+                populateCategoriasOptions();
+                if (callback) callback(); // ✅ Chamar callback quando dados disponíveis
+                return;
+            }
+
+            // Carregar do backend apenas se não há cache
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler(function(result) {
                         if (result && result.ok && result.items) {
+                            window.cachedCategorias = result.items; // Salvar no cache
                             categoriasDisponiveis = result.items;
                             populateCategoriasOptions();
-                            console.log('✅ Categorias carregadas:', result.items.length);
+                            console.log('✅ Categorias carregadas e cacheadas:', result.items.length);
+                            if (callback) callback(); // ✅ Chamar callback após carregar
                         }
                     })
                     .withFailureHandler(function(error) {
@@ -7216,14 +7249,25 @@
         }
 
         // Carregar responsáveis do backend
-        function carregarResponsaveis() {
+        function carregarResponsaveis(callback) {
+            // Se já existe cache, usar diretamente
+            if (window.cachedResponsaveis) {
+                responsaveisDisponiveis = window.cachedResponsaveis;
+                populateResponsaveisOptions();
+                if (callback) callback(); // ✅ Chamar callback quando dados disponíveis
+                return;
+            }
+
+            // Carregar do backend apenas se não há cache
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler(function(result) {
                         if (result && result.ok && result.items) {
+                            window.cachedResponsaveis = result.items; // Salvar no cache
                             responsaveisDisponiveis = result.items;
                             populateResponsaveisOptions();
-                            console.log('✅ Responsáveis carregados:', result.items.length);
+                            console.log('✅ Responsáveis carregados e cacheados:', result.items.length);
+                            if (callback) callback(); // ✅ Chamar callback após carregar
                         }
                     })
                     .withFailureHandler(function(error) {
@@ -7244,8 +7288,11 @@
                 const label = document.createElement('label');
                 label.className = 'filter-option';
 
+                // Verificar se esta categoria está no filtrosState
+                const isChecked = filtrosState.categorias.includes(categoria.id);
+
                 label.innerHTML = `
-                    <input type="checkbox" data-filter="categorias" data-value="${categoria.id}">
+                    <input type="checkbox" data-filter="categorias" data-value="${categoria.id}" ${isChecked ? 'checked' : ''}>
                     <span>${categoria.icone || '📋'} ${categoria.nome}</span>
                 `;
 
@@ -7264,8 +7311,11 @@
                 const label = document.createElement('label');
                 label.className = 'filter-option';
 
+                // Verificar se este usuário está no filtrosState
+                const isChecked = filtrosState.responsavel.includes(usuario.uid);
+
                 label.innerHTML = `
-                    <input type="checkbox" data-filter="responsavel" data-value="${usuario.uid}">
+                    <input type="checkbox" data-filter="responsavel" data-value="${usuario.uid}" ${isChecked ? 'checked' : ''}>
                     <span>👤 ${usuario.nome}</span>
                 `;
 
@@ -7310,11 +7360,8 @@
             }
         };
 
-        // Inicializar quando DOM carregar
-        document.addEventListener('DOMContentLoaded', function() {
-            // Aguardar um pouco para garantir que outros scripts carregaram
-            setTimeout(initFiltrosSystem, 500);
-        });
+        // NOTA: initFiltrosSystem() agora é chamado via lazy init no initActivities()
+        // Removido DOMContentLoaded pois não precisa inicializar se usuário não entrar em Atividades
 
         // Expor função para uso externo
         window.getFiltrosAtivos = function() {
