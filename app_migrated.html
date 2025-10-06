@@ -2091,11 +2091,15 @@
                         <span>Limpar Tudo</span>
                     </button>
 
-                    <!-- Botão Nova Atividade -->
-                    <div style="margin-left: auto;">
+                    <!-- Botões de ação -->
+                    <div style="margin-left: auto; display: flex; flex-direction: column; gap: 8px;">
                         <button class="btn btn-primary" id="btn-nova-atividade">
                             <span>➕</span>
                             <span>Nova Atividade</span>
+                        </button>
+                        <button class="btn btn-outline" id="btn-nova-categoria" disabled style="opacity: 0.5; cursor: not-allowed;">
+                            <span>➕</span>
+                            <span>Nova Categoria</span>
                         </button>
                     </div>
                 </div>
@@ -3026,11 +3030,8 @@
 
         // ===== SISTEMA DE ATIVIDADES =====
         function initActivities() {
-            console.log('🚀 Inicializando atividades no protótipo migrado');
-
             // LAZY INIT: Inicializar sistema de filtros apenas na primeira vez
             if (!filtrosSystemInitialized) {
-                console.log('⚡ Lazy init: Inicializando sistema de filtros pela primeira vez');
                 initFiltrosSystem();
                 filtrosSystemInitialized = true;
             }
@@ -3128,17 +3129,12 @@
                     responsavel: filtrosState.responsavel || []
                 };
 
-                console.log('📤 Enviando filtros para backend:', JSON.stringify(filtrosBackend));
-
                 // Conectar com API real
                 google.script.run
                     .withSuccessHandler(function(result) {
                         isLoadingActivities = false; // Liberar lock
-                        console.log('📊 Resultado completo da API de atividades:', result);
                         if (result && result.ok && result.items) {
-                            console.log('🔍 Primeira atividade para debug:', result.items[0]);
                             const activitiesWithCategory = result.items.map(activity => {
-                                console.log('🏷️ Processando atividade:', activity.titulo, 'Categorias:', activity.categorias);
                                 return {
                                     ...activity,
                                     // Manter compatibilidade com campos de categoria única
@@ -3272,18 +3268,7 @@
             const grid = document.getElementById('activities-grid');
             if (!grid || !activities) return;
 
-            console.log('🎨 Renderizando', activities.length, 'atividades');
-
             const html = activities.map(activity => {
-                console.log('🏷️ Renderizando atividade:', activity.titulo, {
-                    categoria: activity.categoria,
-                    categoria_icone: activity.categoria_icone,
-                    categoria_cor: activity.categoria_cor,
-                    categorias: activity.categorias,
-                    categoriaAtividadeNome: activity.categoriaAtividadeNome,
-                    hasMultipleCategories: activity.categorias && activity.categorias.length > 1
-                });
-
                 // Lógica inteligente de status baseada na data
                 const statusInfo = getSmartStatus(activity.status, activity.data);
 
@@ -6957,8 +6942,6 @@
 
         // Inicializar sistema de filtros
         function initFiltrosSystem() {
-            console.log('🔍 Inicializando sistema de filtros');
-
             // Event listeners
             const btnFiltros = document.getElementById('btn-filtros');
             const btnFechar = document.getElementById('btn-fechar-modal');
@@ -6997,8 +6980,6 @@
 
         // Aplicar filtros padrão (Status: Pendente + Responsável: Usuário logado)
         function aplicarFiltrosPadrao() {
-            console.log('🔍 Aplicando filtros padrão');
-
             // 1. Status: Pendente (sempre aplicar primeiro)
             filtrosState.status = ['pendente'];
             const checkboxPendente = document.querySelector('input[data-filter="status"][data-value="pendente"]');
@@ -7069,7 +7050,6 @@
 
         // Fechar modal de filtros
         function fecharModalFiltros() {
-            console.log('🔍 Fechando modal de filtros');
             const modal = document.getElementById('modal-filtros');
             if (modal) {
                 modal.style.display = 'none';
@@ -7096,7 +7076,6 @@
 
         // Aplicar filtros
         function aplicarFiltros() {
-            console.log('🔍 Aplicando filtros:', filtrosState);
             fecharModalFiltros();
             renderizarChips();
             filtrarAtividades();
@@ -7325,7 +7304,6 @@
 
         // Filtrar atividades (integrar com sistema existente)
         function filtrarAtividades() {
-            console.log('🔍 Filtrando atividades com:', filtrosState);
             // Recarregar atividades aplicando filtros
             if (typeof loadActivities === 'function') {
                 loadActivities();
