@@ -9,9 +9,6 @@ function listParticipacoes(activityId) {
       return { ok: false, error: 'ID da atividade é obrigatório.' };
     }
 
-    console.log('🔧 [BACKEND] listParticipacoes chamada para atividade:', activityId);
-
-    // Busca todas as participações da atividade usando DatabaseManager
     const filters = {
       id_atividade: activityId.toString().trim()
     };
@@ -22,28 +19,39 @@ function listParticipacoes(activityId) {
       return { ok: true, items: [] };
     }
 
-    // Filtra apenas participações ativas (não deletadas)
+    // Buscar membros para ordenação alfabética
+    const membros = DatabaseManager.query('membros', {}, false) || [];
+    const membrosMap = {};
+    membros.forEach(m => {
+      membrosMap[m.codigo_sequencial] = m.nome || '';
+    });
+
+    // Filtra, adiciona nome do membro e ordena
     const activeParticipacoes = participacoes
       .filter(p => p.deleted !== 'x')
       .map(p => ({
         id: p.id,
         id_atividade: p.id_atividade,
         id_membro: p.id_membro,
+        nome_membro: membrosMap[p.id_membro] || 'Nome não encontrado',
         tipo: p.tipo,
         confirmou: p.confirmou,
         participou: p.participou,
         chegou_tarde: p.chegou_tarde,
         saiu_cedo: p.saiu_cedo,
         observacoes: p.observacoes,
-        deleted: p.deleted // Incluir para controle no frontend
-      }));
-
-    console.log('🔧 [BACKEND] Participações encontradas:', activeParticipacoes.length);
+        deleted: p.deleted
+      }))
+      .sort((a, b) => {
+        const nomeA = (a.nome_membro || '').toLowerCase();
+        const nomeB = (b.nome_membro || '').toLowerCase();
+        return nomeA.localeCompare(nomeB, 'pt-BR');
+      });
 
     return { ok: true, items: activeParticipacoes };
 
   } catch (error) {
-    console.error('❌ [BACKEND] Erro listParticipacoes:', error);
+    Logger.error('Participacoes', 'Erro ao listar participações', { activityId, error: error.message });
     return { ok: false, error: 'Erro: ' + error.message };
   }
 }
@@ -201,6 +209,75 @@ function getParticipacaoStats(activityId) {
     };
   } catch (err) {
     return { ok: false, error: 'Erro getParticipacaoStats: ' + (err && err.message ? err.message : err) };
+  }
+}
+
+/**
+ * Obtém estatísticas de participação para MÚLTIPLAS atividades de uma vez (OTIMIZADO)
+ * @param {Array<string>} activityIds - Array de IDs das atividades
+ * @returns {Object} { ok: boolean, statsMap: Object } - Mapa com activityId -> stats
+ */
+function getParticipacaoStatsBatch(activityIds) {
+  try {
+    console.log('⚡ getParticipacaoStatsBatch chamado para', activityIds.length, 'atividades');
+
+    if (!activityIds || activityIds.length === 0) {
+      return { ok: true, statsMap: {} };
+    }
+
+    // 1. Ler TODA a tabela de participações UMA ÚNICA VEZ
+    const todasParticipacoes = DatabaseManager.query('participacoes', {}, false) || [];
+    console.log('📊 Total de participações na tabela:', todasParticipacoes.length);
+
+    // 2. Filtrar apenas participações ativas
+    const participacoesAtivas = todasParticipacoes.filter(p => p.deleted !== 'x');
+    console.log('📊 Participações ativas:', participacoesAtivas.length);
+
+    // 3. Agrupar participações por atividade
+    const participacoesPorAtividade = {};
+    activityIds.forEach(id => {
+      participacoesPorAtividade[id] = [];
+    });
+
+    participacoesAtivas.forEach(p => {
+      const actId = (p.id_atividade || '').toString().trim();
+      if (participacoesPorAtividade.hasOwnProperty(actId)) {
+        participacoesPorAtividade[actId].push(p);
+      }
+    });
+
+    // 4. Calcular stats para cada atividade
+    const statsMap = {};
+    activityIds.forEach(activityId => {
+      const participacoes = participacoesPorAtividade[activityId] || [];
+
+      const total = participacoes.length;
+      const confirmados = participacoes.filter(p => p.confirmou === 'sim').length;
+      const recusados = participacoes.filter(p => p.confirmou === 'nao').length;
+      const participaram = participacoes.filter(p => p.participou === 'sim').length;
+      const ausentes = participacoes.filter(p => p.participou === 'nao').length;
+      const pendentes = participacoes.filter(p => !p.participou).length;
+      const percentualParticipacao = total > 0 ? Math.round((participaram / total) * 100) : 0;
+
+      statsMap[activityId] = {
+        total,
+        confirmados,
+        recusados,
+        participaram,
+        ausentes,
+        pendentes,
+        percentualParticipacao
+      };
+    });
+
+    console.log('✅ Stats calculados para', Object.keys(statsMap).length, 'atividades');
+    return {
+      ok: true,
+      statsMap: statsMap
+    };
+  } catch (err) {
+    console.error('❌ Erro getParticipacaoStatsBatch:', err);
+    return { ok: false, error: 'Erro getParticipacaoStatsBatch: ' + (err && err.message ? err.message : err) };
   }
 }
 

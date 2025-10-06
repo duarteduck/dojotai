@@ -1,9 +1,9 @@
 // activities.gs – API de atividades (atualizada para categoria_atividade_id)
 
-function listActivitiesApi() {
-  console.log('🚀 listActivitiesApi chamada');
+function listActivitiesApi(filtros) {
+  console.log('🚀 listActivitiesApi chamada com filtros:', JSON.stringify(filtros));
   try {
-    const result = _listActivitiesCore();
+    const result = _listActivitiesCore(filtros);
     console.log('📊 _listActivitiesCore resultado:', result?.ok ? 'OK' : 'ERRO', '- Items:', result?.items?.length || 0);
 
     // Garante objeto "serializável" para o HTMLService
@@ -45,8 +45,8 @@ function listActivitiesApi() {
 // ============================================================================
 
 /** Core da listagem (usado pela API pública) */
-function _listActivitiesCore() {
-  console.log('🔄 _listActivitiesCore INICIADA');
+function _listActivitiesCore(filtros) {
+  console.log('🔄 _listActivitiesCore INICIADA com filtros:', JSON.stringify(filtros));
   const ctx = getActivitiesCtx_();
 
   // Lê do cabeçalho até a última linha usada
@@ -114,14 +114,86 @@ function _listActivitiesCore() {
     items.push(item);
   }
 
+  console.log('📋 Total de atividades brutas:', items.length);
+
+  // ============================================================================
+  // OTIMIZAÇÃO: Aplicar filtros ANTES do processamento pesado (stats, categorias)
+  // ============================================================================
+  let filteredItems = items;
+
+  if (filtros) {
+    console.log('⚡ Aplicando filtros ANTES do processamento pesado:', JSON.stringify(filtros));
+
+    // Filtro por status (rápido - apenas string comparison)
+    if (filtros.status && Array.isArray(filtros.status) && filtros.status.length > 0) {
+      const antes = filteredItems.length;
+      filteredItems = filteredItems.filter(item => {
+        const itemStatus = (item.status || '').toString().trim().toLowerCase();
+        return filtros.status.includes(itemStatus);
+      });
+      console.log(`  ✂️ Filtro status: ${filteredItems.length} de ${antes} (removeu ${antes - filteredItems.length})`);
+    }
+
+    // Filtro por responsável (rápido - apenas comparação de string)
+    if (filtros.responsavel && Array.isArray(filtros.responsavel) && filtros.responsavel.length > 0) {
+      const antes = filteredItems.length;
+      filteredItems = filteredItems.filter(item =>
+        filtros.responsavel.includes(item.atribuido_uid)
+      );
+      console.log(`  ✂️ Filtro responsável: ${filteredItems.length} de ${antes} (removeu ${antes - filteredItems.length})`);
+    }
+
+    // Filtro por período (médio - precisa parse de datas)
+    if (filtros.periodo && Array.isArray(filtros.periodo) && filtros.periodo.length > 0) {
+      const antes = filteredItems.length;
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      filteredItems = filteredItems.filter(item => {
+        if (!item.data) return false;
+        const dataAtividade = new Date(item.data);
+        dataAtividade.setHours(0, 0, 0, 0);
+
+        return filtros.periodo.some(periodo => {
+          switch (periodo) {
+            case 'hoje':
+              return dataAtividade.getTime() === hoje.getTime();
+            case 'atrasadas':
+              return dataAtividade < hoje && (item.status || '').toString().toLowerCase() === 'pendente';
+            case 'proximos_10':
+              const em10Dias = new Date(hoje);
+              em10Dias.setDate(hoje.getDate() + 10);
+              return dataAtividade >= hoje && dataAtividade <= em10Dias;
+            case 'mes_atual':
+              return dataAtividade.getMonth() === hoje.getMonth() &&
+                     dataAtividade.getFullYear() === hoje.getFullYear();
+            default:
+              return false;
+          }
+        });
+      });
+      console.log(`  ✂️ Filtro período: ${filteredItems.length} de ${antes} (removeu ${antes - filteredItems.length})`);
+    }
+
+    console.log(`⚡ TOTAL após filtros rápidos: ${filteredItems.length} de ${items.length} (economizou ${items.length - filteredItems.length} processamentos pesados!)`);
+  }
+
+  // Agora processar apenas as atividades filtradas
   const users = getUsersMapReadOnly_();
-  const categoriasAtividades = getCategoriasAtividadesMapReadOnly_(); // NOVO
+  const categoriasAtividades = getCategoriasAtividadesMapReadOnly_();
 
-  // DEBUG: Verificar dados das categorias
-  console.log('🔍 DEBUG categoriasAtividades map:', JSON.stringify(categoriasAtividades, null, 2));
   console.log('🔍 DEBUG categoriasAtividades keys:', Object.keys(categoriasAtividades));
+  console.log('📋 Processando categorias e stats para', filteredItems.length, 'atividades...');
 
-  items.forEach(it => {
+  // ============================================================================
+  // OTIMIZAÇÃO: Buscar stats de TODAS as atividades de uma vez (batch)
+  // ============================================================================
+  const activityIds = filteredItems.map(it => it.id);
+  const statsBatchResult = getParticipacaoStatsBatch(activityIds);
+  const statsMap = statsBatchResult.ok ? statsBatchResult.statsMap : {};
+  console.log('📊 Stats em batch carregados:', Object.keys(statsMap).length, 'atividades');
+
+  filteredItems.forEach(it => {
     const atr = (it.atribuido_uid || '').toString().trim();
     const atu = (it.atualizado_uid || '').toString().trim();
     it.atribuido_nome = users[atr]?.nome || '';
@@ -171,43 +243,16 @@ function _listActivitiesCore() {
 
     console.log(`🔍 DEBUG Categorias processadas para ${it.id}:`, it.categorias);
 
-    // Adicionar contadores de participação usando função existente
-    try {
-      console.log('🔄 Tentando carregar stats para atividade:', it.id);
-
-      // TEMPORÁRIO: Verificar se função existe
-      if (typeof getParticipacaoStats !== 'function') {
-        console.error('❌ getParticipacaoStats não é uma função!');
-        it.total_alvos = 999; // Valor de teste para identificar o problema
-        it.confirmados = 888;
-        it.rejeitados = 777;
-        it.participantes = 666;
-        it.ausentes = 555;
-      } else {
-        const statsResult = getParticipacaoStats(it.id);
-        console.log('📊 Stats resultado para', it.id, ':', JSON.stringify(statsResult));
-
-        if (statsResult && statsResult.ok && statsResult.stats) {
-          const stats = statsResult.stats;
-          it.total_alvos = stats.total || 0;
-          it.confirmados = stats.confirmados || 0;
-          it.rejeitados = stats.recusados || 0;  // recusados no backend = rejeitados no frontend
-          it.participantes = stats.participaram || 0;
-          it.ausentes = stats.ausentes || 0;
-          console.log('✅ Contadores definidos para', it.id, '- Total:', it.total_alvos, 'Confirmados:', it.confirmados);
-        } else {
-          // Fallback para zeros se não conseguir calcular
-          console.log('⚠️ Usando fallback de zeros para atividade', it.id, '- Resultado completo:', statsResult);
-          it.total_alvos = 0;
-          it.confirmados = 0;
-          it.rejeitados = 0;
-          it.participantes = 0;
-          it.ausentes = 0;
-        }
-      }
-    } catch (error) {
-      console.error('❌ ERRO ao carregar stats para', it.id, ':', error);
-      // Fallback em caso de erro
+    // Adicionar contadores de participação do statsMap (já carregado em batch)
+    const stats = statsMap[it.id];
+    if (stats) {
+      it.total_alvos = stats.total || 0;
+      it.confirmados = stats.confirmados || 0;
+      it.rejeitados = stats.recusados || 0;  // recusados no backend = rejeitados no frontend
+      it.participantes = stats.participaram || 0;
+      it.ausentes = stats.ausentes || 0;
+    } else {
+      // Fallback se não houver stats (atividade sem participações)
       it.total_alvos = 0;
       it.confirmados = 0;
       it.rejeitados = 0;
@@ -221,15 +266,30 @@ function _listActivitiesCore() {
     else if (s === 'concluida' || s === 'concluída') it.status = 'concluida';
   });
 
+  console.log('📋 Total de atividades APÓS processamento:', filteredItems.length);
+
+  // Filtro por categorias (só pode ser aplicado DEPOIS de processar categorias)
+  if (filtros && filtros.categorias && Array.isArray(filtros.categorias) && filtros.categorias.length > 0) {
+    const antes = filteredItems.length;
+    filteredItems = filteredItems.filter(item => {
+      if (item.categorias && item.categorias.length > 0) {
+        return item.categorias.some(cat => filtros.categorias.includes(cat.id));
+      }
+      return false;
+    });
+    console.log(`  ✂️ Filtro categorias (pós-processamento): ${filteredItems.length} de ${antes} (removeu ${antes - filteredItems.length})`);
+  }
+
   // Ordenação: pendentes primeiro; depois por data crescente
-  items.sort((a,b) => {
+  filteredItems.sort((a,b) => {
     const sA = (a.status||'').toString().toLowerCase();
     const sB = (b.status||'').toString().toLowerCase();
     if (sA !== sB) return sA === 'pendente' ? -1 : 1;
     return new Date(a.data||'2100-01-01') - new Date(b.data||'2100-01-01');
   });
 
-  return { ok:true, items };
+  console.log('✅ Retornando', filteredItems.length, 'atividades filtradas');
+  return { ok:true, items: filteredItems };
 }
 
 // (Opcional) deixe um alias para trás caso o front antigo chame listActivities

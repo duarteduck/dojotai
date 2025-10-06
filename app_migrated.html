@@ -2073,8 +2073,8 @@
         <div id="activities" class="page-content hidden">
             <!-- Sistema de Filtros com Modal e Chips -->
             <div class="filters-container">
-                <!-- Container dos filtros e chips -->
-                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 24px;">
+                <!-- Linha 1: Botão Filtros, Chips e Nova Atividade -->
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
 
                     <!-- Botão principal "Filtros" -->
                     <button id="btn-filtros" class="btn btn-primary" style="border: none !important; outline: none !important;">
@@ -2097,6 +2097,61 @@
                             <span>➕</span>
                             <span>Nova Atividade</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Linha 2: Campo de busca por texto -->
+                <div>
+                    <div style="position: relative; width: 100%;">
+                        <span style="
+                            position: absolute;
+                            left: 12px;
+                            top: 50%;
+                            transform: translateY(-50%);
+                            color: var(--text-light);
+                            pointer-events: none;
+                            font-size: 16px;
+                        ">🔎</span>
+                        <input
+                            type="text"
+                            id="search-activities"
+                            placeholder="Buscar por título ou descrição..."
+                            style="
+                                width: 100%;
+                                padding: 10px 40px 10px 40px;
+                                border: 2px solid #d1d5db;
+                                border-radius: 8px;
+                                font-size: var(--font-size-sm);
+                                outline: none;
+                                transition: all 0.2s;
+                                background: white;
+                            "
+                            onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                            onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'"
+                            onkeyup="filterActivitiesByText(this.value)"
+                        />
+                        <button
+                            id="clear-search"
+                            onclick="clearSearchText()"
+                            style="
+                                position: absolute;
+                                right: 10px;
+                                top: 50%;
+                                transform: translateY(-50%);
+                                background: var(--surface);
+                                border: none;
+                                color: var(--text-light);
+                                cursor: pointer;
+                                font-size: 20px;
+                                padding: 4px 8px;
+                                display: none;
+                                border-radius: 4px;
+                                line-height: 1;
+                                transition: all 0.2s;
+                            "
+                            onmouseover="this.style.background='var(--border-color)'; this.style.color='var(--text-primary)'"
+                            onmouseout="this.style.background='var(--surface)'; this.style.color='var(--text-light)'"
+                        >×</button>
                     </div>
                 </div>
             </div>
@@ -2969,12 +3024,13 @@
             setupActivityFilters();
 
             // Aplicar filtros padrão (Pendente + Usuário logado)
+            // NOTA: aplicarFiltrosPadrao() já chama loadActivities() via aplicarFiltros()
             if (typeof aplicarFiltrosPadrao === 'function') {
                 aplicarFiltrosPadrao();
             }
 
-            // Carregar atividades
-            loadActivities();
+            // REMOVIDO: Chamada duplicada de loadActivities()
+            // A função aplicarFiltrosPadrao() acima já carrega as atividades
 
             // Configurar botão Nova Atividade
             const btnNova = document.getElementById('btn-nova-atividade');
@@ -3016,9 +3072,22 @@
             }
         }
 
+        // Guard para evitar chamadas simultâneas
+        let isLoadingActivities = false;
+
         function loadActivities() {
+            // Prevenir chamadas simultâneas
+            if (isLoadingActivities) {
+                console.log('⚠️ loadActivities já está em execução, ignorando chamada duplicada');
+                return;
+            }
+            isLoadingActivities = true;
+
             const grid = document.getElementById('activities-grid');
-            if (!grid) return;
+            if (!grid) {
+                isLoadingActivities = false;
+                return;
+            }
 
             // Mostrar estado de carregamento bonito
             grid.innerHTML = `
@@ -3036,9 +3105,20 @@
 
             // Tentar usar API real
             if (typeof google !== 'undefined' && google.script && google.script.run) {
+                // Preparar filtros para enviar ao backend
+                const filtrosBackend = {
+                    status: filtrosState.status || [],
+                    categorias: filtrosState.categorias || [],
+                    periodo: filtrosState.periodo || [],
+                    responsavel: filtrosState.responsavel || []
+                };
+
+                console.log('📤 Enviando filtros para backend:', JSON.stringify(filtrosBackend));
+
                 // Conectar com API real
                 google.script.run
                     .withSuccessHandler(function(result) {
+                        isLoadingActivities = false; // Liberar lock
                         console.log('📊 Resultado completo da API de atividades:', result);
                         if (result && result.ok && result.items) {
                             console.log('🔍 Primeira atividade para debug:', result.items[0]);
@@ -3055,7 +3135,7 @@
                                 };
                             });
 
-                            // Aplicar filtros antes de renderizar
+                            // Backend já filtrou, aplicar apenas filtro de texto (se houver)
                             const filteredActivities = applyActivityFilters(activitiesWithCategory);
                             renderActivities(filteredActivities);
                         } else {
@@ -3064,12 +3144,14 @@
                         }
                     })
                     .withFailureHandler(function(error) {
+                        isLoadingActivities = false; // Liberar lock
                         console.error('Erro na API de atividades:', error);
                         loadActivitiesFallback();
                     })
-                    .listActivitiesApi();
+                    .listActivitiesApi(filtrosBackend);
             } else {
                 // Fallback se API não estiver disponível
+                isLoadingActivities = false;
                 loadActivitiesFallback();
             }
         }
@@ -3077,46 +3159,21 @@
         function applyActivityFilters(activities) {
             if (!activities || !Array.isArray(activities)) return [];
 
-            // Aplicar filtros do novo sistema de modal
-            if (typeof window.aplicarFiltrosNasAtividades === 'function') {
-                const filteredByModal = window.aplicarFiltrosNasAtividades(activities);
-                console.log('🔍 Filtros aplicados pelo modal:', filteredByModal.length, 'de', activities.length);
-                return filteredByModal;
+            // Backend já aplicou filtros de status, categoria, período e responsável
+            // Aqui aplicamos apenas o filtro de TEXTO (busca por título/descrição)
+            let filtered = activities;
+
+            if (filtrosState.searchText && filtrosState.searchText.trim().length > 0) {
+                const searchTerm = filtrosState.searchText.toLowerCase().trim();
+                filtered = filtered.filter(atividade => {
+                    const titulo = (atividade.titulo || '').toLowerCase();
+                    const descricao = (atividade.descricao || '').toLowerCase();
+                    return titulo.includes(searchTerm) || descricao.includes(searchTerm);
+                });
+                console.log('🔍 Filtro de texto aplicado:', filtered.length, 'de', activities.length);
             }
 
-            const ownerFilter = document.getElementById('activities-owner-filter');
-            let filteredActivities = activities;
-
-            // Filtro por responsável (Minhas Tarefas) - sistema antigo mantido para compatibilidade
-            if (ownerFilter && ownerFilter.value === 'minhas') {
-                console.log('🔍 Aplicando filtro: Minhas Tarefas');
-
-                // Buscar usuário atual via API
-                if (typeof google !== 'undefined' && google.script && google.script.run) {
-                    google.script.run
-                        .withSuccessHandler((currentUser) => {
-                            if (currentUser && currentUser.uid) {
-                                console.log('👤 Filtrando para usuário:', currentUser.uid);
-                                const filteredActivities = activities.filter(activity => {
-                                    return activity.atribuido_uid === currentUser.uid || activity.criador_uid === currentUser.uid;
-                                });
-                                renderActivities(filteredActivities);
-                            }
-                        })
-                        .withFailureHandler((error) => {
-                            console.error('❌ Erro ao obter usuário atual:', error);
-                            // Em caso de erro, mostrar todas as atividades
-                            renderActivities(activities);
-                        })
-                        .getCurrentUserForFilter();
-
-                    // Retornar activities original enquanto busca
-                    return activities;
-                }
-            }
-
-            console.log(`📊 Filtros aplicados: ${activities.length} → ${filteredActivities.length} atividades`);
-            return filteredActivities;
+            return filtered;
         }
 
 
@@ -3264,20 +3321,20 @@
                                 <div class="participation-summary" style="margin-bottom: var(--spacing-sm);">
                                     <div class="participation-row" style="margin-bottom: var(--spacing-xs);">
                                         <span class="participation-label" style="font-size: var(--font-size-xs);">Alvo:</span>
-                                        <span class="participation-count total" style="font-size: var(--font-size-xs);">${Math.floor(Math.random() * 30) + 15}</span>
+                                        <span class="participation-count total" style="font-size: var(--font-size-xs);">${activity.total_alvos || 0}</span>
                                     </div>
                                     <div class="participation-row" style="margin-bottom: var(--spacing-xs);">
                                         <span class="participation-label" style="font-size: var(--font-size-xs);">Previsão:</span>
                                         <div class="participation-values">
-                                            <span class="participation-count confirmed" style="font-size: var(--font-size-xs);">${Math.floor(Math.random() * 20) + 10} confirmados</span>
-                                            <span class="participation-count rejected" style="font-size: var(--font-size-xs);">${Math.floor(Math.random() * 5) + 1} rejeitados</span>
+                                            <span class="participation-count confirmed" style="font-size: var(--font-size-xs);">${activity.confirmados || 0} confirmados</span>
+                                            <span class="participation-count rejected" style="font-size: var(--font-size-xs);">${activity.rejeitados || 0} rejeitados</span>
                                         </div>
                                     </div>
                                     <div class="participation-row">
                                         <span class="participation-label" style="font-size: var(--font-size-xs);">Participação:</span>
                                         <div class="participation-values">
-                                            <span class="participation-count present" style="font-size: var(--font-size-xs);">${activity.status === 'Realizada' ? Math.floor(Math.random() * 25) + 15 : 0} presentes</span>
-                                            <span class="participation-count absent" style="font-size: var(--font-size-xs);">${activity.status === 'Realizada' ? Math.floor(Math.random() * 5) : 0} ausentes</span>
+                                            <span class="participation-count present" style="font-size: var(--font-size-xs);">${activity.participantes || 0} presentes</span>
+                                            <span class="participation-count absent" style="font-size: var(--font-size-xs);">${activity.ausentes || 0} ausentes</span>
                                         </div>
                                     </div>
                                 </div>
@@ -3290,7 +3347,7 @@
 
                                 <!-- Botões de ação -->
                                 <div class="activity-actions" style="display: flex; gap: var(--spacing-xs); justify-content: center;">
-                                    <button class="btn btn-primary" onclick="openParticipants('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">👥 Participantes</button>
+                                    <button class="btn btn-primary" onclick="openParticipants('${activity.id}', \`${(activity.titulo || '').replace(/`/g, '')}\`, \`${(activity.descricao || '').replace(/`/g, '')}\`)" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">👥 Participantes</button>
                                     ${statusInfo.text !== 'Concluída' ? `<button class="btn btn-outline" onclick="editActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✏️ Editar</button>` : ''}
                                     ${statusInfo.text !== 'Concluída' ? `<button class="btn btn-complete" onclick="completeActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✅ Concluir</button>` : ''}
                                 </div>
@@ -3315,10 +3372,10 @@
             return `${day}/${month}/${year} - ${hours}:${minutes}`;
         }
 
-        function openParticipants(activityId) {
+        function openParticipants(activityId, titulo = '', descricao = '') {
             console.log('🟢 PASSO 1: openParticipants chamada com ID:', activityId);
             console.log('🟢 PASSO 2: Prestes a chamar openEditActivityModal');
-            openEditActivityModal(activityId, 'participants');
+            openEditActivityModal(activityId, 'participants', titulo, descricao);
             console.log('🟢 PASSO 3: openEditActivityModal chamada finalizada');
         }
 
@@ -3958,7 +4015,7 @@
             return modalHTML;
         }
 
-        function openEditActivityModal(activityId, mode = 'edit') {
+        function openEditActivityModal(activityId, mode = 'edit', titulo = '', descricao = '') {
             console.log('🟡 PASSO 4: openEditActivityModal INICIADO com mode:', mode, 'activityId:', activityId);
             if (!activityId) {
                 console.error('❌ ID da atividade não fornecido!');
@@ -3984,7 +4041,22 @@
 
             if (mode === 'participants') {
                 console.log('🔧 Modo participantes detectado, carregando dados...');
-                // Modo participantes: carregar apenas dados da atividade e participações
+
+                // Se título e descrição foram passados, preencher diretamente (otimização)
+                if (titulo) {
+                    const nameField = document.getElementById('edit-activity-name');
+                    const descField = document.getElementById('edit-activity-description');
+                    if (nameField) nameField.value = titulo;
+                    if (descField) descField.value = descricao;
+
+                    // Mostrar form content imediatamente
+                    const loadingState = document.getElementById('editActivityLoadingState');
+                    const formContent = document.getElementById('editActivityFormContent');
+                    if (loadingState) loadingState.style.display = 'none';
+                    if (formContent) formContent.style.display = 'block';
+                }
+
+                // Modo participantes: carregar apenas participações
                 setTimeout(() => {
                     console.log('🔧 Chamando loadActivityForParticipants para:', activityId);
                     loadActivityForParticipants(activityId);
@@ -4017,197 +4089,7 @@
             }
         }
 
-        // ===== MODAL DE PARTICIPANTES =====
-
-        async function openParticipantsModal(activityId) {
-            if (!activityId) {
-                console.error('❌ ID da atividade não fornecido!');
-                return;
-            }
-
-            // Remove modal existente se houver
-            const existingModal = document.getElementById('participantsModal');
-            if (existingModal) {
-                existingModal.remove();
-            }
-
-            console.log('👥 Abrindo modal de participantes para:', activityId);
-
-            // Criar modal
-            const modalHTML = createParticipantsModal(activityId);
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-            // Prevenir scroll do body
-            document.body.style.overflow = 'hidden';
-
-            // Carregar dados da atividade e participações
-            await loadActivityForParticipants(activityId);
-        }
-
-        function createParticipantsModal(activityId) {
-            return `
-                <div id="participantsModal" style="
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100vw;
-                    height: 100vh;
-                    background: rgba(0, 0, 0, 0.6);
-                    backdrop-filter: blur(3px);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10000;
-                    padding: 20px;
-                    box-sizing: border-box;
-                " onclick="closeParticipantsModal(event)">
-                    <div style="
-                        background: white;
-                        border-radius: 12px;
-                        width: 100%;
-                        max-width: 700px;
-                        max-height: 90vh;
-                        overflow: hidden;
-                        display: flex;
-                        flex-direction: column;
-                        position: relative;
-                    " onclick="event.stopPropagation()">
-
-                        <!-- Header -->
-                        <div style="
-                            background: var(--gradient-primary);
-                            color: white;
-                            padding: 20px;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                        ">
-                            <h2 style="margin: 0; font-size: 1.2rem;">👥 Participantes da Atividade</h2>
-                            <button onclick="closeParticipantsModal()" style="
-                                background: rgba(255,255,255,0.2);
-                                border: none;
-                                color: white;
-                                width: 32px;
-                                height: 32px;
-                                border-radius: 50%;
-                                cursor: pointer;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 18px;
-                                transition: all 0.2s;
-                            " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">×</button>
-                        </div>
-
-                        <!-- Conteúdo -->
-                        <div style="
-                            flex: 1;
-                            overflow-y: auto;
-                            padding: 20px;
-                        ">
-                            <!-- Informações da Atividade -->
-                            <div style="
-                                background: #f8fafc;
-                                border-radius: 8px;
-                                padding: 16px;
-                                margin-bottom: 20px;
-                                border-left: 4px solid var(--primary);
-                            ">
-                                <h3 id="participants-activity-title" style="
-                                    margin: 0 0 8px 0;
-                                    color: #1e293b;
-                                    font-size: 1.1rem;
-                                ">Carregando...</h3>
-                                <p id="participants-activity-description" style="
-                                    margin: 0;
-                                    color: #64748b;
-                                    font-size: 0.9rem;
-                                    line-height: 1.4;
-                                ">Carregando descrição...</p>
-                            </div>
-
-                            <!-- Loading -->
-                            <div id="participants-loading" style="
-                                text-align: center;
-                                padding: 40px;
-                                color: #64748b;
-                            ">
-                                <div class="loading-select-spinner" style="margin: 0 auto 16px;"></div>
-                                <p>Carregando alvos da atividade...</p>
-                            </div>
-
-                            <!-- Lista de Alvos -->
-                            <div id="participants-list" style="display: none;">
-                                <h4 style="margin: 0 0 16px 0; color: #374151; font-size: 1rem;">
-                                    📋 Marcar Participação dos Alvos
-                                </h4>
-                                <div id="participants-items"></div>
-                            </div>
-
-                            <!-- Mensagem quando não há alvos -->
-                            <div id="participants-no-targets" style="
-                                display: none;
-                                text-align: center;
-                                padding: 40px;
-                                color: #6b7280;
-                            ">
-                                <p style="margin: 0; font-size: 0.9rem;">
-                                    📝 Esta atividade ainda não possui alvos definidos.
-                                </p>
-                                <p style="margin: 8px 0 0 0; font-size: 0.8rem;">
-                                    Você pode adicionar alvos editando a atividade.
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Footer -->
-                        <div style="
-                            padding: 20px;
-                            border-top: 1px solid #e5e7eb;
-                            display: flex;
-                            gap: 12px;
-                            justify-content: flex-end;
-                        ">
-                            <button onclick="closeParticipantsModal()" style="
-                                padding: 10px 20px;
-                                background: #f3f4f6;
-                                color: #374151;
-                                border: none;
-                                border-radius: 6px;
-                                cursor: pointer;
-                                font-size: 0.9rem;
-                                transition: all 0.2s;
-                            " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                                Cancelar
-                            </button>
-                            <button id="save-participants-btn" onclick="saveParticipants('${activityId}')" style="
-                                padding: 10px 20px;
-                                background: var(--primary);
-                                color: white;
-                                border: none;
-                                border-radius: 6px;
-                                cursor: pointer;
-                                font-size: 0.9rem;
-                                transition: all 0.2s;
-                            " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
-                                💾 Salvar Participações
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function closeParticipantsModal(event) {
-            // Se há event e não clicou no próprio modal (fundo), ignora
-            if (event && event.target !== event.currentTarget) return;
-
-            const modal = document.getElementById('participantsModal');
-            if (modal) {
-                modal.remove();
-                document.body.style.overflow = '';
-            }
-        }
+        // ===== MODAL DE PARTICIPANTES (usa editActivityModal em modo 'participants') =====
 
         async function loadActivityForParticipants(activityId, tentativa = 1) {
             try {
@@ -4234,79 +4116,9 @@
                     throw new Error('Google Apps Script não está disponível');
                 }
 
-                // Testar se conseguimos chamar uma função simples primeiro
-                console.log('📊 [PARTICIPANTES] Testando conectividade com Google Apps Script...');
+                console.log('📊 [PARTICIPANTES] Carregando participações...');
 
-                try {
-                    const testResult = await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => reject(new Error('Timeout no teste')), 3000);
-                        google.script.run
-                            .withSuccessHandler((result) => {
-                                clearTimeout(timeout);
-                                console.log('📊 [PARTICIPANTES] Teste de conectividade OK');
-                                resolve(result);
-                            })
-                            .withFailureHandler((error) => {
-                                clearTimeout(timeout);
-                                reject(error);
-                            })
-                            .listActivitiesApi(); // Função que sabemos que existe
-                    });
-                    console.log('📊 [PARTICIPANTES] Conectividade confirmada');
-                } catch (testError) {
-                    console.warn('📊 [PARTICIPANTES] Problema de conectividade:', testError);
-                }
-
-                console.log('📊 [PARTICIPANTES] Chamando getActivityById...');
-
-                // Carregar dados da atividade com timeout
-                const activityResult = await Promise.race([
-                    new Promise((resolve, reject) => {
-                        console.log('📊 [PARTICIPANTES] Configurando chamada para Google Apps Script...');
-                        google.script.run
-                            .withSuccessHandler((result) => {
-                                console.log('📊 [PARTICIPANTES] Sucesso da API getActivityById:', result);
-                                resolve(result);
-                            })
-                            .withFailureHandler((error) => {
-                                console.error('📊 [PARTICIPANTES] Erro da API getActivityById:', error);
-                                reject(error);
-                            })
-                            .getActivityById(activityId);
-                    }),
-                    new Promise((_, reject) => {
-                        setTimeout(() => {
-                            reject(new Error('Timeout: getActivityById demorou mais de 10 segundos'));
-                        }, 10000);
-                    })
-                ]);
-
-                console.log('📊 [PARTICIPANTES] Resultado da API:', activityResult);
-                console.log('📊 [PARTICIPANTES] Estrutura completa:', JSON.stringify(activityResult, null, 2));
-
-                if (!activityResult) {
-                    throw new Error('Resultado nulo da API getActivityById');
-                }
-
-                if (!activityResult.ok) {
-                    throw new Error('API retornou erro: ' + (activityResult.error || 'Erro desconhecido'));
-                }
-
-                // A API pode retornar tanto activity diretamente quanto item
-                const activity = activityResult.activity || activityResult.item;
-
-                console.log('📊 [PARTICIPANTES] Atividade extraída:', activity);
-                console.log('📊 [PARTICIPANTES] Propriedades disponíveis:', Object.keys(activity || {}));
-
-                if (!activity) {
-                    throw new Error('Atividade não encontrada na resposta da API');
-                }
-
-                // Atualizar informações da atividade no modal (campos do modal de edição)
-                document.getElementById('edit-activity-name').value = activity.titulo || activity.title || activity.nome || 'Sem título';
-                document.getElementById('edit-activity-description').value = activity.descricao || activity.description || 'Sem descrição';
-
-                // Carregar alvos da atividade (participações)
+                // Carregar participações da atividade
                 const participationsResult = await new Promise((resolve, reject) => {
                     google.script.run
                         .withSuccessHandler(resolve)
@@ -4316,12 +4128,11 @@
 
                 console.log('👥 Participações carregadas:', participationsResult);
 
-                // Mostrar conteúdo do formulário
-                document.getElementById('editActivityLoadingState').style.display = 'none';
-                document.getElementById('editActivityFormContent').style.display = 'block';
-
-                // Esconder loading dos participantes
-                document.getElementById('participantsLoading').style.display = 'none';
+                // Esconder loading (compatível com ambos os modais)
+                const loadingNew = document.getElementById('participants-loading');
+                const loadingOld = document.getElementById('participantsLoading');
+                if (loadingNew) loadingNew.style.display = 'none';
+                if (loadingOld) loadingOld.style.display = 'none';
 
                 if (participationsResult && participationsResult.ok && participationsResult.items && participationsResult.items.length > 0) {
                     // Filtrar apenas registros não deletados
@@ -4331,96 +4142,80 @@
                     console.log('👥 Participações ativas (não deletadas):', activeParticipations.length);
 
                     if (activeParticipations.length > 0) {
-                        // Mostrar lista de participações ativas
-                        document.getElementById('participantsList').style.display = 'block';
+                        // Mostrar lista de participações ativas (compatível com ambos modais)
+                        const listNew = document.getElementById('participants-list');
+                        const listOld = document.getElementById('participantsList');
+                        if (listNew) listNew.style.display = 'block';
+                        if (listOld) listOld.style.display = 'block';
+
+                        // Renderizar participantes
                         renderParticipantsForModal(activeParticipations);
-
-                        // Mostrar campo de busca de membros extras
-                        document.getElementById('addExtraMemberSection').style.display = 'block';
-
-                        // Inicializar sistema de busca
-                        initExtraMemberSearch(activityId);
                     } else {
-                        // Mostrar mensagem de sem alvos ativos
-                        document.getElementById('participantsEmpty').style.display = 'block';
+                        // Mostrar mensagem de sem alvos ativos (novo modal)
+                        const noTargets = document.getElementById('participants-no-targets');
+                        if (noTargets) noTargets.style.display = 'block';
 
-                        // Ainda mostrar campo de busca mesmo sem alvos
-                        document.getElementById('addExtraMemberSection').style.display = 'block';
-                        initExtraMemberSearch(activityId);
+                        // Modal antigo - mostrar mensagem
+                        const emptyOld = document.getElementById('participantsEmpty');
+                        if (emptyOld) emptyOld.style.display = 'block';
                     }
                 } else {
-                    // Mostrar mensagem de sem alvos
-                    document.getElementById('participantsEmpty').style.display = 'block';
+                    // Mostrar mensagem de sem alvos (novo modal)
+                    const noTargets = document.getElementById('participants-no-targets');
+                    if (noTargets) noTargets.style.display = 'block';
 
-                    // Ainda mostrar campo de busca mesmo sem alvos
-                    document.getElementById('addExtraMemberSection').style.display = 'block';
-                    initExtraMemberSearch(activityId);
+                    // Modal antigo - mostrar mensagem
+                    const emptyOld = document.getElementById('participantsEmpty');
+                    if (emptyOld) emptyOld.style.display = 'block';
                 }
 
             } catch (error) {
                 console.error('❌ Erro ao carregar dados para participações:', error);
 
-                // Garantir que o loading desapareça
-                const loadingState = document.getElementById('editActivityLoadingState');
-                const formContent = document.getElementById('editActivityFormContent');
-                const participantsLoading = document.getElementById('participantsLoading');
+                // Garantir que o loading desapareça e mostrar erro
+                const loadingElement = document.getElementById('participants-loading');
 
-                if (loadingState) loadingState.style.display = 'none';
-                if (formContent) formContent.style.display = 'block';
-
-                if (participantsLoading) {
-                    participantsLoading.innerHTML = `
+                if (loadingElement) {
+                    loadingElement.innerHTML = `
                         <div style="text-align: center; color: #ef4444; padding: 20px;">
-                            ❌ Erro ao carregar dados da atividade
+                            ❌ Erro ao carregar participações
                             <br><small>${error.message || error}</small>
                             <br><br>
-                            <button onclick="loadActivityForParticipants('${activityId}', 1)" class="btn btn-primary btn-sm">
+                            <button onclick="loadActivityForParticipants('${activityId}', 1)" class="btn btn-primary btn-sm" style="
+                                padding: 8px 16px;
+                                background: var(--primary);
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                cursor: pointer;
+                            ">
                                 🔄 Tentar Novamente
                             </button>
                         </div>
                     `;
-                } else {
-                    console.error('❌ Elemento participantsLoading não encontrado!');
+                    loadingElement.style.display = 'block';
                 }
             }
         }
 
         function renderParticipantsForModal(participations) {
-            const container = document.getElementById('participantsList');
+            // Compatível com ambos os modais
+            const containerNew = document.getElementById('participants-items');
+            const containerOld = document.getElementById('participantsList');
+            const container = containerNew || containerOld;
 
             if (!container) {
-                console.error('❌ Container participantsList não encontrado');
+                console.error('❌ Container de participantes não encontrado');
                 return;
             }
 
-            // Buscar nomes dos membros do backend
-            console.log('👥 [PARTICIPANTES] Buscando nomes dos membros...');
-            console.log('👥 [PARTICIPANTES] Participações recebidas:', participations);
+            console.log('👥 [PARTICIPANTES] Renderizando participações:', participations.length);
 
-            google.script.run
-                .withSuccessHandler(function(membersResult) {
-                    console.log('👥 [PARTICIPANTES] Resultado da API de membros:', membersResult);
-
-                    if (!membersResult || !membersResult.ok) {
-                        console.error('❌ Erro ao carregar membros:', membersResult);
-                        return;
-                    }
-
-                    const members = membersResult.items || [];
-                    console.log('👥 [PARTICIPANTES] Membros disponíveis:', members);
-
-                    const membersMap = {};
-                    members.forEach(member => {
-                        console.log('👥 [PARTICIPANTES] Mapeando membro:', member.codigo_sequencial, '->', member.nome);
-                        membersMap[member.codigo_sequencial] = member.nome;
-                    });
-
-                    console.log('👥 [PARTICIPANTES] Mapa de membros:', membersMap);
-
-                    let html = '';
-                    participations.forEach(participation => {
-                        console.log('👥 [PARTICIPANTES] Processando participação:', participation.id_membro, 'para atividade');
-                        const memberName = membersMap[participation.id_membro] || `Nome não encontrado (ID: ${participation.id_membro})`;
+            // Backend já retorna nome_membro - não precisa buscar todos os membros
+            let html = '';
+            participations.forEach(participation => {
+                console.log('👥 [PARTICIPANTES] Processando participação:', participation.id_membro, participation.nome_membro);
+                const memberName = participation.nome_membro || `Nome não encontrado (ID: ${participation.id_membro})`;
 
                         html += `
                             <div class="participant-item" data-deleted="${participation.deleted || ''}" data-table-id="${participation.id}" style="
@@ -4565,19 +4360,9 @@
                                 </div>
                             </div>
                         `;
-                    });
+            });
 
-                    container.innerHTML = html;
-                })
-                .withFailureHandler(function(error) {
-                    console.error('❌ Erro ao carregar membros:', error);
-                    container.innerHTML = `
-                        <div style="text-align: center; color: #ef4444; padding: 20px;">
-                            ❌ Erro ao carregar dados dos membros
-                        </div>
-                    `;
-                })
-                .listMembersApi();
+            container.innerHTML = html;
         }
 
         // ===== BUSCA E ADIÇÃO DE MEMBROS EXTRAS =====
@@ -4695,7 +4480,7 @@
                             chegou_tarde: 'nao',
                             saiu_cedo: 'nao',
                             observacoes: 'Adicionado manualmente como participante extra'
-                        }, ''); // TODO: passar UID real quando getCurrentUserUID() estiver implementado
+                        }, '');
                 });
 
                 console.log('✅ Resultado da criação:', result);
@@ -4844,8 +4629,10 @@
                 saveBtn.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
 
                 // Coletar dados de todas as participações
-                const participationUpdates = [];
                 const participantItems = document.querySelectorAll('.participant-item');
+
+                // Criar array de Promises para salvar todas em paralelo
+                const savePromises = [];
 
                 participantItems.forEach(item => {
                     const participouCheckbox = item.querySelector('input[data-participation-id]');
@@ -4855,24 +4642,34 @@
                     const saiuCedo = item.querySelector(`#saiu-cedo-${participationId}`);
 
                     const updateData = {
-                        id: participationId,
-                        participou: participouCheckbox.checked ? 'sim' : 'não',
-                        chegou_tarde: (participouCheckbox.checked && chegouTarde.checked) ? 'sim' : 'não',
-                        saiu_cedo: (participouCheckbox.checked && saiuCedo.checked) ? 'sim' : 'não'
+                        participou: participouCheckbox.checked ? 'sim' : 'nao',
+                        chegou_tarde: (participouCheckbox.checked && chegouTarde.checked) ? 'sim' : 'nao',
+                        saiu_cedo: (participouCheckbox.checked && saiuCedo.checked) ? 'sim' : 'nao'
                     };
 
-                    participationUpdates.push(updateData);
+                    // Adicionar Promise de salvamento
+                    const promise = new Promise((resolve, reject) => {
+                        google.script.run
+                            .withSuccessHandler(resolve)
+                            .withFailureHandler(reject)
+                            .updateParticipacaoById(participationId, updateData, '');
+                    });
+
+                    savePromises.push(promise);
                 });
 
-                console.log('💾 Salvando participações:', participationUpdates);
+                // Executar todas as atualizações em paralelo
+                const results = await Promise.all(savePromises);
 
-                // Salvar via API
-                const result = await new Promise((resolve, reject) => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(reject)
-                        .updateParticipations(participationUpdates);
-                });
+                // Verificar se todas tiveram sucesso
+                const allSuccess = results.every(r => r && r.ok);
+
+                if (!allSuccess) {
+                    const errors = results.filter(r => !r || !r.ok);
+                    throw new Error(`Erro ao salvar ${errors.length} participação(ões)`);
+                }
+
+                const result = { ok: true };
 
                 if (result && result.ok) {
                     console.log('✅ Participações salvas com sucesso');
@@ -7126,7 +6923,8 @@
             status: [],
             categorias: [],
             periodo: [],
-            responsavel: []
+            responsavel: [],
+            searchText: ''  // Novo: filtro de busca por texto
         };
 
         // Categorias disponíveis (carregadas dinamicamente)
@@ -7379,13 +7177,20 @@
         // Limpar todos os filtros
         function limparTodosFiltros() {
             Object.keys(filtrosState).forEach(key => {
-                filtrosState[key] = [];
+                if (key === 'searchText') {
+                    filtrosState[key] = '';
+                } else {
+                    filtrosState[key] = [];
+                }
             });
 
             // Limpar todos os checkboxes
             document.querySelectorAll('#modal-filtros input[type="checkbox"]').forEach(cb => {
                 cb.checked = false;
             });
+
+            // Limpar campo de busca por texto
+            clearSearchText();
 
             atualizarContadorFiltros();
             renderizarChips();
@@ -7477,69 +7282,32 @@
             }
         }
 
-        // Função global para aplicar filtros nas atividades
-        window.aplicarFiltrosNasAtividades = function(atividades) {
-            if (!atividades || !Array.isArray(atividades)) return atividades;
+        // FUNÇÃO REMOVIDA: window.aplicarFiltrosNasAtividades
+        // Motivo: Lógica duplicada - Backend já filtra (activities.gs:224-288)
+        // O filtro de texto é aplicado em applyActivityFilters() (linha 3123-3141)
+        // Removido em: 06/10/2025
 
-            let filtered = [...atividades];
+        // Função de filtro por texto (chamada pelo input)
+        function filterActivitiesByText(searchText) {
+            filtrosState.searchText = searchText;
 
-            // Filtro por Status
-            if (filtrosState.status.length > 0) {
-                filtered = filtered.filter(atividade => {
-                    return filtrosState.status.includes(atividade.status);
-                });
+            // Mostrar/ocultar botão limpar
+            const clearBtn = document.getElementById('clear-search');
+            if (clearBtn) {
+                clearBtn.style.display = searchText.length > 0 ? 'block' : 'none';
             }
 
-            // Filtro por Categorias
-            if (filtrosState.categorias.length > 0) {
-                filtered = filtered.filter(atividade => {
-                    if (atividade.categorias && atividade.categorias.length > 0) {
-                        return atividade.categorias.some(cat => filtrosState.categorias.includes(cat.id));
-                    }
-                    return false;
-                });
+            // Aplicar filtros
+            loadActivities();
+        }
+
+        // Limpar busca por texto
+        function clearSearchText() {
+            const searchInput = document.getElementById('search-activities');
+            if (searchInput) {
+                searchInput.value = '';
+                filterActivitiesByText('');
             }
-
-            // Filtro por Período
-            if (filtrosState.periodo.length > 0) {
-                const hoje = new Date();
-                hoje.setHours(0, 0, 0, 0);
-
-                filtered = filtered.filter(atividade => {
-                    if (!atividade.data) return false;
-
-                    const dataAtividade = new Date(atividade.data);
-                    dataAtividade.setHours(0, 0, 0, 0);
-
-                    return filtrosState.periodo.some(periodo => {
-                        switch (periodo) {
-                            case 'hoje':
-                                return dataAtividade.getTime() === hoje.getTime();
-                            case 'atrasadas':
-                                return dataAtividade < hoje && atividade.status === 'pendente';
-                            case 'proximos_10':
-                                const em10Dias = new Date(hoje);
-                                em10Dias.setDate(hoje.getDate() + 10);
-                                return dataAtividade >= hoje && dataAtividade <= em10Dias;
-                            case 'mes_atual':
-                                return dataAtividade.getMonth() === hoje.getMonth() &&
-                                       dataAtividade.getFullYear() === hoje.getFullYear();
-                            default:
-                                return false;
-                        }
-                    });
-                });
-            }
-
-            // Filtro por Responsável
-            if (filtrosState.responsavel.length > 0) {
-                filtered = filtered.filter(atividade => {
-                    return filtrosState.responsavel.includes(atividade.atribuido_uid);
-                });
-            }
-
-            console.log(`🔍 Filtrados: ${filtered.length}/${atividades.length} atividades`);
-            return filtered;
         };
 
         // Inicializar quando DOM carregar
