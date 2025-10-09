@@ -86,14 +86,22 @@ function getCurrentUserForFilter() {
     // Obter usuário logado real via sessão
     const sessionId = PropertiesService.getScriptProperties().getProperty('currentSessionId');
     if (!sessionId) {
-      console.log('❌ Usuário não autenticado - sem sessão ativa');
-      return null;
+      Logger.warn('UsuariosAPI', 'Tentativa de filtro sem sessão ativa');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
     }
 
     const sessionData = validateSession(sessionId);
     if (!sessionData || !sessionData.ok || !sessionData.session) {
-      console.log('❌ Sessão inválida ou expirada');
-      return null;
+      Logger.warn('UsuariosAPI', 'Sessão inválida ao obter usuário para filtro');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
     }
 
     const userId = sessionData.session.user_id;
@@ -101,7 +109,7 @@ function getCurrentUserForFilter() {
     // Buscar dados do usuário
     const usuario = DatabaseManager.findById('usuarios', userId);
     if (!usuario) {
-      console.log('❌ Usuário não encontrado na base de dados:', userId);
+      Logger.error('UsuariosAPI', 'Usuário não encontrado ao obter para filtro', { userId });
       return null;
     }
 
@@ -110,7 +118,7 @@ function getCurrentUserForFilter() {
       nome: usuario.nome
     };
   } catch (error) {
-    console.error('❌ Erro ao obter usuário atual para filtro:', error);
+    Logger.error('UsuariosAPI', 'Erro ao obter usuário para filtro', { error: error.message });
     return null;
   }
 }
@@ -123,12 +131,13 @@ function getCurrentUserForFilter() {
  */
 async function authenticateUser(login, password) {
   try {
-    console.log('🔐 Autenticando usuário:', login);
+    Logger.info('UsuariosAPI', 'Autenticando usuário', { login });
 
     // Usar SecurityManager.secureLogin existente
     const loginResult = await SecurityManager.secureLogin(login, password);
 
     if (!loginResult.ok) {
+      Logger.warn('UsuariosAPI', 'Falha na autenticação', { login, error: loginResult.error });
       return {
         success: false,
         error: loginResult.error
@@ -141,9 +150,11 @@ async function authenticateUser(login, password) {
       login_method: 'pin'
     });
 
-    console.log('🔍 Resultado da criação de sessão:', sessionResult);
-
     if (!sessionResult || !sessionResult.ok || !sessionResult.session) {
+      Logger.error('UsuariosAPI', 'Falha ao criar sessão após login', {
+        userId: loginResult.user.uid,
+        error: sessionResult?.error
+      });
       return {
         success: false,
         error: 'Erro ao criar sessão: ' + (sessionResult?.error || 'Resposta inválida do SessionManager')
@@ -152,9 +163,11 @@ async function authenticateUser(login, password) {
 
     // Salvar sessionId para uso posterior
     PropertiesService.getScriptProperties().setProperty('currentSessionId', sessionResult.session.id);
-    console.log('💾 SessionId salvo:', sessionResult.session.id);
 
-    console.log('✅ Login bem-sucedido para usuário:', loginResult.user.uid);
+    Logger.info('UsuariosAPI', 'Login bem-sucedido', {
+      userId: loginResult.user.uid,
+      sessionId: sessionResult.session.id
+    });
 
     return {
       success: true,
@@ -171,7 +184,7 @@ async function authenticateUser(login, password) {
     };
 
   } catch (error) {
-    console.error('❌ Erro na autenticação:', error);
+    Logger.error('UsuariosAPI', 'Erro na autenticação', { login, error: error.message });
     return {
       success: false,
       error: 'Erro interno do servidor: ' + error.message
@@ -185,23 +198,27 @@ async function authenticateUser(login, password) {
  */
 function getCurrentLoggedUser() {
   try {
-    console.log('👤 Buscando usuário logado atual...');
-
     // Método 1: Tentar via sessão atual armazenada
     let sessionId = PropertiesService.getScriptProperties().getProperty('currentSessionId');
-    console.log('🔍 SessionId recuperado das propriedades:', sessionId);
 
     if (sessionId) {
       const sessionData = validateSession(sessionId);
-      console.log('🔍 Dados da sessão validada:', sessionData);
+
+      // Verificar se sessão expirou
+      if (sessionData && sessionData.sessionExpired) {
+        Logger.warn('UsuariosAPI', 'Sessão expirada detectada em getCurrentLoggedUser');
+        return {
+          ok: false,
+          error: 'Sessão expirada',
+          sessionExpired: true
+        };
+      }
 
       if (sessionData && sessionData.ok && sessionData.session) {
         const userId = sessionData.session.user_id;
-        console.log('🔍 UserId da sessão:', userId);
 
         const usuario = DatabaseManager.findById('usuarios', userId);
         if (usuario) {
-          console.log('✅ Usuário encontrado via sessão:', usuario.uid, usuario.nome);
           return {
             uid: usuario.uid,
             nome: usuario.nome,
@@ -211,10 +228,8 @@ function getCurrentLoggedUser() {
       }
     }
 
-    // Método 2: Tentar buscar sessão ativa mais recente (migrado para DatabaseManager)
-    console.log('🔄 Tentando método 2: sessão ativa mais recente...');
+    // Método 2: Tentar buscar sessão ativa mais recente
     try {
-      // Buscar todas as sessões ativas usando DatabaseManager
       const queryResult = DatabaseManager.query('sessoes', { active: 'true' }, false);
       const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
 
@@ -227,11 +242,8 @@ function getCurrentLoggedUser() {
         });
 
         const sessionAtiva = sessionsOrdenadas[0];
-        console.log('🔍 Sessão ativa mais recente encontrada:', sessionAtiva.session_id);
-
         const usuario = DatabaseManager.findById('usuarios', sessionAtiva.user_id);
         if (usuario) {
-          console.log('✅ Usuário encontrado via sessão ativa:', usuario.uid, usuario.nome);
           return {
             uid: usuario.uid,
             nome: usuario.nome,
@@ -240,13 +252,11 @@ function getCurrentLoggedUser() {
         }
       }
     } catch (sessionError) {
-      console.warn('⚠️ Erro ao buscar sessões ativas:', sessionError.message);
       Logger.error('UsuariosAPI', 'Error finding active session', { error: sessionError.message });
     }
 
-    // Método 3: Log para debug - NÃO retornar usuário aleatório
-    console.log('❌ Nenhum usuário logado encontrado pelos métodos disponíveis');
-    console.log('💡 Isso pode indicar que o usuário precisa fazer login novamente');
+    // Método 3: Nenhum usuário encontrado
+    Logger.warn('UsuariosAPI', 'Nenhum usuário logado encontrado');
 
     return null;
 

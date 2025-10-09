@@ -106,27 +106,22 @@ async function logoutUser(sessionId) {
   }
 }
 
-/**
- * Forçar logout de todas as sessões de um usuário
- * @param {string} userId - ID do usuário
- * @returns {Object} Resultado da operação
- */
-async function forceLogoutUser(userId) {
-  try {
-    if (typeof SessionManager === 'undefined') {
-      return { ok: false, error: 'SessionManager não disponível' };
-    }
-
-    const result = await SessionManager.destroyAllUserSessions(userId);
-    Logger.info('Auth', 'Force logout completed', { userId, result });
-
-    return result;
-  } catch (err) {
-    Logger.error('Auth', 'Force logout error', { userId, error: err.message });
-    return { ok: false, error: 'forceLogoutUser: ' + (err && err.message || err) };
-  }
-}
-
+// ============================================================================
+// FUNÇÃO REMOVIDA: forceLogoutUser() - auth.gs:109-128 (20 linhas)
+//
+// Motivo: Função órfã nunca utilizada
+// - Única referência: classe SessionManager antiga em database_manager.gs (removida)
+// - Chamava SessionManager.destroyAllUserSessions() que não existe
+// - Funcionalidade substituída por destroySession() em session_manager.gs:199-235
+// - Nenhuma parte do sistema chama forceLogoutUser()
+//
+// Se necessário no futuro, criar função similar usando session_manager.gs:
+//   const sessions = getUserSessions(userId);
+//   sessions.forEach(s => destroySession(s.session_id));
+//
+// Removido em: Migração #2 - Auto Logout, Consolidação de Sessões
+// Data: 02/10/2025
+// ============================================================================
 
 /** Lista usuários ATIVOS para atribuição de atividades.
  *  Migrado para DatabaseManager (cache habilitado - usuários mudam raramente)

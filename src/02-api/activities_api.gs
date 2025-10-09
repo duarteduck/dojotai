@@ -351,7 +351,7 @@ function getActivityById(activityId, retryCount = 0) {
  */
 async function completeActivity(activityId) {
   try {
-    console.log('✅ Marcando atividade como concluída:', activityId);
+    Logger.info('ActivitiesAPI', 'Marcando atividade como concluída', { activityId });
 
     if (!activityId) {
       throw new Error('ID da atividade é obrigatório');
@@ -359,17 +359,25 @@ async function completeActivity(activityId) {
 
     // Obter usuário logado real via sessão
     const sessionId = PropertiesService.getScriptProperties().getProperty('currentSessionId');
-    console.log('🔍 SessionId recuperado:', sessionId);
 
     if (!sessionId) {
-      throw new Error('Usuário não autenticado - sem sessão ativa');
+      Logger.warn('ActivitiesAPI', 'Tentativa de completar atividade sem sessão', { activityId });
+      return {
+        ok: false,
+        error: 'Usuário não autenticado - sem sessão ativa',
+        sessionExpired: true
+      };
     }
 
     const sessionData = validateSession(sessionId);
-    console.log('🔍 Validação da sessão:', sessionData);
 
     if (!sessionData || !sessionData.ok || !sessionData.session) {
-      throw new Error('Sessão inválida ou expirada');
+      Logger.warn('ActivitiesAPI', 'Sessão inválida ao completar atividade', { activityId, sessionId });
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
     }
 
     const userId = sessionData.session.user_id;
@@ -377,10 +385,9 @@ async function completeActivity(activityId) {
     // Buscar dados do usuário
     const usuario = DatabaseManager.findById('usuarios', userId);
     if (!usuario) {
+      Logger.error('ActivitiesAPI', 'Usuário não encontrado ao completar atividade', { userId, activityId });
       throw new Error('Usuário não encontrado na base de dados');
     }
-
-    console.log('👤 Usuário logado:', usuario.uid);
 
     // Dados para atualização - apenas campos necessários
     // Campo atualizado_em preenchido automaticamente pelo DatabaseManager
@@ -389,15 +396,11 @@ async function completeActivity(activityId) {
       atualizado_uid: usuario.uid
     };
 
-    console.log('📝 Dados de atualização:', updateData);
-
-    // Primeiro verificar se a atividade existe
-    console.log('🔍 Verificando se atividade existe:', activityId);
+    // Verificar se a atividade existe
     const existingActivity = DatabaseManager.findById('atividades', activityId);
-    console.log('🔍 Resultado da verificação:', existingActivity);
 
     if (!existingActivity) {
-      console.error('❌ Atividade não encontrada:', activityId);
+      Logger.warn('ActivitiesAPI', 'Atividade não encontrada ao tentar completar', { activityId });
       return {
         ok: false,
         error: `Atividade ${activityId} não encontrada`
@@ -408,16 +411,15 @@ async function completeActivity(activityId) {
     const result = await DatabaseManager.update('atividades', activityId, updateData);
 
     if (result && result.success) {
-      console.log('✅ Status da atividade atualizado com sucesso');
+      Logger.info('ActivitiesAPI', 'Atividade marcada como concluída', { activityId, userId: usuario.uid });
 
       // Forçar limpeza de cache
       try {
         if (typeof CacheManager !== 'undefined') {
           CacheManager.invalidate('atividades');
-          console.log('🗑️ Cache de atividades invalidado após marcar como concluída');
         }
       } catch (cacheError) {
-        console.warn('⚠️ Erro ao invalidar cache:', cacheError.message);
+        Logger.warn('ActivitiesAPI', 'Erro ao invalidar cache', { error: cacheError.message });
       }
 
       return {
@@ -425,8 +427,7 @@ async function completeActivity(activityId) {
         message: 'Atividade marcada como concluída com sucesso'
       };
     } else {
-      console.error('❌ DatabaseManager.update falhou:', result);
-
+      Logger.error('ActivitiesAPI', 'Falha ao atualizar status da atividade', { activityId, result });
       return {
         ok: false,
         error: result?.error || 'Erro ao marcar atividade como concluída'
@@ -434,8 +435,11 @@ async function completeActivity(activityId) {
     }
 
   } catch (error) {
-    console.error('❌ Erro ao marcar atividade como concluída:', error);
-    console.error('❌ Stack trace:', error.stack);
+    Logger.error('ActivitiesAPI', 'Erro ao marcar atividade como concluída', {
+      activityId,
+      error: error.message,
+      stack: error.stack
+    });
     return {
       ok: false,
       error: error.message || 'Erro interno do servidor'

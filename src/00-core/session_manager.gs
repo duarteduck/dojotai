@@ -61,9 +61,35 @@ async function createSession(userId, deviceInfo = {}) {
       return { ok: false, error: 'Usuário não encontrado' };
     }
 
+    // Verificar limite de sessões por usuário
+    const userSessions = getUserSessions(userId);
+    const maxSessions = APP_CONFIG.SESSION.MAX_SESSIONS_PER_USER || 3;
+
+    if (userSessions.length >= maxSessions) {
+      Logger.info('SessionManager', 'Limite de sessões atingido, removendo mais antiga', {
+        userId,
+        currentSessions: userSessions.length,
+        maxSessions
+      });
+
+      // Remover sessão mais antiga
+      const oldestSession = userSessions.sort((a, b) =>
+        new Date(a.created_at) - new Date(b.created_at)
+      )[0];
+
+      if (oldestSession) {
+        await destroySession(oldestSession.session_id);
+        Logger.info('SessionManager', 'Sessão mais antiga removida', {
+          removedSessionId: oldestSession.session_id,
+          userId
+        });
+      }
+    }
+
     // Gerar dados da sessão
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // 8 horas
+    const ttlMilliseconds = APP_CONFIG.SESSION.TTL_HOURS * 60 * 60 * 1000;
+    const expiresAt = new Date(now.getTime() + ttlMilliseconds);
 
     // Gerar token único da sessão
     const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -132,28 +158,36 @@ function validateSession(sessionId) {
   try {
     Logger.debug('SessionManager', 'Validando sessão', { sessionId });
 
+    // Validar se sessionId foi fornecido
+    if (!sessionId) {
+      Logger.debug('SessionManager', 'Session ID não fornecido');
+      return { ok: false, error: 'Session ID não fornecido', sessionExpired: true };
+    }
+
     // Buscar sessão pelo campo session_id usando query()
     const queryResult = DatabaseManager.query('sessoes', { session_id: sessionId }, false);
-    console.log('🔍 validateSession - queryResult:', JSON.stringify(queryResult));
-
     const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
-    console.log('🔍 validateSession - sessions:', JSON.stringify(sessions));
 
     if (!sessions || sessions.length === 0) {
       Logger.debug('SessionManager', 'Sessão não encontrada', { sessionId });
-      console.log('❌ Sessão não encontrada');
-      return { ok: false, error: 'Sessão não encontrada' };
+      return { ok: false, error: 'Sessão não encontrada', sessionExpired: true };
     }
 
     const session = sessions[0];
-    console.log('🔍 validateSession - session encontrada:', JSON.stringify(session));
-    console.log('🔍 validateSession - session.active:', session.active);
 
     // Verificar se está ativa
     if (session.active !== 'sim') {
       Logger.debug('SessionManager', 'Sessão inativa', { sessionId, active: session.active });
-      console.log('❌ Sessão inativa - session.active:', session.active);
-      return { ok: false, error: 'Sessão inativa' };
+
+      // Se ainda não tem destroyed_at, adicionar
+      if (!session.destroyed_at) {
+        const now = new Date();
+        DatabaseManager.update('sessoes', session.id, {
+          destroyed_at: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
+        });
+      }
+
+      return { ok: false, error: 'Sessão inativa', sessionExpired: true };
     }
 
     // Verificar se não expirou
@@ -162,7 +196,14 @@ function validateSession(sessionId) {
 
     if (now > expiresAt) {
       Logger.debug('SessionManager', 'Sessão expirada', { sessionId, expiresAt });
-      return { ok: false, error: 'Sessão expirada' };
+
+      // Marcar sessão como inativa imediatamente
+      DatabaseManager.update('sessoes', session.id, {
+        active: '',
+        destroyed_at: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
+      });
+
+      return { ok: false, error: 'Sessão expirada', sessionExpired: true };
     }
 
     // Atualizar last_activity usando o PRIMARY KEY (id, ex: SES-0055)
@@ -308,6 +349,57 @@ function checkUserExists(userId) {
   } catch (error) {
     Logger.warn('SessionManager', 'Erro ao verificar usuário', { userId, error: error.message });
     return false; // Em caso de erro, assume que não existe
+  }
+}
+
+/**
+ * Obter todas as sessões ativas de um usuário
+ * @param {string} userId - ID do usuário (usuarios.uid)
+ * @returns {Array} Lista de sessões ativas do usuário
+ */
+function getUserSessions(userId) {
+  try {
+    if (!userId) {
+      Logger.warn('SessionManager', 'getUserSessions: userId não fornecido');
+      return [];
+    }
+
+    Logger.debug('SessionManager', 'Buscando sessões do usuário', { userId });
+
+    // Buscar todas as sessões ativas do usuário
+    const queryResult = DatabaseManager.query('sessoes', {
+      user_id: userId,
+      active: 'sim'
+    }, false);
+
+    const sessions = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
+
+    if (!sessions || sessions.length === 0) {
+      Logger.debug('SessionManager', 'Nenhuma sessão ativa encontrada', { userId });
+      return [];
+    }
+
+    // Filtrar apenas sessões não expiradas
+    const now = new Date();
+    const activeSessions = sessions.filter(session => {
+      const expiresAt = new Date(session.expires_at);
+      return now <= expiresAt;
+    });
+
+    Logger.debug('SessionManager', 'Sessões ativas encontradas', {
+      userId,
+      total: sessions.length,
+      active: activeSessions.length
+    });
+
+    return activeSessions;
+
+  } catch (error) {
+    Logger.error('SessionManager', 'Erro ao buscar sessões do usuário', {
+      userId,
+      error: error.message
+    });
+    return [];
   }
 }
 

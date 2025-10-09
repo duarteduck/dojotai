@@ -3395,8 +3395,6 @@
         }
 
         async function completeActivity(activityId) {
-            console.log('✅ Marcando atividade como concluída:', activityId);
-
             // Mostrar loading no botão
             const button = document.querySelector(`button[onclick="completeActivity('${activityId}')"]`);
             const originalContent = button.innerHTML;
@@ -3404,38 +3402,19 @@
             button.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
 
             try {
-                // Chama a API para atualizar o status
-                if (typeof google !== 'undefined' && google.script && google.script.run) {
-                    google.script.run
-                        .withSuccessHandler((response) => {
-                            // Restaurar botão
-                            button.disabled = false;
-                            button.innerHTML = originalContent;
+                // Usar apiCall() que detecta sessão expirada automaticamente
+                const response = await apiCall('completeActivity', activityId);
 
-                            if (response && response.ok) {
-                                console.log('✅ Atividade marcada como concluída com sucesso:', response);
-                                showToast('Atividade marcada como concluída com sucesso!', 'success');
-                                // Recarrega a lista de atividades
-                                loadActivities();
-                            } else {
-                                console.error('❌ Erro ao marcar atividade como concluída:', response);
-                                showToast('Erro ao marcar atividade como concluída: ' + (response.error || 'Erro desconhecido'), 'error');
-                            }
-                        })
-                        .withFailureHandler((error) => {
-                            // Restaurar botão
-                            button.disabled = false;
-                            button.innerHTML = originalContent;
+                // Restaurar botão
+                button.disabled = false;
+                button.innerHTML = originalContent;
 
-                            console.error('❌ Erro ao marcar atividade como concluída:', error);
-                            showToast('Erro ao marcar atividade como concluída: ' + error.message, 'error');
-                        })
-                        .completeActivity(activityId);
+                if (response && response.ok) {
+                    showToast('Atividade marcada como concluída com sucesso!', 'success');
+                    loadActivities();
                 } else {
-                    // Restaurar botão se API não disponível
-                    button.disabled = false;
-                    button.innerHTML = originalContent;
-                    showToast('Erro: Sistema não conseguiu conectar com o servidor.', 'error');
+                    console.error('❌ Erro ao marcar atividade como concluída:', response);
+                    showToast('Erro ao marcar atividade como concluída: ' + (response.error || 'Erro desconhecido'), 'error');
                 }
 
             } catch (error) {
@@ -3443,8 +3422,11 @@
                 button.disabled = false;
                 button.innerHTML = originalContent;
 
-                console.error('❌ Erro ao marcar atividade como concluída:', error);
-                showToast('Erro ao marcar atividade como concluída.', 'error');
+                // Erro de sessão expirada já foi tratado por apiCall()
+                if (!error.message.includes('Sessão')) {
+                    console.error('❌ Erro ao marcar atividade como concluída:', error);
+                    showToast('Erro ao marcar atividade como concluída: ' + error.message, 'error');
+                }
             }
         }
 
@@ -6873,6 +6855,120 @@
             showLogoutLoading(false);
 
             console.log('✅ Logout completo realizado com sucesso!');
+        }
+
+        /**
+         * Trata sessão expirada
+         * Limpa dados locais e mostra modal de re-autenticação
+         */
+        window.handleSessionExpired = function handleSessionExpired() {
+            console.log('🔴 Sessão expirada detectada - tratando...');
+
+            // Limpar dados locais
+            // Nota: Sessão JÁ foi marcada como inativa pelo backend em validateSession()
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('uid');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+
+            // Mostrar modal amigável
+            const modal = `
+                <div id="session-expired-modal" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                ">
+                    <div style="
+                        background: white;
+                        padding: 2rem;
+                        border-radius: 8px;
+                        max-width: 400px;
+                        text-align: center;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                    ">
+                        <h2 style="margin-top: 0; color: #e74c3c;">⏱️ Sessão Expirada</h2>
+                        <p style="margin: 1.5rem 0; color: #555;">
+                            Sua sessão expirou por inatividade.<br>
+                            Por favor, faça login novamente para continuar.
+                        </p>
+                        <button
+                            onclick="document.getElementById('session-expired-modal').remove(); showLogin();"
+                            style="
+                                background: #3498db;
+                                color: white;
+                                border: none;
+                                padding: 0.75rem 2rem;
+                                border-radius: 4px;
+                                font-size: 1rem;
+                                cursor: pointer;
+                            "
+                        >
+                            Fazer Login Novamente
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modal);
+
+            console.log('🔴 Modal de sessão expirada exibido');
+        }
+
+        /**
+         * Wrapper para google.script.run com tratamento automático de sessão expirada
+         *
+         * @param {string} method - Nome do método backend
+         * @param {...any} args - Argumentos para o método
+         * @returns {Promise} Resultado da chamada
+         *
+         * @example
+         * const result = await apiCall('completeActivity', activityId);
+         */
+        window.apiCall = async function apiCall(method, ...args) {
+            return new Promise((resolve, reject) => {
+                console.log(`📡 API Call: ${method}`, args);
+
+                google.script.run
+                    .withSuccessHandler((result) => {
+                        console.log(`✅ ${method} success:`, result);
+
+                        // Detectar sessão expirada via flag
+                        if (result && result.sessionExpired) {
+                            console.warn(`⏱️ Sessão expirada detectada em ${method}`);
+                            handleSessionExpired();
+                            reject(new Error('Sessão expirada'));
+                            return;
+                        }
+
+                        // Verificar mensagem de erro relacionada a sessão (fallback)
+                        if (result && !result.ok && result.error) {
+                            const errorMsg = result.error.toLowerCase();
+                            if (errorMsg.includes('sessão') &&
+                                (errorMsg.includes('expirada') || errorMsg.includes('inválida'))) {
+                                console.warn(`⏱️ Erro de sessão detectado: ${result.error}`);
+                                handleSessionExpired();
+                                reject(new Error(result.error));
+                                return;
+                            }
+                        }
+
+                        resolve(result);
+                    })
+                    .withFailureHandler((error) => {
+                        console.error(`❌ ${method} failed:`, error);
+                        reject(error);
+                    })
+                    [method](...args);
+            });
         }
     </script>
 
