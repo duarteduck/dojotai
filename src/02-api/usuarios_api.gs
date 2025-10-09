@@ -98,51 +98,18 @@ function listUsuariosApi(sessionId) {
 // REMOVIDO: updateActivity() → Movido para activities_api.gs:372-486
 // REMOVIDO: completeActivity() → Movido para activities_api.gs:494-593
 
-/**
- * Retorna o usuário atual logado para filtros
- * @returns {Object} Dados do usuário atual
- */
-function getCurrentUserForFilter() {
-  try {
-    // Obter usuário logado real via sessão
-    const sessionId = PropertiesService.getScriptProperties().getProperty('currentSessionId');
-    if (!sessionId) {
-      Logger.warn('UsuariosAPI', 'Tentativa de filtro sem sessão ativa');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('UsuariosAPI', 'Sessão inválida ao obter usuário para filtro');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
-
-    const userId = sessionData.session.user_id;
-
-    // Buscar dados do usuário
-    const usuario = DatabaseManager.findById('usuarios', userId);
-    if (!usuario) {
-      Logger.error('UsuariosAPI', 'Usuário não encontrado ao obter para filtro', { userId });
-      return null;
-    }
-
-    return {
-      uid: usuario.uid,
-      nome: usuario.nome
-    };
-  } catch (error) {
-    Logger.error('UsuariosAPI', 'Erro ao obter usuário para filtro', { error: error.message });
-    return null;
-  }
-}
+// ============================================================================
+// FUNÇÃO REMOVIDA: getCurrentUserForFilter() - usuarios_api.gs:101-145
+//
+// Motivo: Função órfã/não utilizada - não é chamada pelo frontend nem backend
+// - Nenhuma referência encontrada em app_migrated.html
+// - Nenhuma referência encontrada em arquivos .gs
+// - Funcionalidade similar disponível via getCurrentLoggedUser()
+//
+// Removido em: Correção de funções com PropertiesService
+// Data: 09/10/2025
+// Linhas removidas: 45 (incluindo JSDoc)
+// ============================================================================
 
 /**
  * Autentica usuário e cria sessão usando SecurityManager existente

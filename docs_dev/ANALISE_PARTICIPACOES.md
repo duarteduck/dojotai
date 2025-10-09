@@ -242,10 +242,6 @@ ${activity.ausentes || 0} ausentes
 - ✅ Sem impacto em performance
 
 **Pendências:**
-- ⚠️ **TESTES NÃO REALIZADOS** - Funcionalidade implementada mas não validada
-- ⚠️ Verificar se `getParticipacaoStats()` está sendo chamado corretamente
-- ⚠️ Validar cálculos com dados reais da planilha
-
 **Testes Realizados (04/10/2025 01:10):**
 1. ✅ Carregar dashboard e verificar se números aparecem - OK
 2. ✅ Verificar atividade SEM alvos definidos (deve mostrar 0/0/0/0/0) - OK
@@ -255,6 +251,8 @@ ${activity.ausentes || 0} ausentes
 6. ✅ Comparar números do card com dados da planilha manualmente - OK (valores corretos)
 7. ✅ Testar performance do carregamento (deve ser igual) - OK (sem impacto)
 8. ✅ Verificar console do navegador por erros de cálculo - OK (sem erros)
+
+**Status:** ✅ **TESTADO E VALIDADO**
 
 **Observação:** Campos "Confirmados" e "Rejeitados" não testados pois funcionalidade de confirmação prévia não está implementada (aguardando decisão sobre implementação).
 
@@ -459,7 +457,7 @@ if (dados.participou === 'sim') {
 | **Frontend - Marcação** | ⚠️ Incompleto | 85% | Layout OK, campo observações adicionado mas não salva |
 | **Frontend - Alvos** | ✅ Pronto | 90% | Sistema de lista dupla implementado |
 | **Frontend - Membros Extras** | ⚠️ Implementado | 95% | Busca com autocomplete, adicionar membros - TESTES PENDENTES |
-| **Frontend - Cards Atividades** | ✅ Implementado | 100% | Stats reais integrados e testados |
+| **Frontend - Cards Atividades** | ✅ Testado | 100% | Stats reais integrados e validados |
 | **Confirmação Prévia** | ❌ Não implementado | 0% | Função removida, decidir se reativa |
 | **Notificações** | ❌ Não implementado | 0% | Schema definido, implementação futura |
 | **Consistência** | ⚠️ Problemas | 70% | UID vazio, observações não chegam no backend |

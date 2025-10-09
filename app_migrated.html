@@ -1914,6 +1914,28 @@
         .toast.removing {
             animation: toastSlideOut 0.3s ease;
         }
+
+        /* ===== MARCA D'ÁGUA SIMULADO ===== */
+        .watermark-simulado {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 120px;
+            font-weight: bold;
+            color: rgba(239, 68, 68, 0.08); /* Vermelho transparente */
+            pointer-events: none; /* Não interfere nos cliques */
+            z-index: 1; /* Atrás do conteúdo mas visível */
+            user-select: none;
+            text-transform: uppercase;
+            letter-spacing: 20px;
+            font-family: 'Arial Black', sans-serif;
+        }
+
+        /* Versão para dark mode - um pouco mais visível */
+        [data-theme="dark"] .watermark-simulado {
+            color: rgba(239, 68, 68, 0.12);
+        }
     </style>
 </head>
 <body data-theme="light">
@@ -1974,6 +1996,9 @@
 
         <!-- Dashboard Page -->
         <div id="dashboard" class="page-content">
+            <!-- Marca d'água SIMULADO -->
+            <div class="watermark-simulado">SIMULADO</div>
+
             <div class="dashboard-grid">
                 <!-- Card Atividades -->
                 <div class="card">
@@ -2091,22 +2116,19 @@
                         <span>Limpar Tudo</span>
                     </button>
 
-                    <!-- Botões de ação -->
-                    <div style="margin-left: auto; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Botão Nova Atividade -->
+                    <div style="margin-left: auto;">
                         <button class="btn btn-primary" id="btn-nova-atividade">
                             <span>➕</span>
                             <span>Nova Atividade</span>
                         </button>
-                        <button class="btn btn-outline" id="btn-nova-categoria" disabled style="opacity: 0.5; cursor: not-allowed;">
-                            <span>➕</span>
-                            <span>Nova Categoria</span>
-                        </button>
                     </div>
                 </div>
 
-                <!-- Linha 2: Campo de busca por texto -->
-                <div>
-                    <div style="position: relative; width: 100%;">
+                <!-- Linha 2: Campo de busca e Nova Categoria -->
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <!-- Campo de busca -->
+                    <div style="position: relative; flex: 1;">
                         <span style="
                             position: absolute;
                             left: 12px;
@@ -2157,6 +2179,12 @@
                             onmouseout="this.style.background='var(--surface)'; this.style.color='var(--text-light)'"
                         >×</button>
                     </div>
+
+                    <!-- Botão Nova Categoria -->
+                    <button class="btn btn-outline" id="btn-nova-categoria" disabled style="opacity: 0.5; cursor: not-allowed;">
+                        <span>➕</span>
+                        <span>Nova Categoria</span>
+                    </button>
                 </div>
             </div>
 
@@ -2182,6 +2210,9 @@
 
         <!-- Practices Page -->
         <div id="practices" class="page-content hidden">
+            <!-- Marca d'água SIMULADO -->
+            <div class="watermark-simulado">SIMULADO</div>
+
             <div class="card">
                 <div class="practices-header">
                     <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Registro Diário de Práticas</h1>

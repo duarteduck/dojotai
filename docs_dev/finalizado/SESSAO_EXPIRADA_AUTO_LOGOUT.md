@@ -801,6 +801,52 @@ Minhas Sessões Ativas:
 
 ---
 
+## 🔧 CORREÇÕES PÓS-IMPLEMENTAÇÃO
+
+### **09/10/2025 - Correção de Funções Órfãs**
+
+**Problema Identificado:**
+- Função `completeActivity` não havia sido atualizada para receber `sessionId` como parâmetro
+- Estava usando `PropertiesService` (padrão antigo)
+- Frontend chamava via `apiCall('completeActivity', activityId)` mas backend recebia `sessionId` no lugar do `activityId`
+- Resultado: Erro "Atividade sess_XXX não encontrada"
+
+**Funções Corrigidas:**
+
+1. ✅ **`completeActivity`** (src/02-api/activities_api.gs:417)
+   - **ANTES:** `async function completeActivity(activityId)`
+   - **DEPOIS:** `async function completeActivity(sessionId, activityId)`
+   - Removido uso de `PropertiesService.getScriptProperties().getProperty('currentSessionId')`
+   - Adicionada validação de `sessionId` como primeiro parâmetro
+   - Agora compatível com `apiCall()` wrapper
+
+2. ✅ **`getCurrentUserForFilter`** (src/02-api/usuarios_api.gs:101-145)
+   - **STATUS:** REMOVIDO (função órfã)
+   - Não era chamado pelo frontend nem backend
+   - Documentado como removido com razão e data
+
+3. ⚠️ **`getCurrentLoggedUser`** (src/02-api/usuarios_api.gs:187)
+   - **STATUS:** MANTIDO COMO ESTÁ (decisão consciente)
+   - **Uso:** Fallback raro para menu do usuário quando localStorage falha
+   - **Frontend:** Chamada direta via `google.script.run.getCurrentLoggedUser()` (não usa `apiCall`)
+   - **Backend:** Usa `PropertiesService` + busca sessão ativa mais recente (método de recuperação útil)
+   - **Razão:** Função é um fallback funcional que raramente é chamado, não vale o risco de refatorar
+
+**Arquivos Modificados:**
+- `src/02-api/activities_api.gs:411-445` - Função `completeActivity` atualizada
+- `src/02-api/usuarios_api.gs:101-112` - Função `getCurrentUserForFilter` documentada como removida
+
+**Motivo da Correção:**
+Esta função foi modificada antes da implementação do sistema de auto-logout e não estava na lista original de 9 funções que receberam `sessionId` como parâmetro. Foi identificada ao testar o botão "Concluir" nas atividades.
+
+**Verificação Completa:**
+Busca por `PropertiesService.getScriptProperties().getProperty('currentSessionId')` retornou apenas 3 ocorrências:
+- ✅ `completeActivity` - CORRIGIDO
+- ✅ `getCurrentUserForFilter` - REMOVIDO
+- ⚠️ `getCurrentLoggedUser` - MANTIDO (fallback funcional)
+
+---
+
 **Última Atualização:** 09/10/2025
 **Status:** ✅ **IMPLEMENTADO, TESTADO E FUNCIONANDO**
 **Versão do Sistema:** 2.0.0-alpha.1

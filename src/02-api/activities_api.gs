@@ -410,29 +410,29 @@ function getActivityById(sessionId, activityId, retryCount = 0) {
 
 /**
  * Marca uma atividade como concluída
+ * @param {string} sessionId - ID da sessão (injetado automaticamente pelo apiCall)
  * @param {string} activityId - ID da atividade
  * @returns {Object} Resultado da operação
  */
-async function completeActivity(activityId) {
+async function completeActivity(sessionId, activityId) {
   try {
-    Logger.info('ActivitiesAPI', 'Marcando atividade como concluída', { activityId });
+    Logger.info('ActivitiesAPI', 'Marcando atividade como concluída', { activityId, sessionId: sessionId ? '✓' : '✗' });
+
+    // Validar sessionId
+    if (!sessionId) {
+      Logger.warn('ActivitiesAPI', 'Tentativa de completar atividade sem sessionId', { activityId });
+      return {
+        ok: false,
+        error: 'Usuário não autenticado - sessionId ausente',
+        sessionExpired: true
+      };
+    }
 
     if (!activityId) {
       throw new Error('ID da atividade é obrigatório');
     }
 
-    // Obter usuário logado real via sessão
-    const sessionId = PropertiesService.getScriptProperties().getProperty('currentSessionId');
-
-    if (!sessionId) {
-      Logger.warn('ActivitiesAPI', 'Tentativa de completar atividade sem sessão', { activityId });
-      return {
-        ok: false,
-        error: 'Usuário não autenticado - sem sessão ativa',
-        sessionExpired: true
-      };
-    }
-
+    // Validar sessão
     const sessionData = validateSession(sessionId);
 
     if (!sessionData || !sessionData.ok || !sessionData.session) {

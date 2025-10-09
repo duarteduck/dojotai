@@ -722,8 +722,90 @@ function getParticipacaoStatsBatch(activityIds) {
 
 ### **Curto Prazo** (Próximas Sessões)
 
-#### **1. Layout Aprimorado** 🎨
+#### **1. Expandir Filtro de Responsável para Filtro de Usuário** 🔐
 **Prioridade:** ALTA
+**Status:** ⚠️ **BLOQUEADO** - Aguardando vinculação Usuário ↔ Membro
+
+**Objetivo:**
+Renomear "Filtro por Responsável" para "Filtro por Usuário" e expandir para mostrar atividades onde o usuário é:
+1. **Responsável** (campo `atividades.atribuido_uid`)
+2. **Participante** (registro em `participacoes.id_membro`)
+
+**Problema Atual:**
+- `atividades.atribuido_uid` = UID do usuário (tabela `usuarios`)
+- `participacoes.id_membro` = código_sequencial da tabela `membros`
+- **NÃO HÁ VINCULAÇÃO** entre `usuarios.uid` e `membros.codigo_sequencial`
+
+**Solução Proposta (após vinculação):**
+
+```javascript
+// FASE 1: Criar campo usuario_uid na tabela membros
+// Adicionar coluna: usuarios.uid → membros.usuario_uid
+
+// FASE 2: Popular vinculação (script de migração)
+
+// FASE 3: Implementar filtro expandido no backend
+if (filtros.usuario && filtros.usuario.length > 0) {
+  // Buscar participações com vinculação
+  const participacoesMap = {}; // { activityId: [userId1, userId2, ...] }
+  const todasParticipacoes = DatabaseManager.query('participacoes', {}, false);
+  const membrosVinculacao = DatabaseManager.query('membros', {}, false);
+
+  // Mapear membro → usuário
+  const membroToUser = {};
+  membrosVinculacao.forEach(m => {
+    membroToUser[m.codigo_sequencial] = m.usuario_uid;
+  });
+
+  // Agrupar participações por atividade
+  todasParticipacoes.forEach(p => {
+    const userId = membroToUser[p.id_membro];
+    if (userId) {
+      if (!participacoesMap[p.id_atividade]) {
+        participacoesMap[p.id_atividade] = [];
+      }
+      participacoesMap[p.id_atividade].push(userId);
+    }
+  });
+
+  // Filtrar com OR lógico
+  filteredItems = filteredItems.filter(item => {
+    const isResponsavel = filtros.usuario.includes(item.atribuido_uid);
+    const participantesIds = participacoesMap[item.id] || [];
+    const isParticipante = participantesIds.some(uid =>
+      filtros.usuario.includes(uid)
+    );
+    return isResponsavel || isParticipante;
+  });
+}
+```
+
+**Arquivos a Modificar:**
+1. **Backend:** `src/01-business/activities.gs:157-164` - Expandir lógica do filtro
+2. **Frontend:** `app_migrated.html` - Renomear labels e variáveis
+   - `filtrosState.responsavel` → `filtrosState.usuario`
+   - Label "Responsável" → "Usuário"
+   - Checkbox `data-filter="responsavel"` → `data-filter="usuario"`
+
+**Impacto de Performance:**
+- +1 query adicional (`membros` para vinculação)
+- Reutiliza query de `participacoes` do batch de stats (otimizado)
+- Complexidade: O(n + m) onde n=atividades, m=participações
+
+**Pré-requisitos:**
+- [x] Decidir estrutura de vinculação
+- [ ] Criar campo `usuario_uid` na tabela `membros`
+- [ ] Popular vinculação para membros existentes (script de migração)
+- [ ] Atualizar cadastro de membros para preencher `usuario_uid`
+
+**Estimativa:** 3-4h (após vinculação estar pronta)
+
+**Registrado em:** 10/10/2025
+
+---
+
+#### **2. Layout Aprimorado** 🎨
+**Prioridade:** MÉDIA
 
 - [ ] Reorganizar posição dos elementos
 - [ ] Melhorar responsividade mobile
@@ -735,7 +817,7 @@ function getParticipacaoStatsBatch(activityIds) {
 
 ---
 
-#### **2. Debounce na Busca** ⚡
+#### **3. Debounce na Busca** ⚡
 **Prioridade:** MÉDIA
 
 Atualmente a busca acontece a cada tecla. Implementar debounce de 300ms para:
@@ -758,7 +840,7 @@ function filterActivitiesByText(searchText) {
 
 ---
 
-#### **3. Highlight de Texto** 🎯
+#### **4. Highlight de Texto** 🎯
 **Prioridade:** MÉDIA
 
 Destacar termo buscado nos resultados:
@@ -777,7 +859,7 @@ function highlightSearchTerm(text, searchTerm) {
 
 ### **Médio Prazo**
 
-#### **4. Persistência de Filtros** 💾
+#### **5. Persistência de Filtros** 💾
 **Prioridade:** MÉDIA
 
 Salvar filtros no localStorage para manter entre sessões:
@@ -799,7 +881,7 @@ function carregarFiltros() {
 
 ---
 
-#### **5. Contador de Resultados** 📊
+#### **6. Contador de Resultados** 📊
 **Prioridade:** BAIXA
 
 Mostrar quantidade de atividades filtradas:
@@ -812,7 +894,7 @@ Mostrar quantidade de atividades filtradas:
 
 ---
 
-#### **6. Filtros Avançados** 🔧
+#### **7. Filtros Avançados** 🔧
 **Prioridade:** BAIXA
 
 - [ ] Filtro por data customizada (range picker)
@@ -824,7 +906,7 @@ Mostrar quantidade de atividades filtradas:
 
 ---
 
-#### **7. Salvar Filtros Favoritos** ⭐
+#### **8. Salvar Filtros Favoritos** ⭐
 **Prioridade:** BAIXA
 
 Permitir salvar combinações de filtros como "favoritos":
@@ -842,7 +924,7 @@ Meus Filtros Salvos:
 
 ### **Longo Prazo**
 
-#### **8. Busca Inteligente** 🤖
+#### **9. Busca Inteligente** 🤖
 **Prioridade:** BAIXA
 
 - Sugestões de busca (autocomplete)
@@ -854,7 +936,7 @@ Meus Filtros Salvos:
 
 ---
 
-#### **9. Exportação de Resultados** 📤
+#### **10. Exportação de Resultados** 📤
 **Prioridade:** BAIXA
 
 Exportar atividades filtradas para:
