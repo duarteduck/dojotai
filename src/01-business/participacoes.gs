@@ -2,9 +2,31 @@
 
 /**
  * Lista participações usando DatabaseManager
+ * @param {string} sessionId - ID da sessão do usuário
+ * @param {string} activityId - ID da atividade
  */
-function listParticipacoes(activityId) {
+function listParticipacoes(sessionId, activityId) {
   try {
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('Participacoes', 'Tentativa de listar participações sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('Participacoes', 'Sessão inválida ao listar participações');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
+
     if (!activityId) {
       return { ok: false, error: 'ID da atividade é obrigatório.' };
     }
@@ -114,11 +136,32 @@ function listParticipacoes(activityId) {
 
 /**
  * Busca membros por critérios para definição de alvos
+ * @param {string} sessionId - ID da sessão do usuário
  * @param {Object} filters - Filtros aplicados
  * @returns {Object} { ok: boolean, items: Array }
  */
-function searchMembersByCriteria(filters) {
+function searchMembersByCriteria(sessionId, filters) {
   try {
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('Participacoes', 'Tentativa de buscar membros sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('Participacoes', 'Sessão inválida ao buscar membros');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
+
     // Usar DatabaseManager para buscar membros
     const members = DatabaseManager.query('membros', {}, false);
 
@@ -496,14 +539,35 @@ async function saveTargetsDirectly(activityId, memberIds, uid) {
 
 /**
  * Função alternativa para salvar participação diretamente na planilha
+ * @param {string} sessionId - ID da sessão do usuário
  * @param {string} activityId - ID da atividade
  * @param {string} memberId - ID do membro
  * @param {Object} dados - Dados da participação
  * @param {string} uid - UID do usuário
  * @returns {Object} { ok: boolean }
  */
-async function saveParticipacaoDirectly(activityId, memberId, dados, uid) {
+async function saveParticipacaoDirectly(sessionId, activityId, memberId, dados, uid) {
   try {
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('Participacoes', 'Tentativa de salvar participação sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('Participacoes', 'Sessão inválida ao salvar participação');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
+
     console.log('🔧 [BACKEND] saveParticipacaoDirectly chamada com:');
     console.log('🔧 [BACKEND] - activityId:', activityId);
     console.log('🔧 [BACKEND] - memberId:', memberId);

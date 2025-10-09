@@ -1,8 +1,28 @@
 // activities.gs – API de atividades (atualizada para categoria_atividade_id)
 
-function listActivitiesApi(filtros) {
-  console.log('🚀 listActivitiesApi chamada com filtros:', JSON.stringify(filtros));
+function listActivitiesApi(sessionId, filtros) {
+  console.log('🚀 listActivitiesApi chamada - sessionId:', sessionId ? '✓' : '✗', 'filtros:', JSON.stringify(filtros));
   try {
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('Activities', 'Tentativa de listar atividades sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('Activities', 'Sessão inválida ao listar atividades');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
+
     const result = _listActivitiesCore(filtros);
     console.log('📊 _listActivitiesCore resultado:', result?.ok ? 'OK' : 'ERRO', '- Items:', result?.items?.length || 0);
 
@@ -427,12 +447,33 @@ function getUsersMapReadOnly_() {
 /**
  * Atualiza atividade com suporte a alvos (PATCH)
  * Migrado para DatabaseManager - Migração #2, Fase 4
+ * @param {string} sessionId - ID da sessão do usuário
  * @param {Object} input - Objeto com {id, patch, alvos}
  * @param {string} uidEditor - UID do usuário que está editando
  * @returns {Object} {ok: boolean, atualizadoPorNome?: string, error?: string}
  */
-async function updateActivityWithTargets(input, uidEditor) {
+async function updateActivityWithTargets(sessionId, input, uidEditor) {
   try {
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('Activities', 'Tentativa de atualizar atividade sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('Activities', 'Sessão inválida ao atualizar atividade');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
+
     if (!input || !input.id) {
       return { ok: false, error: 'ID não informado.' };
     }

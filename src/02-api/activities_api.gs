@@ -5,10 +5,31 @@
 
 /**
  * Lista categorias de atividades (endpoint público)
+ * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} Resultado com lista de categorias
  */
-function listCategoriasAtividadesApi() {
+function listCategoriasAtividadesApi(sessionId) {
   try {
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('ActivitiesAPI', 'Tentativa de listar categorias sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('ActivitiesAPI', 'Sessão inválida ao listar categorias');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
+
     console.log('📋 Listando categorias de atividades...');
 
     // Usar função já migrada para DatabaseManager
@@ -50,13 +71,34 @@ function listCategoriasAtividadesApi() {
 
 /**
  * Cria uma nova atividade
+ * @param {string} sessionId - ID da sessão do usuário
  * @param {Object} activityData - Dados da atividade
  * @param {string} creatorUid - UID do usuário criador
  * @returns {Object} Resultado da operação
  */
-async function createActivity(activityData, creatorUid) {
+async function createActivity(sessionId, activityData, creatorUid) {
   try {
-    console.log('📝 Criando nova atividade - dados recebidos:', activityData);
+    console.log('📝 Criando nova atividade - sessionId:', sessionId ? '✓' : '✗', 'dados:', activityData);
+
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('ActivitiesAPI', 'Tentativa de criar atividade sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('ActivitiesAPI', 'Sessão inválida ao criar atividade');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
 
     // Remover qualquer campo 'id' que possa estar vindo do frontend
     if (activityData.hasOwnProperty('id')) {
@@ -226,12 +268,34 @@ async function createActivity(activityData, creatorUid) {
 
 /**
  * Busca uma atividade específica pelo ID
+ * @param {string} sessionId - ID da sessão do usuário
  * @param {string} activityId - ID da atividade
+ * @param {number} retryCount - Contador de tentativas
  * @returns {Object} Resultado com dados da atividade
  */
-function getActivityById(activityId, retryCount = 0) {
+function getActivityById(sessionId, activityId, retryCount = 0) {
   try {
-    console.log(`🔍 Buscando atividade ID: ${activityId} (tentativa ${retryCount + 1})`);
+    console.log(`🔍 Buscando atividade - sessionId: ${sessionId ? '✓' : '✗'}, ID: ${activityId} (tentativa ${retryCount + 1})`);
+
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('ActivitiesAPI', 'Tentativa de buscar atividade sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('ActivitiesAPI', 'Sessão inválida ao buscar atividade');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
 
     if (!activityId) {
       console.error('❌ ID da atividade não fornecido');

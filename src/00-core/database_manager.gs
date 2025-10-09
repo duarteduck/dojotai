@@ -2212,13 +2212,16 @@ const DatabaseManager = {
           // ao marcar participação, não na criação do registro
 
           case 'created_at':
-            fields.created_at = this._formatTimestamp(new Date());
+            // Só gerar se não foi fornecido explicitamente (para sessões)
+            if (!data[fieldName]) {
+              fields.created_at = this._formatTimestamp(new Date());
+            }
             break;
 
           default:
             // Para outros campos gerados, usar padrão baseado no tipo
             // EXCETO campos que devem ser preenchidos em momentos específicos
-            const skipAutoFill = ['marcado_em', 'marcado_por', 'confirmado_em', 'atualizado_em'];
+            const skipAutoFill = ['marcado_em', 'marcado_por', 'confirmado_em', 'atualizado_em', 'expires_at'];
 
             if (fieldDef?.type === 'DATETIME' && !skipAutoFill.includes(fieldName)) {
               fields[fieldName] = this._formatTimestamp(new Date());
@@ -2248,14 +2251,9 @@ const DatabaseManager = {
    * Formatar timestamp no formato do sistema
    */
   _formatTimestamp(date) {
-    // Usar formato compatível com sistema atual
-    // Verificar se APP_CONFIG tem formato específico
-    if (APP_CONFIG && APP_CONFIG.TZ) {
-      return Utilities.formatDate(date, APP_CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss');
-    } else {
-      // Fallback para ISO string
-      return date.toISOString();
-    }
+    // Sempre usar fuso horário de São Paulo
+    const timezone = (APP_CONFIG && APP_CONFIG.TZ) ? APP_CONFIG.TZ : 'America/Sao_Paulo';
+    return Utilities.formatDate(date, timezone, 'yyyy-MM-dd HH:mm:ss');
   }
 };
 

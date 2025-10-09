@@ -3048,11 +3048,16 @@
             // REMOVIDO: Chamada duplicada de loadActivities()
             // A função aplicarFiltrosPadrao() acima já carrega as atividades
 
-            // Configurar botão Nova Atividade
+            // Configurar botão Nova Atividade com validação de sessão
             const btnNova = document.getElementById('btn-nova-atividade');
             if (btnNova) {
                 btnNova.addEventListener('click', function() {
-                    openActivityModal();
+                    // Validar sessão antes de abrir modal (instantâneo - valida em background)
+                    const sessionValid = checkSessionBeforeModal();
+                    if (sessionValid) {
+                        openActivityModal();
+                    }
+                    // Se sessão inválida, checkSessionBeforeModal() já mostrou o modal de sessão expirada
                 });
             }
         }
@@ -3129,10 +3134,13 @@
                     responsavel: filtrosState.responsavel || []
                 };
 
-                // Conectar com API real
-                google.script.run
-                    .withSuccessHandler(function(result) {
+                // Conectar com API real usando apiCall()
+                (async () => {
+                    try {
+                        const result = await apiCall('listActivitiesApi', filtrosBackend);
+
                         isLoadingActivities = false; // Liberar lock
+
                         if (result && result.ok && result.items) {
                             const activitiesWithCategory = result.items.map(activity => {
                                 return {
@@ -3153,13 +3161,16 @@
                             console.error('Erro ao carregar atividades:', result);
                             loadActivitiesFallback();
                         }
-                    })
-                    .withFailureHandler(function(error) {
+                    } catch (error) {
                         isLoadingActivities = false; // Liberar lock
-                        console.error('Erro na API de atividades:', error);
-                        loadActivitiesFallback();
-                    })
-                    .listActivitiesApi(filtrosBackend);
+
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('Erro na API de atividades:', error);
+                            loadActivitiesFallback();
+                        }
+                    }
+                })();
             } else {
                 // Fallback se API não estiver disponível
                 isLoadingActivities = false;
@@ -4100,13 +4111,8 @@
 
                 console.log('📊 [PARTICIPANTES] Carregando participações...');
 
-                // Carregar participações da atividade
-                const participationsResult = await new Promise((resolve, reject) => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(reject)
-                        .listParticipacoes(activityId);
-                });
+                // Carregar participações da atividade usando apiCall()
+                const participationsResult = await apiCall('listParticipacoes', activityId);
 
                 console.log('👥 Participações carregadas:', participationsResult);
 
@@ -4395,16 +4401,19 @@
             suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">🔄 Buscando...</div>';
             suggestionsContainer.style.display = 'block';
 
-            // Buscar membros usando a função existente
-            google.script.run
-                .withSuccessHandler(function(result) {
+            // Buscar membros usando apiCall()
+            (async () => {
+                try {
+                    const result = await apiCall('searchMembersByCriteria', searchTerm, { status: 'ativo' });
                     showMemberSuggestions(result);
-                })
-                .withFailureHandler(function(error) {
-                    console.error('❌ Erro ao buscar membros:', error);
-                    suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">❌ Erro ao buscar membros</div>';
-                })
-                .searchMembersByCriteria(searchTerm, { status: 'ativo' });
+                } catch (error) {
+                    // Erro de sessão já tratado por apiCall()
+                    if (!error.message || !error.message.includes('Sessão')) {
+                        console.error('❌ Erro ao buscar membros:', error);
+                        suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">❌ Erro ao buscar membros</div>';
+                    }
+                }
+            })();
         }
 
         function showMemberSuggestions(result) {
@@ -4452,18 +4461,13 @@
             try {
                 console.log('➕ Adicionando membro extra:', memberName, 'à atividade:', activityId);
 
-                // Criar nova participação
-                const result = await new Promise((resolve, reject) => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(reject)
-                        .saveParticipacaoDirectly(activityId, memberId, {
-                            participou: 'nao',
-                            chegou_tarde: 'nao',
-                            saiu_cedo: 'nao',
-                            observacoes: 'Adicionado manualmente como participante extra'
-                        }, '');
-                });
+                // Criar nova participação usando apiCall()
+                const result = await apiCall('saveParticipacaoDirectly', activityId, memberId, {
+                    participou: 'nao',
+                    chegou_tarde: 'nao',
+                    saiu_cedo: 'nao',
+                    observacoes: 'Adicionado manualmente como participante extra'
+                }, '');
 
                 console.log('✅ Resultado da criação:', result);
 
@@ -4552,26 +4556,21 @@
                 console.log('🔍 [DEBUG] Primeiro item completo:', JSON.stringify(participationUpdates[0], null, 2));
 
                 // Salvar cada participação no backend usando ID da tabela participações
-                const savePromises = participationUpdates.map(data => {
-                    return new Promise((resolve, reject) => {
-                        console.log('💾 Salvando participação ID:', data.tableId, 'com dados:', {
-                            participou: data.participou,
-                            chegou_tarde: data.chegou_tarde,
-                            saiu_cedo: data.saiu_cedo,
-                            observacoes: data.observacoes
-                        });
-
-                        google.script.run
-                            .withSuccessHandler(resolve)
-                            .withFailureHandler(reject)
-                            .saveParticipacaoDirectly(null, null, {
-                                id: data.tableId, // ID específico da tabela participações
-                                participou: data.participou,
-                                chegou_tarde: data.chegou_tarde,
-                                saiu_cedo: data.saiu_cedo,
-                                observacoes: data.observacoes
-                            }, '');
+                const savePromises = participationUpdates.map(async (data) => {
+                    console.log('💾 Salvando participação ID:', data.tableId, 'com dados:', {
+                        participou: data.participou,
+                        chegou_tarde: data.chegou_tarde,
+                        saiu_cedo: data.saiu_cedo,
+                        observacoes: data.observacoes
                     });
+
+                    return await apiCall('saveParticipacaoDirectly', null, null, {
+                        id: data.tableId, // ID específico da tabela participações
+                        participou: data.participou,
+                        chegou_tarde: data.chegou_tarde,
+                        saiu_cedo: data.saiu_cedo,
+                        observacoes: data.observacoes
+                    }, '');
                 });
 
                 const results = await Promise.all(savePromises);
@@ -4745,25 +4744,24 @@
 
             // Carregar da API apenas se cache não existe ainda
             if (typeof google !== 'undefined' && google.script && google.script.run) {
-                try {
-                    google.script.run
-                        .withSuccessHandler(function(result) {
-                            if (result && result.ok && result.items) {
-                                window.cachedCategorias = result.items; // Salvar no cache
-                                populateSelect(select, result.items, 'id', 'nome', select.multiple ? null : 'Selecione uma categoria...');
-                            } else {
-                                loadCategoriesFallback(select);
-                            }
-                        })
-                        .withFailureHandler(function(error) {
+                (async () => {
+                    try {
+                        const result = await apiCall('listCategoriasAtividadesApi');
+
+                        if (result && result.ok && result.items) {
+                            window.cachedCategorias = result.items; // Salvar no cache
+                            populateSelect(select, result.items, 'id', 'nome', select.multiple ? null : 'Selecione uma categoria...');
+                        } else {
+                            loadCategoriesFallback(select);
+                        }
+                    } catch (error) {
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
                             console.error('Erro ao carregar categorias:', error);
                             loadCategoriesFallback(select);
-                        })
-                        .listCategoriasAtividadesApi();
-                } catch (error) {
-                    console.warn('API listCategoriasAtividadesApi() não implementada ainda');
-                    loadCategoriesFallback(select);
-                }
+                        }
+                    }
+                })();
             } else {
                 loadCategoriesFallback(select);
             }
@@ -4793,25 +4791,24 @@
 
             // Carregar da API apenas se cache não existe ainda
             if (typeof google !== 'undefined' && google.script && google.script.run) {
-                try {
-                    google.script.run
-                        .withSuccessHandler(function(result) {
-                            if (result && result.ok && result.items) {
-                                window.cachedResponsaveis = result.items; // Salvar no cache
-                                populateSelect(select, result.items, 'uid', 'nome', 'Selecione um responsável...');
-                            } else {
-                                loadResponsibleUsersFallback(select);
-                            }
-                        })
-                        .withFailureHandler(function(error) {
+                (async () => {
+                    try {
+                        const result = await apiCall('listUsuariosApi');
+
+                        if (result && result.ok && result.items) {
+                            window.cachedResponsaveis = result.items; // Salvar no cache
+                            populateSelect(select, result.items, 'uid', 'nome', 'Selecione um responsável...');
+                        } else {
+                            loadResponsibleUsersFallback(select);
+                        }
+                    } catch (error) {
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
                             console.error('Erro ao carregar usuários:', error);
                             loadResponsibleUsersFallback(select);
-                        })
-                        .listUsuariosApi();
-                } catch (error) {
-                    console.warn('API listUsuariosApi() não implementada ainda');
-                    loadResponsibleUsersFallback(select);
-                }
+                        }
+                    }
+                })();
             } else {
                 loadResponsibleUsersFallback(select);
             }
@@ -4845,44 +4842,45 @@
             });
         }
 
-        function loadActivityForEdit(activityId, retryCount = 0) {
+        async function loadActivityForEdit(activityId, retryCount = 0) {
             console.log(`Carregando atividade para edição: ${activityId} (tentativa ${retryCount + 1})`);
 
             // Tentar carregar dados reais da API
             if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler(function(result) {
-                        console.log('📥 Resposta da API getActivityById:', result);
-                        console.log('🔍 Tipo da resposta:', typeof result);
-                        console.log('🔍 Resposta serializada:', JSON.stringify(result));
+                try {
+                    const result = await apiCall('getActivityById', activityId);
 
-                        // Verificação mais robusta com retry
-                        if (result === null || result === undefined) {
-                            console.error(`❌ Resposta nula da API (tentativa ${retryCount + 1}) - possível problema de serialização`);
+                    console.log('📥 Resposta da API getActivityById:', result);
+                    console.log('🔍 Tipo da resposta:', typeof result);
+                    console.log('🔍 Resposta serializada:', JSON.stringify(result));
 
-                            if (retryCount < 2) {
-                                console.log(`⏳ Tentando novamente em 1 segundo... (retry ${retryCount + 1})`);
-                                setTimeout(() => {
-                                    loadActivityForEdit(activityId, retryCount + 1);
-                                }, 1000);
-                                return;
-                            } else {
-                                showEditActivityDataLoading(false);
-                                showToast('Erro de comunicação persistente com o servidor. Tente novamente mais tarde.', 'error');
-                                return;
-                            }
-                        }
+                    // Verificação mais robusta com retry
+                    if (result === null || result === undefined) {
+                        console.error(`❌ Resposta nula da API (tentativa ${retryCount + 1}) - possível problema de serialização`);
 
-                        if (result && result.ok === true && result.activity) {
-                            const activity = result.activity;
-
-                            // Mostrar formulário e esconder loading
+                        if (retryCount < 2) {
+                            console.log(`⏳ Tentando novamente em 1 segundo... (retry ${retryCount + 1})`);
+                            setTimeout(() => {
+                                loadActivityForEdit(activityId, retryCount + 1);
+                            }, 1000);
+                            return;
+                        } else {
                             showEditActivityDataLoading(false);
+                            showToast('Erro de comunicação persistente com o servidor. Tente novamente mais tarde.', 'error');
+                            return;
+                        }
+                    }
 
-                            // Preencher campos básicos
-                            document.getElementById('edit-activity-name').value = activity.titulo || '';
-                            document.getElementById('edit-activity-description').value = activity.descricao || '';
-                            document.getElementById('edit-activity-tags').value = activity.tags || '';
+                    if (result && result.ok === true && result.activity) {
+                        const activity = result.activity;
+
+                        // Mostrar formulário e esconder loading
+                        showEditActivityDataLoading(false);
+
+                        // Preencher campos básicos
+                        document.getElementById('edit-activity-name').value = activity.titulo || '';
+                        document.getElementById('edit-activity-description').value = activity.descricao || '';
+                        document.getElementById('edit-activity-tags').value = activity.tags || '';
 
                             // Processar data/hora
                             if (activity.data) {
@@ -4961,18 +4959,19 @@
                                 };
                                 setTimeout(selectResponsible, 100);
                             }
-                        } else {
-                            console.error('Erro ao carregar atividade:', result);
-                            showEditActivityDataLoading(false);
-                            showToast('Erro ao carregar atividade: ' + (result?.error || 'Erro desconhecido'), 'error');
-                        }
-                    })
-                    .withFailureHandler(function(error) {
+                    } else {
+                        console.error('Erro ao carregar atividade:', result);
+                        showEditActivityDataLoading(false);
+                        showToast('Erro ao carregar atividade: ' + (result?.error || 'Erro desconhecido'), 'error');
+                    }
+                } catch (error) {
+                    // Erro de sessão já tratado por apiCall()
+                    if (!error.message || !error.message.includes('Sessão')) {
                         console.error('Erro na API ao carregar atividade:', error);
                         showEditActivityDataLoading(false);
                         showToast('Erro ao conectar com o servidor.', 'error');
-                    })
-                    .getActivityById(activityId);
+                    }
+                }
             } else {
                 console.log('⚠️ API não disponível, usando fallback');
                 showEditActivityDataLoading(false);
@@ -5093,8 +5092,19 @@
 
             // Tentar conectar com API real
             if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler(function(result) {
+                (async () => {
+                    try {
+                        const result = await apiCall('updateActivityWithTargets', {
+                            id: formData.id,
+                            patch: {
+                                titulo: formData.titulo,
+                                descricao: formData.descricao,
+                                data: formData.data,
+                                atribuido_uid: formData.atribuido_uid
+                            },
+                            alvos: formData.alvos
+                        });
+
                         // Esconder loading
                         showEditActivitySaveLoading(false);
 
@@ -5110,24 +5120,19 @@
                             showToast('Erro ao atualizar atividade: ' + (result.error || 'Erro desconhecido'), 'error');
                             closeEditActivityModal(); // Fechar mesmo com erro
                         }
-                    })
-                    .withFailureHandler(function(error) {
+                    } catch (error) {
                         // Esconder loading
                         showEditActivitySaveLoading(false);
-                        console.error('Erro na API:', error);
-                        showToast('Erro ao conectar com o servidor. Tente novamente.', 'error');
+
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('Erro na API:', error);
+                            showToast('Erro ao conectar com o servidor. Tente novamente.', 'error');
+                        }
+
                         closeEditActivityModal(); // Fechar mesmo com erro
-                    })
-                    .updateActivityWithTargets({
-                        id: formData.id,
-                        patch: {
-                            titulo: formData.titulo,
-                            descricao: formData.descricao,
-                            data: formData.data,
-                            atribuido_uid: formData.atribuido_uid
-                        },
-                        alvos: formData.alvos
-                    });
+                    }
+                })();
                 return;
             }
 
@@ -5185,8 +5190,11 @@
             // Tentar conectar com API real
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 const uid = localStorage.getItem('uid') || 'U001';
-                google.script.run
-                    .withSuccessHandler(function(result) {
+
+                (async () => {
+                    try {
+                        const result = await apiCall('createActivity', formData, uid);
+
                         if (result && result.ok) {
                             console.log('✅ Atividade criada com sucesso, ID:', result.id);
 
@@ -5205,15 +5213,16 @@
                             showCreateActivityLoading(false);
                             showToast('Erro ao criar atividade: ' + (result.error || 'Erro desconhecido'), 'error');
                         }
-                    })
-                    .withFailureHandler(function(error) {
-                        // Esconder loading
+                    } catch (error) {
                         showCreateActivityLoading(false);
 
-                        console.error('Erro na API:', error);
-                        showToast('Erro ao conectar com o servidor. Tente novamente.', 'error');
-                    })
-                    .createActivity(formData, uid);
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('Erro na API:', error);
+                            showToast('Erro ao conectar com o servidor. Tente novamente.', 'error');
+                        }
+                    }
+                })();
                 return;
             }
 
@@ -5351,31 +5360,37 @@
         // ============================================================================
         function preLoadCachedData() {
             if (typeof google !== 'undefined' && google.script && google.script.run) {
-                // Carregar categorias em paralelo
-                google.script.run
-                    .withSuccessHandler(function(result) {
+                // Carregar categorias em paralelo usando apiCall()
+                (async () => {
+                    try {
+                        const result = await apiCall('listCategoriasAtividadesApi');
                         if (result && result.ok && result.items) {
                             window.cachedCategorias = result.items;
                             console.log('⚡ Cache de categorias pré-carregado:', result.items.length);
                         }
-                    })
-                    .withFailureHandler(function(error) {
-                        console.error('❌ Erro ao pré-carregar categorias:', error);
-                    })
-                    .listCategoriasAtividadesApi();
+                    } catch (error) {
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('❌ Erro ao pré-carregar categorias:', error);
+                        }
+                    }
+                })();
 
-                // Carregar responsáveis em paralelo
-                google.script.run
-                    .withSuccessHandler(function(result) {
+                // Carregar responsáveis em paralelo usando apiCall()
+                (async () => {
+                    try {
+                        const result = await apiCall('listUsuariosApi');
                         if (result && result.ok && result.items) {
                             window.cachedResponsaveis = result.items;
                             console.log('⚡ Cache de responsáveis pré-carregado:', result.items.length);
                         }
-                    })
-                    .withFailureHandler(function(error) {
-                        console.error('❌ Erro ao pré-carregar responsáveis:', error);
-                    })
-                    .listUsuariosApi();
+                    } catch (error) {
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('❌ Erro ao pré-carregar responsáveis:', error);
+                        }
+                    }
+                })();
             }
         }
 
@@ -5385,8 +5400,8 @@
             initNavigation();
             loadCurrentUser(); // Carregar dados do usuário
 
-            // PRE-CARREGAR categorias e responsáveis no cache ANTES do usuário abrir a tela
-            preLoadCachedData();
+            // PRE-CARREGAR categorias e responsáveis no cache - MOVIDO para showApp() após login
+            // preLoadCachedData();
 
             // Verificar modais após carregamento
             setTimeout(() => {
@@ -5647,6 +5662,10 @@
 
             // Atualizar informações do usuário no menu após login
             loadCurrentUser();
+
+            // PRE-CARREGAR categorias e responsáveis no cache APÓS login bem-sucedido
+            // Isso otimiza a abertura dos modais de atividades
+            preLoadCachedData();
         }
 
         // Função para mostrar/esconder loading de logout
@@ -6864,6 +6883,29 @@
         window.handleSessionExpired = function handleSessionExpired() {
             console.log('🔴 Sessão expirada detectada - tratando...');
 
+            // Fechar todos os modais abertos antes de mostrar sessão expirada
+            const activityModal = document.getElementById('activityModal');
+            const filtersModal = document.getElementById('modal-filtros');
+            const backdrop = document.querySelector('.modal-backdrop');
+
+            if (activityModal) {
+                activityModal.style.display = 'none';
+            }
+            if (filtersModal) {
+                filtersModal.style.display = 'none';
+            }
+            if (backdrop) {
+                backdrop.style.display = 'none';
+            }
+
+            // Fechar outros modais possíveis
+            const allModals = document.querySelectorAll('.modal, [id*="modal"], [id*="Modal"]');
+            allModals.forEach(modal => {
+                if (modal.style.display !== 'none') {
+                    modal.style.display = 'none';
+                }
+            });
+
             // Limpar dados locais
             // Nota: Sessão JÁ foi marcada como inativa pelo backend em validateSession()
             localStorage.removeItem('sessionId');
@@ -6925,6 +6967,7 @@
 
         /**
          * Wrapper para google.script.run com tratamento automático de sessão expirada
+         * Injeta automaticamente o sessionId do localStorage como primeiro parâmetro
          *
          * @param {string} method - Nome do método backend
          * @param {...any} args - Argumentos para o método
@@ -6935,7 +6978,20 @@
          */
         window.apiCall = async function apiCall(method, ...args) {
             return new Promise((resolve, reject) => {
-                console.log(`📡 API Call: ${method}`, args);
+                // Obter sessionId do localStorage
+                const sessionId = localStorage.getItem('sessionId');
+
+                // Se não há sessionId, não faz a chamada (usuário não logado)
+                if (!sessionId) {
+                    console.warn(`⚠️ API Call bloqueada (sem sessão): ${method}`);
+                    reject(new Error('Usuário não autenticado'));
+                    return;
+                }
+
+                console.log(`📡 API Call: ${method}`, { sessionId: '✓', args });
+
+                // Injetar sessionId como primeiro parâmetro
+                const argsWithSession = [sessionId, ...args];
 
                 google.script.run
                     .withSuccessHandler((result) => {
@@ -6967,8 +7023,62 @@
                         console.error(`❌ ${method} failed:`, error);
                         reject(error);
                     })
-                    [method](...args);
+                    [method](...argsWithSession);
             });
+        }
+
+        /**
+         * Valida se há sessão ativa (apenas localStorage - instantâneo)
+         * Retorna true se há sessionId, false se não há
+         */
+        window.checkSessionBeforeModal = function checkSessionBeforeModal() {
+            const sessionId = localStorage.getItem('sessionId');
+
+            // Se não há sessionId, sessão expirou
+            if (!sessionId) {
+                console.warn('⚠️ Tentativa de abrir modal sem sessão');
+                handleSessionExpired();
+                return false;
+            }
+
+            // Validar sessão no backend EM BACKGROUND (não bloqueia abertura do modal)
+            validateSessionInBackground();
+
+            return true;
+        }
+
+        /**
+         * Valida sessão no backend em background (não bloqueia UI)
+         * Se sessão expirou, fecha modal automaticamente e mostra aviso
+         */
+        async function validateSessionInBackground() {
+            const sessionId = localStorage.getItem('sessionId');
+
+            if (!sessionId) return;
+
+            try {
+                const result = await apiCall('validateSessionQuick', sessionId);
+
+                if (!result || !result.ok) {
+                    console.warn('⚠️ Sessão inválida detectada em background');
+
+                    // Fechar todos os modais abertos
+                    const activityModal = document.getElementById('activityModal');
+                    const filtersModal = document.getElementById('modal-filtros');
+
+                    if (activityModal && activityModal.style.display !== 'none') {
+                        activityModal.style.display = 'none';
+                    }
+                    if (filtersModal && filtersModal.style.display !== 'none') {
+                        fecharModalFiltros();
+                    }
+
+                    // Mostrar modal de sessão expirada
+                    handleSessionExpired();
+                }
+            } catch (error) {
+                // Erro já tratado por apiCall
+            }
         }
     </script>
 
@@ -7045,7 +7155,14 @@
             const btnLimpar = document.getElementById('btn-limpar-filtros');
             const backdrop = document.querySelector('.modal-backdrop');
 
-            if (btnFiltros) btnFiltros.addEventListener('click', abrirModalFiltros);
+            if (btnFiltros) btnFiltros.addEventListener('click', function() {
+                // Validar sessão antes de abrir modal (instantâneo - valida em background)
+                const sessionValid = checkSessionBeforeModal();
+                if (sessionValid) {
+                    abrirModalFiltros();
+                }
+                // Se sessão inválida, checkSessionBeforeModal() já mostrou o modal de sessão expirada
+            });
             if (btnFechar) btnFechar.addEventListener('click', fecharModalFiltros);
             if (btnAplicar) btnAplicar.addEventListener('click', aplicarFiltros);
             if (btnLimpar) btnLimpar.addEventListener('click', limparTodosFiltros);
@@ -7306,8 +7423,9 @@
 
             // Carregar do backend apenas se não há cache
             if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler(function(result) {
+                (async () => {
+                    try {
+                        const result = await apiCall('listCategoriasAtividadesApi');
                         if (result && result.ok && result.items) {
                             window.cachedCategorias = result.items; // Salvar no cache
                             categoriasDisponiveis = result.items;
@@ -7315,11 +7433,13 @@
                             console.log('✅ Categorias carregadas e cacheadas:', result.items.length);
                             if (callback) callback(); // ✅ Chamar callback após carregar
                         }
-                    })
-                    .withFailureHandler(function(error) {
-                        console.error('❌ Erro ao carregar categorias:', error);
-                    })
-                    .listCategoriasAtividadesApi();
+                    } catch (error) {
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('❌ Erro ao carregar categorias:', error);
+                        }
+                    }
+                })();
             }
         }
 
@@ -7335,8 +7455,9 @@
 
             // Carregar do backend apenas se não há cache
             if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler(function(result) {
+                (async () => {
+                    try {
+                        const result = await apiCall('listUsuariosApi');
                         if (result && result.ok && result.items) {
                             window.cachedResponsaveis = result.items; // Salvar no cache
                             responsaveisDisponiveis = result.items;
@@ -7344,11 +7465,13 @@
                             console.log('✅ Responsáveis carregados e cacheados:', result.items.length);
                             if (callback) callback(); // ✅ Chamar callback após carregar
                         }
-                    })
-                    .withFailureHandler(function(error) {
-                        console.error('❌ Erro ao carregar responsáveis:', error);
-                    })
-                    .listUsuariosApi();
+                    } catch (error) {
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('❌ Erro ao carregar responsáveis:', error);
+                        }
+                    }
+                })();
             }
         }
 

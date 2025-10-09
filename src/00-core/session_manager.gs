@@ -206,9 +206,13 @@ function validateSession(sessionId) {
       return { ok: false, error: 'Sessão expirada', sessionExpired: true };
     }
 
-    // Atualizar last_activity usando o PRIMARY KEY (id, ex: SES-0055)
+    // Estender sessão: atualizar last_activity E expires_at
+    const ttlMilliseconds = APP_CONFIG.SESSION.TTL_HOURS * 60 * 60 * 1000;
+    const newExpiresAt = new Date(now.getTime() + ttlMilliseconds);
+
     DatabaseManager.update('sessoes', session.id, {
-      last_activity: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
+      last_activity: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss'),
+      expires_at: Utilities.formatDate(newExpiresAt, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
     });
 
     const sessionData = {
@@ -232,6 +236,28 @@ function validateSession(sessionId) {
       sessionId
     });
     return { ok: false, error: error.message };
+  }
+}
+
+/**
+ * Validação rápida de sessão (apenas verifica se está ativa e não expirou)
+ * Usada antes de abrir modais para avisar o usuário precocemente
+ * @param {string} sessionId - ID da sessão
+ * @returns {Object} { ok: boolean, sessionExpired?: boolean }
+ */
+function validateSessionQuick(sessionId) {
+  try {
+    // Reutilizar validateSession() completo (já estende sessão)
+    const result = validateSession(sessionId);
+
+    // Retornar apenas ok/sessionExpired para o frontend
+    return {
+      ok: result.ok,
+      sessionExpired: result.sessionExpired || false
+    };
+  } catch (error) {
+    Logger.error('SessionManager', 'Erro na validação rápida', { sessionId, error: error.message });
+    return { ok: false, sessionExpired: true };
   }
 }
 

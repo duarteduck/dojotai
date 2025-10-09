@@ -12,10 +12,31 @@
 /**
  * Lista todos os usuários ativos do sistema
  * Refatorado para usar listActiveUsers (já migrado para DatabaseManager)
+ * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} Resultado com lista de usuários
  */
-function listUsuariosApi() {
+function listUsuariosApi(sessionId) {
   try {
+    // Validar sessão
+    if (!sessionId) {
+      Logger.warn('UsuariosAPI', 'Tentativa de listar usuários sem sessionId');
+      return {
+        ok: false,
+        error: 'Usuário não autenticado',
+        sessionExpired: true
+      };
+    }
+
+    const sessionData = validateSession(sessionId);
+    if (!sessionData || !sessionData.ok || !sessionData.session) {
+      Logger.warn('UsuariosAPI', 'Sessão inválida ao listar usuários');
+      return {
+        ok: false,
+        error: 'Sessão inválida ou expirada',
+        sessionExpired: true
+      };
+    }
+
     console.log('📋 Listando usuários para seleção...');
 
     // Usar função já migrada para DatabaseManager

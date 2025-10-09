@@ -73,9 +73,8 @@ const APP_CONFIG = {
    */
   SESSION: {
     /** @type {number} Duração da sessão em horas */
-    // TEMPORÁRIO: 2 minutos para testes (0.033 horas)
-    // PRODUÇÃO: Usar 8 horas
-    TTL_HOURS: 0.033,  // 2 minutos = 2/60 horas
+    // Sessão estendida automaticamente a cada atividade do usuário
+    TTL_HOURS: 4,  // 4 horas - renovado automaticamente em cada operação
 
     /** @type {number} Intervalo de limpeza em minutos */
     CLEANUP_INTERVAL: 60,
