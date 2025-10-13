@@ -2,7 +2,7 @@
  * ╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
  * ║                             SISTEMA DOJOTAI V2.0 - DICIONÁRIO DE DADOS                          ║
  * ║                                    Criado: 18/09/2025                                           ║
- * ║                                  Atualizado: 23/09/2025                                         ║
+ * ║                                  Atualizado: 10/10/2025                                         ║
  * ╚══════════════════════════════════════════════════════════════════════════════════════════════════╝
  *
  * @fileoverview Definição central de todas as tabelas do sistema incluindo
@@ -60,6 +60,14 @@
  * 12. NOTIFICACOES       - Sistema de notificações para usuários
  * 13. PREFERENCIAS       - Preferências personalizadas dos usuários
  * 14. HISTORICO          - Auditoria e histórico de ações do sistema
+ *
+ * ═════════════════════ TABELAS DE PARÂMETROS (CADASTROS) ═══════════════════════════
+ * 15. CARGO              - Cadastro de Cargos do Dojo
+ * 16. CATEGORIA_MEMBROS  - Cadastro de Categorias de Membros
+ * 17. DOJO               - Cadastro de Dojos Ativos
+ * 18. OMITAMA            - Cadastro de Graus de Omitama
+ * 19. SEXO               - Cadastro de Sexo
+ * 20. STATUS_MEMBRO      - Cadastro de Status de Membros
  *
  * 🕐 FORMATO DE DATAS: yyyy-MM-dd HH:mm:ss (America/Sao_Paulo)
  */
@@ -806,13 +814,79 @@ const DATA_DICTIONARY = {
         example: 'Praticante'
       },
 
-      // Buntai (equipe/grupo)
+      // Buntai (equipe/grupo) - número identificador
       buntai: {
-        type: 'TEXT',
+        type: 'NUMBER',
         required: false,
-        maxLength: 50,
-        description: 'Buntai (equipe/grupo) do membro',
-        example: 'Buntai A'
+        description: 'Número do Buntai (equipe/grupo) do membro',
+        example: 1
+      },
+
+      // ═══════════════════════════════════════════════════════════════════════════════════════════
+      // 🔗 CAMPOS DE RELACIONAMENTO (FOREIGN KEYS)
+      // ═══════════════════════════════════════════════════════════════════════════════════════════
+
+      // ID do cargo do membro (FK)
+      cargo_id: {
+        type: 'NUMBER',
+        required: false,
+        foreignKey: { table: 'cargo', field: 'id' },
+        description: 'ID do cargo do membro',
+        example: 1
+      },
+
+      // ID da categoria do membro (FK)
+      categoria_membro_id: {
+        type: 'NUMBER',
+        required: true,
+        foreignKey: { table: 'categoria_membros', field: 'id' },
+        description: 'Classificação/nível do membro (O QUE É)',
+        example: 1
+      },
+
+      // ID da categoria do grupo (FK)
+      categoria_grupo_id: {
+        type: 'NUMBER',
+        required: true,
+        foreignKey: { table: 'categoria_membros', field: 'id' },
+        description: 'Grupo que o membro pertence (ONDE ESTÁ)',
+        example: 3
+      },
+
+      // ID do dojo (FK)
+      dojo_id: {
+        type: 'NUMBER',
+        required: false,
+        foreignKey: { table: 'dojo', field: 'id' },
+        description: 'ID do dojo do membro',
+        example: 1
+      },
+
+      // ID do grau de omitama (FK)
+      omitama_id: {
+        type: 'NUMBER',
+        required: false,
+        foreignKey: { table: 'omitama', field: 'id' },
+        description: 'ID do grau de omitama',
+        example: 1
+      },
+
+      // ID do sexo (FK)
+      sexo_id: {
+        type: 'NUMBER',
+        required: false,
+        foreignKey: { table: 'sexo', field: 'id' },
+        description: 'ID do sexo',
+        example: 1
+      },
+
+      // ID do status (FK)
+      status_membro_id: {
+        type: 'NUMBER',
+        required: false,
+        foreignKey: { table: 'status_membro', field: 'id' },
+        description: 'ID do status do membro',
+        example: 1
       },
 
       // Ordenação para listagens
@@ -1659,6 +1733,291 @@ const DATA_DICTIONARY = {
         required: false,
         description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
         default: ''
+      }
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+  // │                              TABELAS DE PARÂMETROS (CADASTROS)                                  │
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+  // │                                    8. TABELA: CARGO                                              │
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  cargo: {
+    tableName: 'cargo',
+    description: 'Cadastro de Cargos',
+    primaryKey: 'id',
+    file: 'Parametros',
+    sheet: 'Cargo',
+
+    fields: {
+      id: {
+        type: 'NUMBER',
+        required: true,
+        description: 'ID único do cargo',
+        example: 1
+      },
+      nome: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 25,
+        description: 'Nome do cargo',
+        example: 'Taityo'
+      },
+      abreviacao: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 5,
+        description: 'Abreviação do cargo',
+        example: 'TT'
+      },
+      ordem: {
+        type: 'NUMBER',
+        required: false,
+        description: 'Ordem de exibição',
+        example: 1
+      },
+      ativo: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', 'nao'],
+        default: 'sim',
+        description: 'Cargo ativo no sistema'
+      }
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+  // │                               9. TABELA: CATEGORIA_MEMBROS                                       │
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  categoria_membros: {
+    tableName: 'categoria_membros',
+    description: 'Cadastro de Categorias de Membros',
+    primaryKey: 'id',
+    file: 'Parametros',
+    sheet: 'Categoria_Membro',
+
+    fields: {
+      id: {
+        type: 'NUMBER',
+        required: true,
+        description: 'ID único da categoria',
+        example: 1
+      },
+      nome: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 15,
+        description: 'Nome da categoria',
+        example: 'Oficial'
+      },
+      abreviacao: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 5,
+        description: 'Abreviação da categoria',
+        example: 'OF'
+      },
+      ordem: {
+        type: 'NUMBER',
+        required: false,
+        description: 'Ordem de exibição',
+        example: 1
+      },
+      ativo: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', 'nao'],
+        default: 'sim',
+        description: 'Categoria ativa no sistema'
+      }
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+  // │                                    10. TABELA: DOJO                                              │
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  dojo: {
+    tableName: 'dojo',
+    description: 'Cadastro de Dojos Ativos',
+    primaryKey: 'id',
+    file: 'Parametros',
+    sheet: 'Dojo',
+
+    fields: {
+      id: {
+        type: 'NUMBER',
+        required: true,
+        description: 'ID único do dojo',
+        example: 1
+      },
+      nome: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 25,
+        description: 'Nome do dojo',
+        example: 'Dojotai'
+      },
+      abreviacao: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 5,
+        description: 'Abreviação do dojo',
+        example: 'TT'
+      },
+      ordem: {
+        type: 'NUMBER',
+        required: false,
+        description: 'Ordem de exibição',
+        example: 1
+      },
+      ativo: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', 'nao'],
+        default: 'sim',
+        description: 'Dojo ativo no sistema'
+      }
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+  // │                                   11. TABELA: OMITAMA                                            │
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  omitama: {
+    tableName: 'omitama',
+    description: 'Cadastro de Graus de Omitama',
+    primaryKey: 'id',
+    file: 'Parametros',
+    sheet: 'Omitama',
+
+    fields: {
+      id: {
+        type: 'NUMBER',
+        required: true,
+        description: 'ID único do grau',
+        example: 1
+      },
+      nome: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 15,
+        description: 'Nome do grau de omitama',
+        example: 'Superior'
+      },
+      abreviacao: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 5,
+        description: 'Abreviação do grau',
+        example: 'S'
+      },
+      ordem: {
+        type: 'NUMBER',
+        required: false,
+        description: 'Ordem de exibição (hierarquia)',
+        example: 1
+      },
+      ativo: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', 'nao'],
+        default: 'sim',
+        description: 'Grau ativo no sistema'
+      }
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+  // │                                    12. TABELA: SEXO                                              │
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  sexo: {
+    tableName: 'sexo',
+    description: 'Cadastro de Sexo',
+    primaryKey: 'id',
+    file: 'Parametros',
+    sheet: 'Sexo',
+
+    fields: {
+      id: {
+        type: 'NUMBER',
+        required: true,
+        description: 'ID único do sexo',
+        example: 1
+      },
+      nome: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 10,
+        description: 'Sexo',
+        example: 'Masculino'
+      },
+      abreviacao: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 1,
+        description: 'Abreviação',
+        example: 'M'
+      },
+      ordem: {
+        type: 'NUMBER',
+        required: false,
+        description: 'Ordem de exibição',
+        example: 1
+      },
+      ativo: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', 'nao'],
+        default: 'sim',
+        description: 'Opção ativa no sistema'
+      }
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+  // │                                 13. TABELA: STATUS_MEMBRO                                        │
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  status_membro: {
+    tableName: 'status_membro',
+    description: 'Cadastro de Status de Membros',
+    primaryKey: 'id',
+    file: 'Parametros',
+    sheet: 'Status',
+
+    fields: {
+      id: {
+        type: 'NUMBER',
+        required: true,
+        description: 'ID único do status',
+        example: 1
+      },
+      nome: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 15,
+        description: 'Nome do status',
+        example: 'Ativo'
+      },
+      ordem: {
+        type: 'NUMBER',
+        required: false,
+        description: 'Ordem de exibição',
+        example: 10
+      },
+      ativo: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', 'nao'],
+        default: 'sim',
+        description: 'Status ativo no sistema'
       }
     }
   }

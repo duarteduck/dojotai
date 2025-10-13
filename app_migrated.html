@@ -1936,6 +1936,76 @@
         [data-theme="dark"] .watermark-simulado {
             color: rgba(239, 68, 68, 0.12);
         }
+
+        /* ===== FILTROS MULTI-SELECT ===== */
+        .filter-multiselect {
+            position: relative;
+        }
+
+        .filter-dropdown {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            background: white;
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: var(--transition);
+            min-height: 32px;
+        }
+
+        .filter-dropdown:hover {
+            border-color: var(--primary);
+            background: var(--light);
+        }
+
+        .filter-dropdown.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .filter-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            padding: 4px;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: var(--transition);
+            font-size: var(--font-size-sm);
+        }
+
+        .filter-option:hover {
+            background: var(--light);
+        }
+
+        .filter-option input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .filter-option label {
+            cursor: pointer;
+            flex: 1;
+            user-select: none;
+        }
     </style>
 </head>
 <body data-theme="light">
@@ -3583,26 +3653,100 @@
 
                                 <!-- Filtros para seleção de membros -->
                                 <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
-                                        <div>
-                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Dojo</label>
-                                            <select id="target-dojo-filter" class="form-input" style="font-size: var(--font-size-sm);">
-                                                <option value="">Todos os dojos</option>
-                                            </select>
+                                    <!-- Busca por Nome -->
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">🔍 Busca por Nome</label>
+                                        <input type="text" id="target-name-filter" class="form-input" placeholder="Digite o nome do membro..." style="font-size: var(--font-size-sm);">
+                                    </div>
+
+                                    <!-- Loading de filtros -->
+                                    <div id="target-filters-loading" style="display: none; text-align: center; padding: 20px;">
+                                        <div style="width: 24px; height: 24px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div>
+                                        <p style="color: var(--text-light); margin: 0; font-size: var(--font-size-sm);">Carregando filtros...</p>
+                                    </div>
+
+                                    <!-- Filtros Multi-Select -->
+                                    <div id="target-filters-content" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px;">
+                                        <!-- Linha 1: Dojo / Status -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Dojo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-dojo')">
+                                                <span id="target-dojo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-dojo-options" class="filter-options" style="display: none;"></div>
                                         </div>
-                                        <div>
-                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Status</label>
-                                            <select id="target-status-filter" class="form-input" style="font-size: var(--font-size-sm);">
-                                                <option value="">Todos os status</option>
-                                            </select>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Status</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-status')">
+                                                <span id="target-status-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-status-options" class="filter-options" style="display: none;"></div>
                                         </div>
-                                        <div>
-                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Busca por nome</label>
-                                            <input type="text" id="target-name-filter" class="form-input" placeholder="Digite o nome..." style="font-size: var(--font-size-sm);">
+
+                                        <!-- Linha 2: Categoria Grupo / Categoria Membro -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cat. Grupo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-categoria-grupo')">
+                                                <span id="target-categoria-grupo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-categoria-grupo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cat. Membro</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-categoria-membro')">
+                                                <span id="target-categoria-membro-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-categoria-membro-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 3: Cargo / Buntai -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cargo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-cargo')">
+                                                <span id="target-cargo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-cargo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Buntai</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-buntai')">
+                                                <span id="target-buntai-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-buntai-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 4: Omitama / Sexo -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Omitama</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-omitama')">
+                                                <span id="target-omitama-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-omitama-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Sexo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-sexo')">
+                                                <span id="target-sexo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-sexo-options" class="filter-options" style="display: none;"></div>
                                         </div>
                                     </div>
+
+                                    <!-- Botões de Ação -->
                                     <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearTargetFilters()" style="font-size: 0.75rem; padding: 4px 8px;">Limpar</button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearTargetFilters('create')" style="font-size: 0.75rem; padding: 4px 8px;">Limpar</button>
                                         <button class="btn btn-sm btn-outline-primary" onclick="searchMembersForTargets('create')" style="font-size: 0.75rem; padding: 4px 8px;">🔍 Buscar</button>
                                     </div>
                                 </div>
@@ -3877,24 +4021,99 @@
                                 <!-- Filtros para buscar e gerenciar alvos -->
                                 <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
                                     <h4 style="font-size: var(--font-size-md); font-weight: 600; margin: 0 0 12px 0; color: var(--text);">Buscar e Gerenciar Alvos</h4>
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
-                                        <div>
-                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Dojo</label>
-                                            <select id="edit-target-dojo-filter" class="form-input" style="font-size: var(--font-size-sm);">
-                                                <option value="">Todos os dojos</option>
-                                            </select>
+
+                                    <!-- Busca por Nome -->
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">🔍 Busca por Nome</label>
+                                        <input type="text" id="edit-target-name-filter" class="form-input" placeholder="Digite o nome do membro..." style="font-size: var(--font-size-sm);">
+                                    </div>
+
+                                    <!-- Loading de filtros -->
+                                    <div id="edit-target-filters-loading" style="display: none; text-align: center; padding: 20px;">
+                                        <div style="width: 24px; height: 24px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div>
+                                        <p style="color: var(--text-light); margin: 0; font-size: var(--font-size-sm);">Carregando filtros...</p>
+                                    </div>
+
+                                    <!-- Filtros Multi-Select -->
+                                    <div id="edit-target-filters-content" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px;">
+                                        <!-- Linha 1: Dojo / Status -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Dojo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-dojo')">
+                                                <span id="edit-target-dojo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-dojo-options" class="filter-options" style="display: none;"></div>
                                         </div>
-                                        <div>
-                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Status</label>
-                                            <select id="edit-target-status-filter" class="form-input" style="font-size: var(--font-size-sm);">
-                                                <option value="">Todos os status</option>
-                                            </select>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Status</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-status')">
+                                                <span id="edit-target-status-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-status-options" class="filter-options" style="display: none;"></div>
                                         </div>
-                                        <div>
-                                            <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">Busca por nome</label>
-                                            <input type="text" id="edit-target-name-filter" class="form-input" placeholder="Digite o nome..." style="font-size: var(--font-size-sm);">
+
+                                        <!-- Linha 2: Categoria Grupo / Categoria Membro -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cat. Grupo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-categoria-grupo')">
+                                                <span id="edit-target-categoria-grupo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-categoria-grupo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cat. Membro</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-categoria-membro')">
+                                                <span id="edit-target-categoria-membro-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-categoria-membro-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 3: Cargo / Buntai -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cargo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-cargo')">
+                                                <span id="edit-target-cargo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-cargo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Buntai</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-buntai')">
+                                                <span id="edit-target-buntai-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-buntai-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 4: Omitama / Sexo -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Omitama</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-omitama')">
+                                                <span id="edit-target-omitama-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-omitama-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Sexo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-sexo')">
+                                                <span id="edit-target-sexo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-sexo-options" class="filter-options" style="display: none;"></div>
                                         </div>
                                     </div>
+
+                                    <!-- Botões de Ação -->
                                     <div style="display: flex; gap: 6px; justify-content: flex-end;">
                                         <button class="btn btn-sm btn-outline-secondary" onclick="clearTargetFilters('edit')" style="font-size: 0.75rem; padding: 4px 8px;">Limpar</button>
                                         <button class="btn btn-sm btn-outline-primary" onclick="searchMembersForTargets('edit')" style="font-size: 0.75rem; padding: 4px 8px;">🔍 Buscar</button>
@@ -5794,28 +6013,185 @@
             }
         }
 
+        // ===== FUNÇÕES DE MULTI-SELECT FILTERS =====
+
+        // Popular filtro multi-select com checkboxes
+        function populateMultiSelectFilter(filterId, items, defaultSelectedNames = []) {
+            const optionsContainer = document.getElementById(filterId + '-options');
+            if (!optionsContainer) return;
+
+            optionsContainer.innerHTML = '';
+
+            items.forEach(item => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'filter-option';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `${filterId}-${item.id}`;
+                checkbox.value = item.id;
+                checkbox.addEventListener('change', () => updateFilterLabel(filterId));
+
+                // Marcar como selecionado se estiver na lista de defaults
+                if (defaultSelectedNames.length > 0) {
+                    const itemNomeLower = item.nome.toLowerCase();
+                    if (defaultSelectedNames.some(name => itemNomeLower.includes(name.toLowerCase()))) {
+                        checkbox.checked = true;
+                    }
+                }
+
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.textContent = item.nome;
+
+                optionDiv.appendChild(checkbox);
+                optionDiv.appendChild(label);
+                optionsContainer.appendChild(optionDiv);
+            });
+
+            // Inicializar label
+            updateFilterLabel(filterId);
+        }
+
+        // Abrir/fechar dropdown do filtro
+        function toggleFilterDropdown(filterId) {
+            const optionsContainer = document.getElementById(filterId + '-options');
+            const dropdown = document.querySelector(`[onclick="toggleFilterDropdown('${filterId}')"]`);
+
+            if (!optionsContainer) return;
+
+            // Fechar todos os outros dropdowns
+            document.querySelectorAll('.filter-options').forEach(el => {
+                if (el.id !== filterId + '-options') {
+                    el.style.display = 'none';
+                }
+            });
+
+            document.querySelectorAll('.filter-dropdown').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Toggle do dropdown atual
+            if (optionsContainer.style.display === 'none' || !optionsContainer.style.display) {
+                optionsContainer.style.display = 'block';
+                if (dropdown) dropdown.classList.add('active');
+            } else {
+                optionsContainer.style.display = 'none';
+                if (dropdown) dropdown.classList.remove('active');
+            }
+        }
+
+        // Atualizar label do filtro com contagem de selecionados
+        function updateFilterLabel(filterId) {
+            const label = document.getElementById(filterId + '-label');
+            const optionsContainer = document.getElementById(filterId + '-options');
+
+            if (!label || !optionsContainer) return;
+
+            const checkboxes = optionsContainer.querySelectorAll('input[type="checkbox"]');
+            const selected = Array.from(checkboxes).filter(cb => cb.checked);
+
+            if (selected.length === 0) {
+                label.textContent = 'Todos';
+                label.style.color = '';
+            } else if (selected.length === 1) {
+                const selectedOption = selected[0].nextElementSibling;
+                label.textContent = selectedOption.textContent;
+                label.style.color = 'var(--primary)';
+                label.style.fontWeight = '600';
+            } else {
+                label.textContent = `${selected.length} selecionados`;
+                label.style.color = 'var(--primary)';
+                label.style.fontWeight = '600';
+            }
+        }
+
+        // Obter valores selecionados de um filtro
+        function getSelectedFilterValues(filterId) {
+            const optionsContainer = document.getElementById(filterId + '-options');
+            if (!optionsContainer) return [];
+
+            const checkboxes = optionsContainer.querySelectorAll('input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        // Limpar seleções de um filtro
+        function clearFilterSelections(filterId) {
+            const optionsContainer = document.getElementById(filterId + '-options');
+            if (!optionsContainer) return;
+
+            const checkboxes = optionsContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateFilterLabel(filterId);
+        }
+
+        // Fechar dropdowns ao clicar fora (melhorado)
+        document.addEventListener('click', function(event) {
+            // Verifica se o clique foi dentro de algum dropdown ou opções
+            const clickedInsideFilter = event.target.closest('.filter-multiselect');
+
+            if (!clickedInsideFilter) {
+                // Clicou fora de qualquer filtro - fecha todos
+                document.querySelectorAll('.filter-options').forEach(el => {
+                    el.style.display = 'none';
+                });
+                document.querySelectorAll('.filter-dropdown').forEach(el => {
+                    el.classList.remove('active');
+                });
+            }
+        });
+
+        // ===== FIM FUNÇÕES DE MULTI-SELECT FILTERS =====
+
         // Carregar filtros para os selects
-        function loadTargetFilters(mode = 'create') {
+        async function loadTargetFilters(mode = 'create') {
             console.log('📋 Carregando filtros para alvos...');
 
-            // Carregar dojos (reutilizar função existente)
-            if (typeof loadDojos === 'function') {
-                const prefix = mode === 'create' ? 'target' : 'edit-target';
-                loadDojos(prefix + '-dojo-filter');
-            }
+            const prefix = mode === 'create' ? 'target' : 'edit-target';
+            const loadingEl = document.getElementById(prefix + '-filters-loading');
+            const contentEl = document.getElementById(prefix + '-filters-content');
 
-            // Carregar membros para popular filtros de status
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler((result) => {
-                        if (result && result.ok && result.items) {
-                            populateTargetStatusFilter(result.items, mode);
-                        }
-                    })
-                    .withFailureHandler((error) => {
-                        console.warn('⚠️ Erro ao carregar membros para filtros:', error);
-                    })
-                    .listMembersApi();
+            try {
+                // Mostrar loading
+                if (loadingEl) loadingEl.style.display = 'block';
+                if (contentEl) contentEl.style.display = 'none';
+
+                // OTIMIZAÇÃO: Carregar TODOS os filtros em UMA única chamada API
+                const result = await apiCall('listAllFiltersApi');
+
+                if (result && result.ok && result.filters) {
+                    const filters = result.filters;
+
+                    // Popular cada filtro com os dados retornados
+                    populateMultiSelectFilter(prefix + '-dojo', filters.dojos);
+                    populateMultiSelectFilter(prefix + '-status', filters.status, ['Ativo', 'Afastado']);
+
+                    // Separar categorias: Grupo e Membro (usam a mesma tabela)
+                    populateMultiSelectFilter(prefix + '-categoria-grupo', filters.categorias);
+                    populateMultiSelectFilter(prefix + '-categoria-membro', filters.categorias);
+
+                    populateMultiSelectFilter(prefix + '-cargo', filters.cargos);
+                    populateMultiSelectFilter(prefix + '-omitama', filters.omitamas);
+                    populateMultiSelectFilter(prefix + '-sexo', filters.sexos);
+                    populateMultiSelectFilter(prefix + '-buntai', filters.buntais);
+
+                    console.log('✅ Filtros carregados com sucesso (1 chamada API)');
+                } else {
+                    console.warn('⚠️ Erro ao carregar filtros:', result);
+                    showToast('⚠️ Erro ao carregar filtros', 'error');
+                }
+
+                // Esconder loading e mostrar filtros
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) contentEl.style.display = 'grid';
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar filtros:', error);
+                showToast('⚠️ Erro ao carregar filtros: ' + error.message, 'error');
+
+                // Esconder loading em caso de erro
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) contentEl.style.display = 'grid';
             }
         }
 
@@ -5843,22 +6219,21 @@
         }
 
         // Carregar alvos existentes (modo edição)
-        function loadExistingTargets(activityId) {
+        async function loadExistingTargets(activityId) {
             console.log('📋 Carregando alvos existentes para:', activityId);
 
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler((result) => {
-                        if (result && result.ok) {
-                            displayExistingTargets(result.items || []);
-                        } else {
-                            console.warn('⚠️ Erro ao carregar alvos:', result?.error);
-                        }
-                    })
-                    .withFailureHandler((error) => {
-                        console.error('❌ Erro na API de alvos:', error);
-                    })
-                    .listParticipacoes(activityId);
+            try {
+                const result = await apiCall('listParticipacoes', activityId);
+
+                if (result && result.ok) {
+                    displayExistingTargets(result.items || []);
+                } else {
+                    console.warn('⚠️ Erro ao carregar alvos:', result?.error);
+                    showToast('⚠️ Erro ao carregar alvos: ' + (result?.error || 'Erro desconhecido'), 'error');
+                }
+            } catch (error) {
+                console.error('❌ Erro na API de alvos:', error);
+                showToast('❌ Erro ao carregar alvos: ' + error.message, 'error');
             }
         }
 
@@ -6092,66 +6467,69 @@
         // Função removeExistingTarget removida - agora usamos o sistema de lista dupla integrado
 
         // Buscar membros com base nos filtros
-        function searchMembersForTargets(mode = 'create') {
+        async function searchMembersForTargets(mode = 'create') {
             console.log('🔍 Buscando membros para alvos...');
 
             const prefix = mode === 'create' ? 'target' : 'edit-target';
 
-            // Obter valores dos filtros
+            // Obter valores de todos os filtros
             const filters = {
-                dojo: document.getElementById(prefix + '-dojo-filter')?.value || '',
-                status: document.getElementById(prefix + '-status-filter')?.value || '',
                 nome: document.getElementById(prefix + '-name-filter')?.value || ''
             };
+
+            // Obter valores dos filtros multi-select
+            const dojoValues = getSelectedFilterValues(prefix + '-dojo');
+            const statusValues = getSelectedFilterValues(prefix + '-status');
+            const categoriaGrupoValues = getSelectedFilterValues(prefix + '-categoria-grupo');
+            const categoriaMembroValues = getSelectedFilterValues(prefix + '-categoria-membro');
+            const cargoValues = getSelectedFilterValues(prefix + '-cargo');
+            const buntaiValues = getSelectedFilterValues(prefix + '-buntai');
+            const omitamaValues = getSelectedFilterValues(prefix + '-omitama');
+            const sexoValues = getSelectedFilterValues(prefix + '-sexo');
+
+            // Adicionar ao objeto filters apenas se tiver seleções
+            if (dojoValues.length > 0) filters.dojo_id = dojoValues;
+            if (statusValues.length > 0) filters.status_membro_id = statusValues;
+            if (categoriaGrupoValues.length > 0) filters.categoria_grupo_id = categoriaGrupoValues;
+            if (categoriaMembroValues.length > 0) filters.categoria_membro_id = categoriaMembroValues;
+            if (cargoValues.length > 0) filters.cargo_id = cargoValues;
+            if (buntaiValues.length > 0) filters.buntai = buntaiValues;
+            if (omitamaValues.length > 0) filters.omitama_id = omitamaValues;
+            if (sexoValues.length > 0) filters.sexo_id = sexoValues;
 
             console.log('🔍 Filtros aplicados:', filters);
 
             // Mostrar loading
             showTargetsLoading(mode);
 
-            // Chamar API de busca diretamente
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler((result) => {
-                        hideTargetsLoading(mode);
-                        console.log('✅ Resposta da API:', result);
-                        console.log('🔍 Tipo do resultado:', typeof result);
-                        console.log('🔍 É array?', Array.isArray(result));
-                        if (result) {
-                            console.log('🔍 Propriedades:', Object.keys(result));
-                            console.log('🔍 result.ok:', result.ok);
-                            console.log('🔍 result.items:', result.items);
-                            console.log('🔍 Tamanho items:', result.items ? result.items.length : 'undefined');
-                        }
+            try {
+                const result = await apiCall('searchMembersByCriteria', filters);
 
-                        // Verificar se o resultado é válido
-                        if (result && result.ok && result.items) {
-                            console.log('✅ Processando items:', result.items.length);
-                            displayTargetsResults(result.items, mode);
-                        } else if (result && result.ok && Array.isArray(result)) {
-                            // Fallback se retornar array direto
-                            console.log('✅ Processando array direto:', result.length);
-                            displayTargetsResults(result, mode);
-                        } else if (Array.isArray(result)) {
-                            // Fallback se retornar só array sem wrapper
-                            console.log('✅ Processando array sem wrapper:', result.length);
-                            displayTargetsResults(result, mode);
-                        } else {
-                            console.error('❌ Erro na busca:', result?.error || 'Resposta inválida');
-                            console.log('🔍 Resultado completo:', result);
-                            showTargetsEmpty(mode);
-                        }
-                    })
-                    .withFailureHandler((error) => {
-                        hideTargetsLoading(mode);
-                        console.error('❌ Erro na API de busca:', error);
-                        showTargetsEmpty(mode);
-                    })
-                    .searchMembersByCriteria(filters);
-            } else {
                 hideTargetsLoading(mode);
-                console.error('❌ Google Apps Script não disponível');
+                console.log('✅ Resposta da API:', result);
+
+                // Verificar se o resultado é válido
+                if (result && result.ok && result.items) {
+                    console.log('✅ Processando items:', result.items.length);
+                    displayTargetsResults(result.items, mode);
+                } else if (result && result.ok && Array.isArray(result)) {
+                    // Fallback se retornar array direto
+                    console.log('✅ Processando array direto:', result.length);
+                    displayTargetsResults(result, mode);
+                } else if (Array.isArray(result)) {
+                    // Fallback se retornar só array sem wrapper
+                    console.log('✅ Processando array sem wrapper:', result.length);
+                    displayTargetsResults(result, mode);
+                } else {
+                    console.error('❌ Erro na busca:', result?.error || 'Resposta inválida');
+                    showTargetsEmpty(mode);
+                    showToast('⚠️ Erro ao buscar membros: ' + (result?.error || 'Resposta inválida'), 'error');
+                }
+            } catch (error) {
+                hideTargetsLoading(mode);
+                console.error('❌ Erro na API de busca:', error);
                 showTargetsEmpty(mode);
+                showToast('❌ Erro ao buscar membros: ' + error.message, 'error');
             }
         }
 
@@ -6610,13 +6988,19 @@
         function clearTargetFilters(mode = 'create') {
             const prefix = mode === 'create' ? 'target' : 'edit-target';
 
-            const dojoFilter = document.getElementById(prefix + '-dojo-filter');
-            const statusFilter = document.getElementById(prefix + '-status-filter');
+            // Limpar filtro de nome
             const nameFilter = document.getElementById(prefix + '-name-filter');
-
-            if (dojoFilter) dojoFilter.value = '';
-            if (statusFilter) statusFilter.value = '';
             if (nameFilter) nameFilter.value = '';
+
+            // Limpar todos os filtros multi-select
+            clearFilterSelections(prefix + '-dojo');
+            clearFilterSelections(prefix + '-status');
+            clearFilterSelections(prefix + '-categoria-grupo');
+            clearFilterSelections(prefix + '-categoria-membro');
+            clearFilterSelections(prefix + '-cargo');
+            clearFilterSelections(prefix + '-buntai');
+            clearFilterSelections(prefix + '-omitama');
+            clearFilterSelections(prefix + '-sexo');
 
             // Esconder resultados e mostrar estado vazio
             showTargetsEmpty(mode);

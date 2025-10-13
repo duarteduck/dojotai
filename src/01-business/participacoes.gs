@@ -140,7 +140,19 @@ function listParticipacoes(sessionId, activityId) {
  * @param {Object} filters - Filtros aplicados
  * @returns {Object} { ok: boolean, items: Array }
  */
-function searchMembersByCriteria(sessionId, filters) {
+/**
+ * Busca membros com filtros dinâmicos
+ * Aceita valores simples (string/number) ou múltiplos (array)
+ * Filtra pelos campos _id (foreign keys) e campos numéricos diretamente
+ *
+ * EXEMPLOS:
+ * - Filtro simples: { status_membro_id: 1 }
+ * - Filtro múltiplo: { dojo_id: [1, 2] }
+ * - Filtros combinados: { status_membro_id: 1, dojo_id: [1, 2], nome: 'João' }
+ * - Campo texto: { nome: 'João' } (usa CONTAINS)
+ * - Campo numérico array: { buntai: [1, 2] } (usa IN)
+ */
+function searchMembersByCriteria(sessionId, filters = {}) {
   try {
     // Validar sessão
     if (!sessionId) {
@@ -162,55 +174,112 @@ function searchMembersByCriteria(sessionId, filters) {
       };
     }
 
-    // Usar DatabaseManager para buscar membros
-    const members = DatabaseManager.query('membros', {}, false);
+    // Separar filtros: exatos (para DatabaseManager) vs complexos (para JS)
+    const exactFilters = {};
+    const complexFilters = {};
+
+    Object.keys(filters).forEach(field => {
+      const value = filters[field];
+
+      // Ignorar valores vazios
+      if (value === null || value === undefined || value === '') {
+        return;
+      }
+
+      // Detectar tipo de filtro
+      if (Array.isArray(value)) {
+        // Array = filtro IN (múltiplos valores)
+        complexFilters[field] = { type: 'IN', values: value };
+      } else if (field === 'nome') {
+        // Campo 'nome' sempre usa CONTAINS
+        complexFilters[field] = { type: 'CONTAINS', value: value };
+      } else if (typeof value === 'string' && value.trim()) {
+        // String simples = EQUALS (passa para DatabaseManager)
+        exactFilters[field] = value.trim();
+      } else {
+        // Outros tipos (não deveria acontecer, mas por segurança)
+        exactFilters[field] = value;
+      }
+    });
+
+    Logger.debug('searchMembersByCriteria', 'Filtros processados', {
+      filters: filters,
+      exact: exactFilters,
+      complex: complexFilters
+    });
+
+    // Query otimizada: passa filtros exatos para DatabaseManager (aproveita cache!)
+    const members = DatabaseManager.query('membros', exactFilters, true);
 
     if (!members || members.length === 0) {
-      return { ok: true, items: [] };
+      return { ok: true, items: [], total: 0 };
     }
 
-    // Aplicar filtros se fornecidos
+    // Aplicar filtros complexos em memória
     let filteredMembers = members;
 
-    // Filtro por dojo
-    if (filters.dojo && filters.dojo.trim()) {
-      filteredMembers = filteredMembers.filter(member => {
-        const memberDojo = (member.dojo || '').toString().toLowerCase();
-        const filterDojo = filters.dojo.toLowerCase();
-        return memberDojo.includes(filterDojo) || memberDojo === filterDojo;
-      });
-    }
+    Object.keys(complexFilters).forEach(field => {
+      const filter = complexFilters[field];
 
-    // Filtro por status
-    if (filters.status && filters.status.trim()) {
-      filteredMembers = filteredMembers.filter(member => {
-        const memberStatus = (member.status || '').toString().toLowerCase();
-        const filterStatus = filters.status.toLowerCase();
-        return memberStatus === filterStatus;
-      });
-    }
+      if (filter.type === 'IN') {
+        // Filtro IN: campo está em lista de valores
+        filteredMembers = filteredMembers.filter(member => {
+          const memberValue = member[field];
 
-    // Filtro por nome
-    if (filters.nome && filters.nome.trim()) {
-      const nomeFiltro = filters.nome.toLowerCase().trim();
-      filteredMembers = filteredMembers.filter(member => {
-        const memberNome = (member.nome || '').toString().toLowerCase();
-        return memberNome.includes(nomeFiltro);
-      });
-    }
+          // Ignorar membros com valor vazio/null/undefined
+          if (memberValue === null || memberValue === undefined || memberValue === '') {
+            return false;
+          }
 
-    // Otimizar dados: retornar apenas campos necessários
+          // Comparar valores (numéricos ou strings)
+          return filter.values.some(filterValue => {
+            // Comparar como números (campos _id e buntai)
+            const memberNum = Number(memberValue);
+            const filterNum = Number(filterValue);
+
+            if (!isNaN(memberNum) && !isNaN(filterNum)) {
+              return memberNum === filterNum;
+            }
+
+            // Fallback para campos texto futuros (case-insensitive)
+            return memberValue.toString().toLowerCase() === filterValue.toString().toLowerCase();
+          });
+        });
+      } else if (filter.type === 'CONTAINS') {
+        // Filtro CONTAINS: campo contém valor
+        const searchValue = filter.value.toString().toLowerCase();
+        filteredMembers = filteredMembers.filter(member => {
+          const memberValue = (member[field] || '').toString().toLowerCase();
+          return memberValue.includes(searchValue);
+        });
+      }
+    });
+
+    // Retornar apenas campos necessários (otimiza tráfego)
     const optimizedMembers = filteredMembers.map(member => ({
       codigo_sequencial: member.codigo_sequencial,
       nome: member.nome,
       dojo: member.dojo,
-      status: member.status
+      status: member.status,
+      categoria_grupo: member.categoria_grupo,
+      categoria_membro: member.categoria_membro
     }));
 
-    const result = { ok: true, items: optimizedMembers };
-    return result;
+    return {
+      ok: true,
+      items: optimizedMembers,
+      total: optimizedMembers.length
+    };
+
   } catch (err) {
-    return { ok: false, error: 'Erro searchMembersByCriteria: ' + (err && err.message ? err.message : err) };
+    Logger.error('Participacoes', 'Erro em searchMembersByCriteria', {
+      error: err.message,
+      filters
+    });
+    return {
+      ok: false,
+      error: 'Erro ao buscar membros: ' + (err?.message || err)
+    };
   }
 }
 
