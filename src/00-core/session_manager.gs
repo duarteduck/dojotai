@@ -240,6 +240,63 @@ function validateSession(sessionId) {
 }
 
 /**
+ * Helper: Valida sessão e retorna erro padronizado se inválida
+ *
+ * @description Centraliza a lógica de validação de sessão usada em 19+ funções de API.
+ * Reduz duplicação de código e garante consistência na validação.
+ *
+ * Comportamento idêntico ao código manual repetido, mas em 3 linhas em vez de 20.
+ *
+ * @param {string} sessionId - ID da sessão a validar
+ * @param {string} [context='API'] - Nome do módulo/contexto (para logs detalhados)
+ * @returns {Object} Resultado da validação
+ * @returns {boolean} returns.ok - Se a validação foi bem-sucedida
+ * @returns {Object} [returns.session] - Dados da sessão se válida
+ * @returns {string} [returns.error] - Mensagem de erro se inválida
+ * @returns {boolean} [returns.sessionExpired] - True se sessão expirou/inválida
+ *
+ * @example
+ * // Uso em qualquer API:
+ * function minhaApi(sessionId) {
+ *   const auth = requireSession(sessionId, 'MinhaAPI');
+ *   if (!auth.ok) return auth;  // Retorna erro padronizado
+ *
+ *   // Código da API continua aqui...
+ *   const user = auth.session.user_id;
+ * }
+ *
+ * @since 2.0.0-alpha.5
+ */
+function requireSession(sessionId, context = 'API') {
+  // Validação 1: sessionId foi fornecido?
+  if (!sessionId) {
+    Logger.warn(context, 'Tentativa sem sessionId');
+    return {
+      ok: false,
+      error: 'Usuário não autenticado',
+      sessionExpired: true
+    };
+  }
+
+  // Validação 2: sessão é válida?
+  const sessionData = validateSession(sessionId);
+  if (!sessionData || !sessionData.ok || !sessionData.session) {
+    Logger.warn(context, 'Sessão inválida');
+    return {
+      ok: false,
+      error: 'Sessão inválida ou expirada',
+      sessionExpired: true
+    };
+  }
+
+  // Sucesso: retorna sessão válida
+  return {
+    ok: true,
+    session: sessionData.session
+  };
+}
+
+/**
  * Validação rápida de sessão (apenas verifica se está ativa e não expirou)
  * Usada antes de abrir modais para avisar o usuário precocemente
  * @param {string} sessionId - ID da sessão

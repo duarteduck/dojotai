@@ -7,24 +7,9 @@
  */
 function listCargosApi(sessionId) {
   try {
-    if (!sessionId) {
-      Logger.warn('Parametros', 'Tentativa de listar cargos sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Parametros', 'Sessão inválida ao listar cargos');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Parametros');
+    if (!auth.ok) return auth;
 
     const cargos = DatabaseManager.query('cargo', { ativo: 'sim' }, true);
 
@@ -57,24 +42,9 @@ function listCargosApi(sessionId) {
  */
 function listCategoriasApi(sessionId) {
   try {
-    if (!sessionId) {
-      Logger.warn('Parametros', 'Tentativa de listar categorias sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Parametros', 'Sessão inválida ao listar categorias');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Parametros');
+    if (!auth.ok) return auth;
 
     const categorias = DatabaseManager.query('categoria_membros', { ativo: 'sim' }, true);
 
@@ -106,24 +76,9 @@ function listCategoriasApi(sessionId) {
  */
 function listDojosApi(sessionId) {
   try {
-    if (!sessionId) {
-      Logger.warn('Parametros', 'Tentativa de listar dojos sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Parametros', 'Sessão inválida ao listar dojos');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Parametros');
+    if (!auth.ok) return auth;
 
     const dojos = DatabaseManager.query('dojo', { ativo: 'sim' }, true);
 
@@ -155,24 +110,9 @@ function listDojosApi(sessionId) {
  */
 function listOmitamasApi(sessionId) {
   try {
-    if (!sessionId) {
-      Logger.warn('Parametros', 'Tentativa de listar omitamas sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Parametros', 'Sessão inválida ao listar omitamas');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Parametros');
+    if (!auth.ok) return auth;
 
     const omitamas = DatabaseManager.query('omitama', { ativo: 'sim' }, true);
 
@@ -204,24 +144,9 @@ function listOmitamasApi(sessionId) {
  */
 function listSexosApi(sessionId) {
   try {
-    if (!sessionId) {
-      Logger.warn('Parametros', 'Tentativa de listar sexos sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Parametros', 'Sessão inválida ao listar sexos');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Parametros');
+    if (!auth.ok) return auth;
 
     const sexos = DatabaseManager.query('sexo', { ativo: 'sim' }, true);
 
@@ -253,24 +178,9 @@ function listSexosApi(sessionId) {
  */
 function listStatusMembrosApi(sessionId) {
   try {
-    if (!sessionId) {
-      Logger.warn('Parametros', 'Tentativa de listar status sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Parametros', 'Sessão inválida ao listar status');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Parametros');
+    if (!auth.ok) return auth;
 
     const status = DatabaseManager.query('status_membro', { ativo: 'sim' }, true);
 
@@ -303,25 +213,9 @@ function listStatusMembrosApi(sessionId) {
  */
 function listAllFiltersApi(sessionId) {
   try {
-    // Validação de sessão UMA VEZ para todos os filtros
-    if (!sessionId) {
-      Logger.warn('Parametros', 'Tentativa de listar filtros sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Parametros', 'Sessão inválida ao listar filtros');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Parametros');
+    if (!auth.ok) return auth;
 
     // Buscar todas as tabelas de parâmetros (todas com cache habilitado)
     const dojos = DatabaseManager.query('dojo', { ativo: 'sim' }, true) || [];
