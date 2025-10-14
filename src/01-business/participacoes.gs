@@ -633,6 +633,129 @@ async function saveParticipacaoDirectly(sessionId, activityId, memberId, dados, 
 }
 
 /**
+ * Cria múltiplas participações em batch (membros extras)
+ * @param {string} sessionId - ID da sessão do usuário
+ * @param {string} activityId - ID da atividade
+ * @param {Array<Object>} membrosData - Array de {memberId, tipo}
+ * @param {string} uid - UID do usuário que está criando
+ * @returns {Object} { ok: boolean, created: number, skipped: number, message: string }
+ */
+async function createMultipleParticipacoes(sessionId, activityId, membrosData, uid) {
+  try {
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Participacoes');
+    if (!auth.ok) return auth;
+
+    // Validar parâmetros
+    if (!activityId) {
+      return { ok: false, error: 'ID da atividade é obrigatório.' };
+    }
+
+    if (!Array.isArray(membrosData) || membrosData.length === 0) {
+      return { ok: false, error: 'Array de membros é obrigatório e não pode estar vazio.' };
+    }
+
+    Logger.info('Participacoes', 'Criando múltiplas participações', {
+      activityId,
+      quantidade: membrosData.length,
+      uid
+    });
+
+    // Buscar participações existentes para evitar duplicatas
+    const existentes = DatabaseManager.query('participacoes', {
+      id_atividade: activityId
+    }, false) || [];
+
+    const existentesMembrosSet = new Set(
+      existentes
+        .filter(p => p.deleted !== 'x')
+        .map(p => p.id_membro.toString())
+    );
+
+    Logger.debug('Participacoes', 'Participações existentes verificadas', {
+      total: existentes.length,
+      ativos: existentesMembrosSet.size
+    });
+
+    // Inserir novos membros
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    for (const membroData of membrosData) {
+      const memberId = membroData.memberId.toString();
+
+      // Verificar se já existe participação ativa para este membro
+      if (existentesMembrosSet.has(memberId)) {
+        Logger.debug('Participacoes', 'Participação já existe, pulando', {
+          memberId,
+          activityId
+        });
+        skippedCount++;
+        continue;
+      }
+
+      // Montar dados da participação seguindo data_dictionary.gs
+      const novaParticipacao = {
+        // Campos obrigatórios
+        id_atividade: activityId,
+        id_membro: memberId,
+        tipo: membroData.tipo || 'extra',
+        marcado_em: nowString_(),
+
+        // Campos opcionais (usar dados do frontend se fornecidos, senão vazio)
+        confirmou: '',
+        confirmado_em: '',
+        participou: membroData.participou || '',
+        chegou_tarde: membroData.chegou_tarde || '',
+        saiu_cedo: membroData.saiu_cedo || '',
+        status_participacao: (membroData.participou === 'sim') ? 'Presente' : '',
+        justificativa: '',
+        observacoes: membroData.observacoes || '',
+        marcado_por: uid || '',
+        deleted: ''
+      };
+
+      // Inserir usando DatabaseManager (padrão do projeto)
+      const insertResult = await DatabaseManager.insert('participacoes', novaParticipacao);
+
+      if (insertResult && insertResult.success) {
+        createdCount++;
+        Logger.info('Participacoes', 'Participação criada com sucesso', {
+          participacaoId: insertResult.id,
+          memberId,
+          tipo: novaParticipacao.tipo
+        });
+      } else {
+        Logger.warn('Participacoes', 'Falha ao criar participação', {
+          memberId,
+          error: insertResult?.error
+        });
+      }
+    }
+
+    const message = `${createdCount} participações criadas, ${skippedCount} já existentes`;
+    Logger.info('Participacoes', 'Batch insert finalizado', {
+      created: createdCount,
+      skipped: skippedCount
+    });
+
+    return {
+      ok: true,
+      created: createdCount,
+      skipped: skippedCount,
+      message: message
+    };
+
+  } catch (error) {
+    Logger.error('Participacoes', 'Erro em createMultipleParticipacoes', {
+      error: error.message,
+      stack: error.stack
+    });
+    return { ok: false, error: 'Erro ao criar participações: ' + error.message };
+  }
+}
+
+/**
  * Atualiza participação usando ID específico da tabela
  * @param {string} participacaoId - ID específico da participação (ex: PART-0001)
  * @param {Object} dados - Dados da participação

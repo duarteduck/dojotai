@@ -4202,9 +4202,20 @@
                                         <input
                                             type="text"
                                             id="search-extra-member"
-                                            placeholder="🔍 Buscar membro por nome..."
+                                            placeholder="Buscar membro por nome..."
                                             autocomplete="off"
-                                            style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: var(--font-size-md); background: white;"
+                                            style="
+                                                width: 100%;
+                                                padding: 10px 12px;
+                                                border: 2px solid #d1d5db;
+                                                border-radius: 8px;
+                                                font-size: var(--font-size-md);
+                                                outline: none;
+                                                transition: all 0.2s;
+                                                background: white;
+                                            "
+                                            onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                                            onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'"
                                         />
                                         <div id="member-suggestions" class="autocomplete-suggestions" style="display: none;"></div>
                                     </div>
@@ -4336,6 +4347,10 @@
             selectedTargets.clear();
             currentTargetsData = [];
             window.allMembersCache = new Map();
+            pendingExtraMembers = []; // Limpar membros extras pendentes
+            currentParticipations = []; // Limpar participações carregadas
+            extraMemberSearchInitialized = false; // Resetar flag para permitir reinicialização
+            console.log('🧼 Membros extras pendentes limpos ao fechar modal');
 
             const modal = document.getElementById('editActivityModal');
             if (modal) {
@@ -4388,6 +4403,9 @@
                     // Filtrar apenas registros não deletados
                     const activeParticipations = participationsResult.items.filter(p => p.deleted !== 'x');
 
+                    // Armazenar participações para validação de duplicatas
+                    currentParticipations = activeParticipations;
+
                     console.log('👥 Total de participações:', participationsResult.items.length);
                     console.log('👥 Participações ativas (não deletadas):', activeParticipations.length);
 
@@ -4410,6 +4428,9 @@
                         if (emptyOld) emptyOld.style.display = 'block';
                     }
                 } else {
+                    // Armazenar array vazio para validação
+                    currentParticipations = [];
+
                     // Mostrar mensagem de sem alvos (novo modal)
                     const noTargets = document.getElementById('participants-no-targets');
                     if (noTargets) noTargets.style.display = 'block';
@@ -4418,6 +4439,17 @@
                     const emptyOld = document.getElementById('participantsEmpty');
                     if (emptyOld) emptyOld.style.display = 'block';
                 }
+
+                // ========== MOSTRAR SEÇÃO DE BUSCA DE MEMBROS EXTRAS ==========
+                const extraSection = document.getElementById('addExtraMemberSection');
+                if (extraSection) {
+                    extraSection.style.display = 'block';
+                    console.log('✅ Seção de busca de membros extras exibida');
+                }
+
+                // ========== INICIALIZAR BUSCA DE MEMBROS EXTRAS ==========
+                initExtraMemberSearch(activityId);
+                console.log('✅ Busca de membros extras inicializada');
 
             } catch (error) {
                 console.error('❌ Erro ao carregar dados para participações:', error);
@@ -4459,23 +4491,50 @@
                 return;
             }
 
-            console.log('👥 [PARTICIPANTES] Renderizando participações:', participations.length);
+            // CONVERTER PENDENTES EM FORMATO DE PARTICIPAÇÃO
+            const pendingAsParticipations = pendingExtraMembers.map(m => ({
+                id: `temp-${m.uid}`, // ID temporário
+                id_membro: m.uid,
+                nome_membro: m.nome,
+                tipo: 'extra',
+                participou: 'sim', // ✅ Já marcado como participou
+                chegou_tarde: '',
+                saiu_cedo: '',
+                observacoes: '',
+                deleted: '',
+                isPending: true // Flag para identificar
+            }));
+
+            // COMBINAR: participações do banco + pendentes
+            const allParticipations = [...participations, ...pendingAsParticipations];
+
+            console.log('👥 [PARTICIPANTES] Renderizando:', participations.length, 'do banco +', pendingExtraMembers.length, 'pendentes');
 
             // Backend já retorna nome_membro - não precisa buscar todos os membros
             let html = '';
-            participations.forEach(participation => {
+            allParticipations.forEach(participation => {
                 console.log('👥 [PARTICIPANTES] Processando participação:', participation.id_membro, participation.nome_membro);
                 const memberName = participation.nome_membro || `Nome não encontrado (ID: ${participation.id_membro})`;
+                const isPending = participation.isPending || false;
 
                         html += `
-                            <div class="participant-item" data-deleted="${participation.deleted || ''}" data-table-id="${participation.id}" style="
-                                background: white;
-                                border: 1px solid var(--border-color);
+                            <div class="participant-item"
+                                 data-deleted="${participation.deleted || ''}"
+                                 data-table-id="${participation.id}"
+                                 data-pending="${isPending}"
+                                 style="
+                                background: ${isPending ? '#fffbeb' : 'white'};
+                                border: 1px solid ${isPending ? '#fbbf24' : 'var(--border-color)'};
                                 border-radius: 8px;
                                 padding: 16px;
                                 margin-bottom: 12px;
+                                ${isPending ? 'border-left: 4px solid #f59e0b;' : ''}
                                 ${participation.deleted === 'x' ? 'opacity: 0.5; background: #fee; border-color: var(--danger);' : ''}
-                            ">
+                            ">${isPending ? `
+                                <div style="color: #f59e0b; font-size: 12px; font-weight: 600; margin-bottom: 8px;">
+                                    ⏳ PENDENTE - Será salvo ao clicar em "Salvar Participações"
+                                </div>
+                            ` : ''}
                                 <!-- Linha 1: Nome + Checkbox Participou -->
                                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                                     <div style="display: flex; align-items: center;">
@@ -4519,6 +4578,7 @@
                                                 width: 18px;
                                                 height: 18px;
                                                 accent-color: var(--primary);
+                                                cursor: pointer;
                                             "
                                         >
                                         Participou
@@ -4620,6 +4680,8 @@
         let searchTimeout;
         let currentActivityIdForExtraMember = null;
         let extraMemberSearchInitialized = false;
+        let pendingExtraMembers = []; // Membros extras adicionados localmente, ainda não salvos no banco
+        let currentParticipations = []; // Participações carregadas do banco (para validação de duplicatas)
 
         function initExtraMemberSearch(activityId) {
             currentActivityIdForExtraMember = activityId;
@@ -4666,7 +4728,11 @@
             // Buscar membros usando apiCall()
             (async () => {
                 try {
-                    const result = await apiCall('searchMembersByCriteria', searchTerm, { status: 'ativo' });
+                    // Enviar filtros como objeto único: {nome: 'termo', status: ['ativo', 'afastado']}
+                    const result = await apiCall('searchMembersByCriteria', {
+                        nome: searchTerm,
+                        status: ['Ativo', 'Afastado'] // Array = filtro IN (múltiplos valores)
+                    });
                     showMemberSuggestions(result);
                 } catch (error) {
                     // Erro de sessão já tratado por apiCall()
@@ -4689,7 +4755,7 @@
 
             const members = result.items;
             const html = members.map(member => `
-                <div class="suggestion-item" onclick="addExtraMember('${member.uid}', '${escapeHtml(member.nome)}', '${escapeHtml(member.dojo || '')}')">
+                <div class="suggestion-item" onclick="addExtraMember('${member.codigo_sequencial}', '${escapeHtml(member.nome)}', '${escapeHtml(member.dojo || '')}')">
                     <div class="member-avatar">${member.nome.charAt(0).toUpperCase()}</div>
                     <div class="member-info">
                         <div class="member-name">${member.nome}</div>
@@ -4712,7 +4778,7 @@
                 .replace(/'/g, '&#039;');
         }
 
-        async function addExtraMember(memberId, memberName, memberDojo) {
+        function addExtraMember(memberId, memberName, memberDojo) {
             const activityId = currentActivityIdForExtraMember;
 
             if (!activityId) {
@@ -4720,37 +4786,45 @@
                 return;
             }
 
-            try {
-                console.log('➕ Adicionando membro extra:', memberName, 'à atividade:', activityId);
+            // Verificar se membro já existe nas participações do banco
+            const memberIdStr = String(memberId);
+            const jaExisteNoBanco = currentParticipations.some(p => {
+                return String(p.id_membro) === memberIdStr;
+            });
 
-                // Criar nova participação usando apiCall()
-                const result = await apiCall('saveParticipacaoDirectly', activityId, memberId, {
-                    participou: 'nao',
-                    chegou_tarde: 'nao',
-                    saiu_cedo: 'nao',
-                    observacoes: 'Adicionado manualmente como participante extra'
-                }, '');
-
-                console.log('✅ Resultado da criação:', result);
-
-                if (result && result.ok) {
-                    showToast(`${memberName} adicionado com sucesso!`, 'success');
-
-                    // Recarregar lista de participantes
-                    loadActivityForParticipants(activityId);
-
-                    // Limpar campo de busca e sugestões
-                    const searchInput = document.getElementById('search-extra-member');
-                    const suggestionsContainer = document.getElementById('member-suggestions');
-                    if (searchInput) searchInput.value = '';
-                    if (suggestionsContainer) suggestionsContainer.style.display = 'none';
-                } else {
-                    throw new Error(result.message || 'Falha ao adicionar membro');
-                }
-            } catch (error) {
-                console.error('❌ Erro ao adicionar membro extra:', error);
-                showToast('Erro ao adicionar membro: ' + (error.message || error), 'error');
+            if (jaExisteNoBanco) {
+                showToast('Este membro já está na lista de participantes', 'warning');
+                return;
             }
+
+            // Verificar se membro já foi adicionado localmente (pendente)
+            const jaAdicionadoPendente = pendingExtraMembers.some(m => {
+                return String(m.uid) === memberIdStr;
+            });
+
+            if (jaAdicionadoPendente) {
+                showToast('Este membro já foi adicionado à lista', 'warning');
+                return;
+            }
+
+            // Adicionar membro em memória (não faz INSERT imediato)
+            pendingExtraMembers.push({
+                uid: memberId,
+                nome: memberName,
+                dojo: memberDojo || ''
+            });
+
+            // Re-renderizar lista combinada (banco + pendentes)
+            loadActivityForParticipants(activityId);
+
+            // Limpar campo de busca e sugestões
+            const searchInput = document.getElementById('search-extra-member');
+            const suggestionsContainer = document.getElementById('member-suggestions');
+            if (searchInput) searchInput.value = '';
+            if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+
+            // Feedback ao usuário
+            showToast(`${memberName} adicionado. Clique em "Salvar Participações" para confirmar.`, 'info');
         }
 
         function toggleParticipationOptions(checkbox) {
@@ -4778,11 +4852,52 @@
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
 
-                // Coletar dados de todas as participações
+                // ========== 1. COLETAR E INSERIR NOVOS EXTRAS PENDENTES (SE HOUVER) ==========
+                if (pendingExtraMembers.length > 0) {
+                    console.log('➕ Inserindo', pendingExtraMembers.length, 'membros extras...');
+
+                    // Coletar dados da interface para cada pendente
+                    const membrosData = pendingExtraMembers.map(m => {
+                        const tempId = `temp-${m.uid}`;
+                        const participouCheckbox = document.getElementById(`participou-${tempId}`);
+                        const chegouTardeCheckbox = document.getElementById(`chegou-tarde-${tempId}`);
+                        const saiuCedoCheckbox = document.getElementById(`saiu-cedo-${tempId}`);
+                        const observacoesTextarea = document.getElementById(`observacoes-${tempId}`);
+
+                        return {
+                            memberId: m.uid,
+                            tipo: 'extra',
+                            participou: (participouCheckbox && participouCheckbox.checked) ? 'sim' : 'nao',
+                            chegou_tarde: (chegouTardeCheckbox && chegouTardeCheckbox.checked) ? 'sim' : 'nao',
+                            saiu_cedo: (saiuCedoCheckbox && saiuCedoCheckbox.checked) ? 'sim' : 'nao',
+                            observacoes: observacoesTextarea ? observacoesTextarea.value.trim() : ''
+                        };
+                    });
+
+                    const insertResult = await apiCall('createMultipleParticipacoes',
+                        activityId,
+                        membrosData,
+                        State.user?.uid || ''
+                    );
+
+                    if (!insertResult.ok) {
+                        throw new Error('Falha ao criar membros extras: ' + (insertResult.error || 'Erro desconhecido'));
+                    }
+
+                    console.log('✅ Membros extras criados:', insertResult.created);
+                }
+
+                // ========== 2. COLETAR UPDATES DOS EXISTENTES ==========
                 const participationUpdates = [];
                 const participantItems = document.querySelectorAll('.participant-item');
 
                 participantItems.forEach(item => {
+                    // IGNORAR PENDENTES (já foram inseridos acima)
+                    if (item.dataset.pending === 'true') {
+                        console.log('⏭️ Pulando item pendente (já inserido no banco)');
+                        return;
+                    }
+
                     const participouCheckbox = item.querySelector('input[data-participation-id]');
                     const participationId = participouCheckbox.dataset.participationId;
                     const memberId = participouCheckbox.dataset.memberId;
@@ -4843,6 +4958,10 @@
                 if (failures.length > 0) {
                     throw new Error(`${failures.length} participações falharam ao salvar`);
                 }
+
+                // ========== 3. LIMPAR PENDENTES ==========
+                pendingExtraMembers = [];
+                console.log('🧹 Membros extras pendentes limpos da memória');
 
                 // Mostrar mensagem de sucesso
                 showToast('Participações salvas com sucesso!', 'success');
