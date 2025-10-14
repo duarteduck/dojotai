@@ -7,25 +7,9 @@
  */
 function listMembersApi(sessionId) {
   try {
-    // Validar sessão
-    if (!sessionId) {
-      Logger.warn('Members', 'Tentativa de listar membros sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Members', 'Sessão inválida ao listar membros');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Members');
+    if (!auth.ok) return auth;
 
     const result = _listMembersCore();
     return JSON.parse(JSON.stringify(result));

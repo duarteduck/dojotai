@@ -6226,7 +6226,7 @@
                 const result = await apiCall('listParticipacoes', activityId);
 
                 if (result && result.ok) {
-                    displayExistingTargets(result.items || []);
+                    await displayExistingTargets(result.items || []);
                 } else {
                     console.warn('⚠️ Erro ao carregar alvos:', result?.error);
                     showToast('⚠️ Erro ao carregar alvos: ' + (result?.error || 'Erro desconhecido'), 'error');
@@ -6238,7 +6238,7 @@
         }
 
         // Exibir alvos existentes
-        function displayExistingTargets(targets) {
+        async function displayExistingTargets(targets) {
             console.log('🎯 Carregando alvos existentes no sistema de lista dupla:', targets.length);
 
             // Esconder a seção antiga de alvos atuais (não usamos mais)
@@ -6265,117 +6265,105 @@
             const memberIds = targets.map(target => target.id_membro);
             console.log('🔍 Buscando dados completos dos membros:', memberIds);
 
-            // Buscar dados completos dos membros via API
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler((result) => {
-                        if (result && result.ok && result.items) {
-                            console.log('✅ Dados dos membros carregados:', result.items.length);
+            try {
+                // Buscar dados completos dos membros via API (COM sessionId!)
+                const result = await apiCall('listMembersApi');
 
-                            // Debug: verificar dados dos alvos
-                            console.log('🔍 DEBUG - targets recebidos:', targets);
-                            console.log('🔍 DEBUG - membros carregados:', result.items.length);
-                            console.log('🔍 DEBUG - IDs dos alvos:', targets.map(t => t.id_membro));
+                if (result && result.ok && result.items) {
+                    console.log('✅ Dados dos membros carregados:', result.items.length);
 
-                            // Debug: verificar estrutura dos membros
-                            if (result.items.length > 0) {
-                                console.log('🔍 DEBUG - Estrutura do primeiro membro:', result.items[0]);
-                                console.log('🔍 DEBUG - Campos disponíveis:', Object.keys(result.items[0]));
+                    // Debug: verificar dados dos alvos
+                    console.log('🔍 DEBUG - targets recebidos:', targets);
+                    console.log('🔍 DEBUG - membros carregados:', result.items.length);
+                    console.log('🔍 DEBUG - IDs dos alvos:', targets.map(t => t.id_membro));
+
+                    // Debug: verificar estrutura dos membros
+                    if (result.items.length > 0) {
+                        console.log('🔍 DEBUG - Estrutura do primeiro membro:', result.items[0]);
+                        console.log('🔍 DEBUG - Campos disponíveis:', Object.keys(result.items[0]));
+                    }
+
+                    // Adicionar alvos existentes ao selectedTargets com dados completos
+                    result.items.forEach(member => {
+                        // Tentar diferentes campos para o ID
+                        const memberId = String(member.codigo_sequencial || member.id || member.codigo || '');
+
+                        console.log(`🔍 DEBUG - Membro processado:`, {
+                            nome: member.nome,
+                            codigo_sequencial: member.codigo_sequencial,
+                            id: member.id,
+                            codigo: member.codigo,
+                            memberId: memberId
+                        });
+
+                        // Verificar se este membro estava nos alvos
+                        const isTarget = targets.find(t => String(t.id_membro) === memberId);
+                        console.log(`🔍 DEBUG - Verificando membro ${memberId} (${member.nome}):`, isTarget ? 'É ALVO' : 'NÃO é alvo');
+
+                        if (isTarget) {
+                            selectedTargets.add(memberId);
+
+                            // Inicializar cache se necessário
+                            if (!window.allMembersCache) {
+                                window.allMembersCache = new Map();
                             }
 
-                            // Adicionar alvos existentes ao selectedTargets com dados completos
-                            result.items.forEach(member => {
-                                // Tentar diferentes campos para o ID
-                                const memberId = String(member.codigo_sequencial || member.id || member.codigo || '');
-
-                                console.log(`🔍 DEBUG - Membro processado:`, {
-                                    nome: member.nome,
-                                    codigo_sequencial: member.codigo_sequencial,
-                                    id: member.id,
-                                    codigo: member.codigo,
-                                    memberId: memberId
-                                });
-
-                                // Verificar se este membro estava nos alvos
-                                const isTarget = targets.find(t => String(t.id_membro) === memberId);
-                                console.log(`🔍 DEBUG - Verificando membro ${memberId} (${member.nome}):`, isTarget ? 'É ALVO' : 'NÃO é alvo');
-
-                                if (isTarget) {
-                                    selectedTargets.add(memberId);
-
-                                    // Inicializar cache se necessário
-                                    if (!window.allMembersCache) {
-                                        window.allMembersCache = new Map();
-                                    }
-
-                                    // Adicionar dados completos ao cache
-                                    window.allMembersCache.set(memberId, member);
-                                    console.log('✅ Alvo existente adicionado com dados completos:', member.nome, `(#${member.codigo_sequencial})`);
-                                }
-                            });
-
-                            console.log('🎯 Alvos existentes carregados:', selectedTargets.size);
-                            console.log('📋 Cache final:', window.allMembersCache);
-
-                            // Gerenciar visibilidade dos elementos UI
-                            const emptyEl = document.getElementById('editTargetsEmpty');
-                            const selectedContainerEl = document.getElementById('editTargetsSelectedContainer');
-
-                            if (emptyEl) {
-                                emptyEl.style.display = 'none';
-                                console.log('✅ Estado vazio escondido');
-                            }
-
-                            if (selectedContainerEl) {
-                                selectedContainerEl.style.display = 'block';
-                                console.log('✅ Container de selecionados forçado para visível');
-                            }
-
-                            // Atualizar lista de selecionados
-                            console.log('🚀 Chamando updateSelectedMembersList(edit)...');
-                            updateSelectedMembersList('edit');
-                        } else {
-                            console.error('❌ Erro ao buscar dados dos membros:', result?.error);
-                            // Fallback: usar dados parciais
-                            loadTargetsWithPartialData(targets);
+                            // Adicionar dados completos ao cache
+                            window.allMembersCache.set(memberId, member);
+                            console.log('✅ Alvo existente adicionado com dados completos:', member.nome, `(#${member.codigo_sequencial})`);
                         }
-                    })
-                    .withFailureHandler((error) => {
-                        console.error('❌ Erro na API de membros:', error);
-                        // Fallback: usar dados parciais
-                        loadTargetsWithPartialData(targets);
-                    })
-                    .listMembersApi();
-            } else {
+                    });
+
+                    console.log('🎯 Alvos existentes carregados:', selectedTargets.size);
+                    console.log('📋 Cache final:', window.allMembersCache);
+
+                    // Gerenciar visibilidade dos elementos UI
+                    const emptyEl = document.getElementById('editTargetsEmpty');
+                    const selectedContainerEl = document.getElementById('editTargetsSelectedContainer');
+
+                    if (emptyEl) {
+                        emptyEl.style.display = 'none';
+                        console.log('✅ Estado vazio escondido');
+                    }
+
+                    if (selectedContainerEl) {
+                        selectedContainerEl.style.display = 'block';
+                        console.log('✅ Container de selecionados forçado para visível');
+                    }
+
+                    // Atualizar lista de selecionados
+                    console.log('🚀 Chamando updateSelectedMembersList(edit)...');
+                    updateSelectedMembersList('edit');
+                } else {
+                    console.error('❌ Erro ao buscar dados dos membros:', result?.error);
+                    // Fallback: usar dados parciais
+                    await loadTargetsWithPartialData(targets);
+                }
+            } catch (error) {
+                console.error('❌ Erro na API de membros:', error);
                 // Fallback: usar dados parciais
-                loadTargetsWithPartialData(targets);
+                await loadTargetsWithPartialData(targets);
             }
         }
 
         // Função fallback melhorada para carregar alvos com dados reais
-        function loadTargetsWithPartialData(targets) {
+        async function loadTargetsWithPartialData(targets) {
             console.log('⚠️ Tentando buscar dados reais dos membros via searchMembersByCriteria...');
 
-            // Primeiro, tentar buscar dados reais via searchMembersByCriteria
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler((result) => {
-                        if (result && result.ok && result.items && result.items.length > 0) {
-                            console.log('✅ Dados reais dos membros obtidos via fallback:', result.items.length);
-                            processTargetsWithRealData(targets, result.items);
-                        } else {
-                            console.log('⚠️ Fallback para dados básicos - não foi possível obter dados reais');
-                            processTargetsWithBasicData(targets);
-                        }
-                    })
-                    .withFailureHandler((error) => {
-                        console.error('❌ Erro no fallback melhorado:', error);
-                        console.log('⚠️ Usando dados básicos como último recurso');
-                        processTargetsWithBasicData(targets);
-                    })
-                    .searchMembersByCriteria({}); // Buscar todos os membros
-            } else {
-                console.log('⚠️ Google script não disponível - usando dados básicos');
+            try {
+                // Tentar buscar dados reais via searchMembersByCriteria (COM sessionId!)
+                const result = await apiCall('searchMembersByCriteria', {});
+
+                if (result && result.ok && result.items && result.items.length > 0) {
+                    console.log('✅ Dados reais dos membros obtidos via fallback:', result.items.length);
+                    processTargetsWithRealData(targets, result.items);
+                } else {
+                    console.log('⚠️ Fallback para dados básicos - não foi possível obter dados reais');
+                    processTargetsWithBasicData(targets);
+                }
+            } catch (error) {
+                console.error('❌ Erro no fallback melhorado:', error);
+                console.log('⚠️ Usando dados básicos como último recurso');
                 processTargetsWithBasicData(targets);
             }
         }
@@ -6493,7 +6481,7 @@
             if (categoriaGrupoValues.length > 0) filters.categoria_grupo_id = categoriaGrupoValues;
             if (categoriaMembroValues.length > 0) filters.categoria_membro_id = categoriaMembroValues;
             if (cargoValues.length > 0) filters.cargo_id = cargoValues;
-            if (buntaiValues.length > 0) filters.buntai = buntaiValues;
+            if (buntaiValues.length > 0) filters.buntai_id = buntaiValues;
             if (omitamaValues.length > 0) filters.omitama_id = omitamaValues;
             if (sexoValues.length > 0) filters.sexo_id = sexoValues;
 

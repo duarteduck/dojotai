@@ -3,25 +3,9 @@
 function listActivitiesApi(sessionId, filtros) {
   console.log('🚀 listActivitiesApi chamada - sessionId:', sessionId ? '✓' : '✗', 'filtros:', JSON.stringify(filtros));
   try {
-    // Validar sessão
-    if (!sessionId) {
-      Logger.warn('Activities', 'Tentativa de listar atividades sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Activities', 'Sessão inválida ao listar atividades');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Activities');
+    if (!auth.ok) return auth;
 
     const result = _listActivitiesCore(filtros);
     console.log('📊 _listActivitiesCore resultado:', result?.ok ? 'OK' : 'ERRO', '- Items:', result?.items?.length || 0);
@@ -454,25 +438,9 @@ function getUsersMapReadOnly_() {
  */
 async function updateActivityWithTargets(sessionId, input, uidEditor) {
   try {
-    // Validar sessão
-    if (!sessionId) {
-      Logger.warn('Activities', 'Tentativa de atualizar atividade sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Activities', 'Sessão inválida ao atualizar atividade');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Activities');
+    if (!auth.ok) return auth;
 
     if (!input || !input.id) {
       return { ok: false, error: 'ID não informado.' };

@@ -7,25 +7,9 @@
  */
 function listParticipacoes(sessionId, activityId) {
   try {
-    // Validar sessão
-    if (!sessionId) {
-      Logger.warn('Participacoes', 'Tentativa de listar participações sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Participacoes', 'Sessão inválida ao listar participações');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Participacoes');
+    if (!auth.ok) return auth;
 
     if (!activityId) {
       return { ok: false, error: 'ID da atividade é obrigatório.' };
@@ -154,25 +138,9 @@ function listParticipacoes(sessionId, activityId) {
  */
 function searchMembersByCriteria(sessionId, filters = {}) {
   try {
-    // Validar sessão
-    if (!sessionId) {
-      Logger.warn('Participacoes', 'Tentativa de buscar membros sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Participacoes', 'Sessão inválida ao buscar membros');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Participacoes');
+    if (!auth.ok) return auth;
 
     // Separar filtros: exatos (para DatabaseManager) vs complexos (para JS)
     const exactFilters = {};
@@ -617,25 +585,9 @@ async function saveTargetsDirectly(activityId, memberIds, uid) {
  */
 async function saveParticipacaoDirectly(sessionId, activityId, memberId, dados, uid) {
   try {
-    // Validar sessão
-    if (!sessionId) {
-      Logger.warn('Participacoes', 'Tentativa de salvar participação sem sessionId');
-      return {
-        ok: false,
-        error: 'Usuário não autenticado',
-        sessionExpired: true
-      };
-    }
-
-    const sessionData = validateSession(sessionId);
-    if (!sessionData || !sessionData.ok || !sessionData.session) {
-      Logger.warn('Participacoes', 'Sessão inválida ao salvar participação');
-      return {
-        ok: false,
-        error: 'Sessão inválida ou expirada',
-        sessionExpired: true
-      };
-    }
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Participacoes');
+    if (!auth.ok) return auth;
 
     console.log('🔧 [BACKEND] saveParticipacaoDirectly chamada com:');
     console.log('🔧 [BACKEND] - activityId:', activityId);

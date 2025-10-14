@@ -835,6 +835,15 @@ const DATA_DICTIONARY = {
         example: 1
       },
 
+      // ID do buntai (FK para grupos)
+      buntai_id: {
+        type: 'NUMBER',
+        required: false,
+        foreignKey: { table: 'grupos', field: 'id' },
+        description: 'ID do Buntai (FK para tabela grupos filtrado por tipo=buntai)',
+        example: 1
+      },
+
       // ID da categoria do membro (FK)
       categoria_membro_id: {
         type: 'NUMBER',
@@ -2018,6 +2027,55 @@ const DATA_DICTIONARY = {
         enum: ['sim', 'nao'],
         default: 'sim',
         description: 'Status ativo no sistema'
+      }
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+  // │                                    14. TABELA: GRUPO                                             │
+  // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  grupo: {
+    tableName: 'grupos',
+    description: 'Cadastro de Grupos (Buntais)',
+    primaryKey: 'id',
+    file: 'Parametros',
+    sheet: 'Grupo',
+
+    fields: {
+      id: {
+        type: 'NUMBER',
+        required: true,
+        unique: true,
+        description: 'ID único do grupo',
+        example: 1
+      },
+      tipo: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 20,
+        description: 'Tipo do grupo (buntai, etc)',
+        example: 'buntai'
+      },
+      grupo: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 100,
+        description: 'Nome/descrição do grupo',
+        example: 'Buntai 1 (OF MASC CRI)'
+      },
+      ordem: {
+        type: 'NUMBER',
+        required: false,
+        description: 'Ordem de exibição',
+        example: 1
+      },
+      ativo: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', 'nao'],
+        default: 'sim',
+        description: 'Grupo ativo no sistema'
       }
     }
   }

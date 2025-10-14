@@ -205,6 +205,47 @@ function listStatusMembrosApi(sessionId) {
 }
 
 /**
+ * Lista grupos por tipo (genérico para buntais e futuros tipos de grupo)
+ * @param {string} sessionId - ID da sessão do usuário
+ * @param {string} tipo - Tipo de grupo a filtrar (ex: 'buntai', null = todos)
+ * @returns {Object} { ok: boolean, items: Array }
+ */
+function listGruposApi(sessionId, tipo = null) {
+  try {
+    // Validar sessão (helper centralizado)
+    const auth = requireSession(sessionId, 'Parametros');
+    if (!auth.ok) return auth;
+
+    // Montar filtros
+    const filters = { ativo: 'sim' };
+    if (tipo) {
+      filters.tipo = tipo;
+    }
+
+    const grupos = DatabaseManager.query('grupos', filters, true);
+
+    if (!grupos || grupos.length === 0) {
+      return { ok: true, items: [] };
+    }
+
+    const sorted = grupos
+      .map(g => ({
+        id: g.id,
+        tipo: g.tipo || '',
+        nome: g.grupo || '',
+        ordem: Number(g.ordem || 999)
+      }))
+      .sort((a, b) => a.ordem - b.ordem);
+
+    return { ok: true, items: sorted };
+
+  } catch (err) {
+    Logger.error('Parametros', 'Erro ao listar grupos', { error: err.message, tipo });
+    return { ok: false, error: 'Erro ao listar grupos: ' + (err?.message || err) };
+  }
+}
+
+/**
  * OTIMIZAÇÃO: Carrega todos os filtros de uma vez
  * Reduz 7 chamadas API para 1 única chamada
  *
@@ -225,20 +266,8 @@ function listAllFiltersApi(sessionId) {
     const omitamas = DatabaseManager.query('omitama', { ativo: 'sim' }, true) || [];
     const sexos = DatabaseManager.query('sexo', { ativo: 'sim' }, true) || [];
 
-    // Buntai: buscar valores únicos da tabela membros
-    // TODO: Quando criar tabela buntai, trocar por: DatabaseManager.query('buntai', { ativo: 'sim' }, true)
-    const membros = DatabaseManager.query('membros', {}, true) || [];
-    const buntaisUnicos = [...new Set(
-      membros
-        .map(m => m.buntai)
-        .filter(b => b !== null && b !== undefined && b !== '' && !isNaN(b))
-    )].sort((a, b) => Number(a) - Number(b));
-
-    const buntais = buntaisUnicos.map(b => ({
-      id: Number(b),
-      nome: 'Buntai ' + b,
-      ordem: Number(b)
-    }));
+    // Buntais: buscar da tabela grupos filtrado por tipo='buntai'
+    const buntais = DatabaseManager.query('grupos', { ativo: 'sim', tipo: 'buntai' }, true) || [];
 
     // Mapear e ordenar cada filtro
     const mapAndSort = (items) => items
@@ -263,7 +292,11 @@ function listAllFiltersApi(sessionId) {
         cargos: mapAndSort(cargos),
         omitamas: mapAndSort(omitamas),
         sexos: mapAndSort(sexos),
-        buntais: buntais
+        buntais: buntais.map(b => ({
+          id: b.id,
+          nome: b.grupo || '',
+          ordem: Number(b.ordem || 999)
+        })).sort((a, b) => a.ordem - b.ordem)
       }
     };
 
