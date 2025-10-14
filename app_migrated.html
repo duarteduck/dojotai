@@ -1027,6 +1027,18 @@
             animation: fadeIn 0.2s ease-in;
         }
 
+        /* Filtros dentro do modal - sempre visíveis (não são dropdowns) */
+        .modal-filtros .filter-options {
+            position: static !important;
+            display: flex !important;
+            flex-direction: column;
+            gap: 4px;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            max-height: none !important;
+        }
+
         .modal-backdrop {
             position: absolute;
             top: 0;
@@ -7649,7 +7661,6 @@
 
         // Abrir modal de filtros
         function abrirModalFiltros() {
-            console.log('🔍 Abrindo modal de filtros');
             const modal = document.getElementById('modal-filtros');
             if (modal) {
                 modal.style.display = 'block';
