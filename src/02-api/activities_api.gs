@@ -390,7 +390,7 @@ async function completeActivity(sessionId, activityId) {
     // Dados para atualização - apenas campos necessários
     // Campo atualizado_em preenchido automaticamente pelo DatabaseManager
     const updateData = {
-      status: 'Concluída',
+      status: 'Concluida',
       atualizado_uid: usuario.uid
     };
 
