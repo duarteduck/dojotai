@@ -427,7 +427,7 @@ const DATA_DICTIONARY = {
       status: {
         type: 'TEXT',
         required: true,
-        enum: ['Pendente', 'Concluída'],
+        enum: ['Pendente', 'Concluida'],
         default: 'Pendente',
         description: 'Status da atividade'
       },

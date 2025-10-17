@@ -48,9 +48,22 @@ function listActivitiesApi(sessionId, filtros) {
 // Data: 02/10/2025
 // ============================================================================
 
-/** Core da listagem (usado pela API pública) */
-function _listActivitiesCore(filtros) {
-  console.log('🔄 _listActivitiesCore INICIADA com filtros:', JSON.stringify(filtros));
+/**
+ * Core da listagem (usado pela API pública)
+ * NOVO: Suporta 2 modos de operação
+ * - Modo LIST: _listActivitiesCore(filtros) → { ok, items: [...] }
+ * - Modo SINGLE: _listActivitiesCore(filtros, 'ACT-001') → { ok, passaNoFiltro, activity }
+ *
+ * @param {Object} filtros - Filtros a aplicar
+ * @param {string} singleActivityId - (Opcional) Se fornecido, processa apenas esta atividade
+ */
+function _listActivitiesCore(filtros, singleActivityId) {
+  const modo = singleActivityId ? 'SINGLE' : 'LIST';
+  console.log(`🔄 _listActivitiesCore INICIADA - Modo: ${modo}, Filtros:`, JSON.stringify(filtros));
+  if (singleActivityId) {
+    console.log('🎯 Modo SINGLE - Atividade:', singleActivityId);
+  }
+
   const ctx = getActivitiesCtx_();
 
   // Lê do cabeçalho até a última linha usada
@@ -87,6 +100,209 @@ function _listActivitiesCore(filtros) {
   // DEBUG: Verificar se colunas existe
   console.log('🔍 DEBUG idxCatIds (categorias_ids):', idxCatIds);
   console.log('🔍 DEBUG idxTags (tags):', idxTags);
+
+  // ============================================================================
+  // MODO SINGLE: Processar apenas 1 atividade
+  // ============================================================================
+  if (singleActivityId) {
+    console.log('🎯 [MODO SINGLE] Buscando atividade:', singleActivityId);
+
+    // Buscar linha da atividade específica
+    let activityRow = null;
+    for (let i = 1; i < v.length; i++) {
+      const r = v[i];
+      if (r[idxId] === singleActivityId) {
+        activityRow = r;
+        console.log('✅ [MODO SINGLE] Atividade encontrada na linha', i);
+        break;
+      }
+    }
+
+    if (!activityRow) {
+      console.error('❌ [MODO SINGLE] Atividade não encontrada:', singleActivityId);
+      return { ok: false, error: 'Atividade não encontrada: ' + singleActivityId };
+    }
+
+    // Criar objeto da atividade
+    const activity = {
+      id: activityRow[idxId],
+      titulo: activityRow[idxTit],
+      descricao: activityRow[idxDesc],
+      data: activityRow[idxData],
+      status: activityRow[idxStat],
+      atribuido_uid: activityRow[idxAtrU],
+      atualizado_uid: activityRow[idxAtuU],
+      criado_em: activityRow[idxCri],
+      atualizado_em: activityRow[idxAtuE]
+    };
+
+    // Adicionar campos opcionais
+    if (idxCatIds >= 0) activity.categorias_ids = activityRow[idxCatIds] || '';
+    if (idxTags >= 0) activity.tags = activityRow[idxTags] || '';
+
+    console.log('📋 [MODO SINGLE] Processando categorias, stats e usuários...');
+
+    // Carregar dados auxiliares (mesma lógica do modo LIST)
+    const users = getUsersMapReadOnly_();
+    const categoriasAtividades = getCategoriasAtividadesMapReadOnly_();
+    const statsBatchResult = getParticipacaoStatsBatch([activity.id]);
+    const statsMap = statsBatchResult.ok ? statsBatchResult.statsMap : {};
+
+    // Adicionar nomes de usuários
+    const atr = (activity.atribuido_uid || '').toString().trim();
+    const atu = (activity.atualizado_uid || '').toString().trim();
+    activity.atribuido_nome = users[atr]?.nome || '';
+    activity.atualizado_nome = users[atu]?.nome || '';
+
+    // Processar categorias
+    const categoriasIds = (activity.categorias_ids || '').toString().trim();
+    activity.categorias = [];
+
+    if (categoriasIds) {
+      const idsArray = categoriasIds.split(',').map(id => id.trim()).filter(id => id);
+
+      idsArray.forEach(catId => {
+        if (categoriasAtividades[catId]) {
+          activity.categorias.push({
+            id: catId,
+            nome: categoriasAtividades[catId].nome,
+            icone: categoriasAtividades[catId].icone,
+            cor: categoriasAtividades[catId].cor
+          });
+        }
+      });
+
+      // Compatibilidade: campos da primeira categoria
+      if (activity.categorias.length > 0) {
+        activity.categoria_atividade_nome = activity.categorias[0].nome;
+        activity.categoria_atividade_icone = activity.categorias[0].icone;
+        activity.categoria_atividade_cor = activity.categorias[0].cor;
+      } else {
+        activity.categoria_atividade_nome = '';
+        activity.categoria_atividade_icone = '';
+        activity.categoria_atividade_cor = '';
+      }
+    } else {
+      activity.categoria_atividade_nome = '';
+      activity.categoria_atividade_icone = '';
+      activity.categoria_atividade_cor = '';
+    }
+
+    // Adicionar stats de participação
+    const stats = statsMap[activity.id];
+    if (stats) {
+      activity.total_alvos = stats.total || 0;
+      activity.confirmados = stats.confirmados || 0;
+      activity.rejeitados = stats.recusados || 0;
+      activity.participantes = stats.participaram || 0;
+      activity.ausentes = stats.ausentes || 0;
+    } else {
+      activity.total_alvos = 0;
+      activity.confirmados = 0;
+      activity.rejeitados = 0;
+      activity.participantes = 0;
+      activity.ausentes = 0;
+    }
+
+    // Normalizar status
+    const s = (activity.status || '').toString().trim().toLowerCase();
+    if (s === 'pendente') activity.status = 'pendente';
+    else if (s === 'concluida' || s === 'concluída') activity.status = 'concluida';
+
+    console.log('🔍 [MODO SINGLE] Atividade processada:', activity.id);
+
+    // ✅ APLICAR FILTROS (mesma lógica que modo LIST)
+    let passaNoFiltro = true;
+
+    if (filtros) {
+      console.log('🔍 [MODO SINGLE] Aplicando filtros...');
+
+      // Filtro STATUS
+      if (filtros.status && Array.isArray(filtros.status) && filtros.status.length > 0) {
+        const itemStatus = (activity.status || '').toString().trim().toLowerCase();
+        if (!filtros.status.includes(itemStatus)) {
+          console.log(`  ❌ Filtro STATUS: ${activity.status} não está em [${filtros.status.join(', ')}]`);
+          passaNoFiltro = false;
+        } else {
+          console.log(`  ✅ Filtro STATUS: ${activity.status} passa`);
+        }
+      }
+
+      // Filtro RESPONSÁVEL
+      if (passaNoFiltro && filtros.responsavel && Array.isArray(filtros.responsavel) && filtros.responsavel.length > 0) {
+        if (!filtros.responsavel.includes(activity.atribuido_uid)) {
+          console.log(`  ❌ Filtro RESPONSÁVEL: ${activity.atribuido_uid} não está em [${filtros.responsavel.join(', ')}]`);
+          passaNoFiltro = false;
+        } else {
+          console.log(`  ✅ Filtro RESPONSÁVEL: ${activity.atribuido_uid} passa`);
+        }
+      }
+
+      // Filtro PERÍODO
+      if (passaNoFiltro && filtros.periodo && Array.isArray(filtros.periodo) && filtros.periodo.length > 0) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const dataAtividade = new Date(activity.data);
+        dataAtividade.setHours(0, 0, 0, 0);
+
+        const passaPeriodo = filtros.periodo.some(periodo => {
+          switch (periodo) {
+            case 'hoje':
+              return dataAtividade.getTime() === hoje.getTime();
+            case 'atrasadas':
+              return dataAtividade < hoje && activity.status === 'pendente';
+            case 'proximos_10':
+              const em10Dias = new Date(hoje);
+              em10Dias.setDate(hoje.getDate() + 10);
+              return dataAtividade >= hoje && dataAtividade <= em10Dias;
+            case 'mes_atual':
+              return dataAtividade.getMonth() === hoje.getMonth() &&
+                     dataAtividade.getFullYear() === hoje.getFullYear();
+            default:
+              return false;
+          }
+        });
+
+        if (!passaPeriodo) {
+          console.log(`  ❌ Filtro PERÍODO: data ${activity.data} não passa em [${filtros.periodo.join(', ')}]`);
+          passaNoFiltro = false;
+        } else {
+          console.log(`  ✅ Filtro PERÍODO: passa`);
+        }
+      }
+
+      // Filtro CATEGORIAS
+      if (passaNoFiltro && filtros.categorias && Array.isArray(filtros.categorias) && filtros.categorias.length > 0) {
+        if (activity.categorias && activity.categorias.length > 0) {
+          const hasMatchingCategory = activity.categorias.some(cat =>
+            filtros.categorias.includes(cat.id)
+          );
+          if (!hasMatchingCategory) {
+            console.log(`  ❌ Filtro CATEGORIAS: nenhuma categoria match em [${filtros.categorias.join(', ')}]`);
+            passaNoFiltro = false;
+          } else {
+            console.log(`  ✅ Filtro CATEGORIAS: passa`);
+          }
+        } else {
+          console.log(`  ❌ Filtro CATEGORIAS: atividade sem categorias`);
+          passaNoFiltro = false;
+        }
+      }
+    }
+
+    console.log(`✅ [MODO SINGLE] Resultado: ${passaNoFiltro ? 'PASSA' : 'NÃO PASSA'} nos filtros`);
+
+    return {
+      ok: true,
+      passaNoFiltro: passaNoFiltro,
+      activity: activity
+    };
+  }
+
+  // ============================================================================
+  // MODO LIST: Processar todas as atividades (código original mantido)
+  // ============================================================================
+  console.log('📋 [MODO LIST] Processando todas as atividades...');
 
   const items = [];
   for (let i=1;i<v.length;i++) {
@@ -301,6 +517,127 @@ function listActivities() {
   return listActivitiesApi();
 }
 
+/**
+ * Valida se uma atividade específica passa nos filtros fornecidos
+ *
+ * IMPORTANTE: Esta é uma API PÚBLICA chamada pelo frontend
+ * Wrapper thin para _listActivitiesCore() em modo SINGLE
+ *
+ * @param {string} sessionId - ID da sessão do usuário (validação obrigatória)
+ * @param {string} activityId - ID da atividade a validar (ex: 'ACT-001')
+ * @param {Object} filtros - Filtros a aplicar (mesma estrutura de listActivitiesApi)
+ *   @param {string[]} filtros.status - Array de status (ex: ['pendente'])
+ *   @param {string[]} filtros.categorias - Array de IDs de categorias (ex: ['CAT-001'])
+ *   @param {string[]} filtros.periodo - Array de períodos (ex: ['hoje', 'proximos_10'])
+ *   @param {string[]} filtros.responsavel - Array de UIDs (ex: ['U001'])
+ *
+ * @returns {Object} Resultado com validação e dados da atividade
+ *   - Sucesso: { ok: true, passaNoFiltro: boolean, activity: {...} }
+ *   - Erro: { ok: false, error: string }
+ *
+ * @example
+ * // Frontend chama:
+ * const result = await apiCall('validateActivityAgainstFilters', 'ACT-001', {
+ *   status: ['pendente'],
+ *   responsavel: ['U001']
+ * });
+ *
+ * if (result.ok && result.passaNoFiltro) {
+ *   // Atividade ainda passa nos filtros → atualizar card
+ *   updateSingleActivityCard(activityId, result.activity);
+ * } else {
+ *   // Não passa mais → remover card
+ *   removeActivityCardWithAnimation(activityId);
+ * }
+ */
+function validateActivityAgainstFilters(sessionId, activityId, filtros) {
+  try {
+    console.log('🔍 validateActivityAgainstFilters chamada');
+    console.log('  → sessionId:', sessionId ? '✓ fornecido' : '✗ ausente');
+    console.log('  → activityId:', activityId || '(vazio)');
+    console.log('  → filtros:', JSON.stringify(filtros));
+
+    // ============================================================================
+    // VALIDAÇÃO 1: Sessão
+    // ============================================================================
+    const auth = requireSession(sessionId, 'Activities');
+    if (!auth.ok) {
+      console.error('❌ Sessão inválida ou expirada');
+      return auth; // Retorna { ok: false, error: '...' }
+    }
+    console.log('✅ Sessão válida');
+
+    // ============================================================================
+    // VALIDAÇÃO 2: ID da atividade
+    // ============================================================================
+    if (!activityId || typeof activityId !== 'string' || activityId.trim() === '') {
+      console.error('❌ ID da atividade inválido:', activityId);
+      return {
+        ok: false,
+        error: 'ID da atividade é obrigatório e deve ser uma string não vazia'
+      };
+    }
+    console.log('✅ ID da atividade válido:', activityId);
+
+    // ============================================================================
+    // VALIDAÇÃO 3: Filtros (opcional, mas validar estrutura se fornecido)
+    // ============================================================================
+    if (filtros && typeof filtros !== 'object') {
+      console.error('❌ Filtros devem ser um objeto');
+      return {
+        ok: false,
+        error: 'Filtros devem ser um objeto'
+      };
+    }
+
+    // Normalizar filtros vazios para objeto vazio
+    const filtrosNormalizados = filtros || {};
+    console.log('✅ Filtros validados');
+
+    // ============================================================================
+    // EXECUÇÃO: Chamar _listActivitiesCore em modo SINGLE
+    // ============================================================================
+    console.log('🚀 Chamando _listActivitiesCore em modo SINGLE...');
+    const result = _listActivitiesCore(filtrosNormalizados, activityId);
+
+    // ============================================================================
+    // VERIFICAÇÃO DE RESULTADO
+    // ============================================================================
+    if (!result || !result.ok) {
+      console.error('❌ Erro retornado por _listActivitiesCore:', result?.error);
+      return {
+        ok: false,
+        error: result?.error || 'Erro ao processar atividade'
+      };
+    }
+
+    console.log('✅ Resultado obtido com sucesso');
+    console.log('  → passaNoFiltro:', result.passaNoFiltro);
+    console.log('  → activity.id:', result.activity?.id);
+    console.log('  → activity.status:', result.activity?.status);
+
+    // ============================================================================
+    // RETORNO: Serializar para garantir compatibilidade com HTMLService
+    // ============================================================================
+    const serialized = JSON.parse(JSON.stringify(result));
+    console.log('✅ validateActivityAgainstFilters finalizada com sucesso');
+
+    return serialized;
+
+  } catch (err) {
+    // ============================================================================
+    // TRATAMENTO DE EXCEÇÕES
+    // ============================================================================
+    console.error('❌ EXCEÇÃO em validateActivityAgainstFilters:', err);
+    console.error('   Stack trace:', err.stack);
+
+    return {
+      ok: false,
+      error: 'Erro interno: ' + (err.message || err.toString())
+    };
+  }
+}
+
 /* ----------------------------------------------------------------------
  * NOVO: resolve o contexto (sheet/startRow/startCol) via Tabela Planilhas
  * -------------------------------------------------------------------- */
@@ -466,6 +803,7 @@ async function updateActivityWithTargets(sessionId, input, uidEditor) {
     if (patch.data !== undefined) updateData.data = patch.data;
     if (patch.atribuido_uid !== undefined) updateData.atribuido_uid = patch.atribuido_uid;
     if (patch.categorias_ids !== undefined) updateData.categorias_ids = patch.categorias_ids;
+    if (patch.tags !== undefined) updateData.tags = patch.tags; // Tags livres separadas por vírgula
     if (uidEditor) updateData.atualizado_uid = uidEditor;
     // atualizado_em preenchido automaticamente pelo DatabaseManager
 
