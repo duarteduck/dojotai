@@ -11,10 +11,13 @@
 </head>
 <body data-theme="light">
 
-    <!-- ===== STATE: Gerenciamento de Estado Global ===== -->
+    <!-- ===== CORE: Sistema base ===== -->
     <?!= include('src/05-components/core/state'); ?>
+    <?!= include('src/05-components/core/auth'); ?>
+    <?!= include('src/05-components/core/navigation'); ?>
+    <?!= include('src/05-components/core/api'); ?>
 
-    <!-- ===== USER MENU DROPDOWN ===== -->
+    <!-- ===== COMPONENTS: Componentes específicos ===== -->
     <?!= include('src/05-components/userMenuDropdown'); ?>
 
     <!-- ===== TEMPORÁRIO: Carrega arquivo antigo enquanto migramos ===== -->

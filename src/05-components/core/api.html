@@ -1,0 +1,40 @@
+<script>
+    // ============================================================================
+    // WRAPPERS DA API
+    // Helpers para chamadas ao google.script.run
+    // ============================================================================
+
+    /**
+     * Wrapper genérico para chamadas API com tratamento de erro
+     */
+    function apiCall(functionName, ...args) {
+        return new Promise((resolve, reject) => {
+            if (typeof google === 'undefined' || !google.script || !google.script.run) {
+                reject(new Error('Google Script não disponível'));
+                return;
+            }
+
+            const callback = google.script.run[functionName];
+            if (typeof callback !== 'function') {
+                reject(new Error(`Função ${functionName} não encontrada`));
+                return;
+            }
+
+            callback
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)
+                .apply(null, args);
+        });
+    }
+
+    /**
+     * Verifica se está rodando no ambiente Google Apps Script
+     */
+    function isGoogleScriptEnvironment() {
+        return typeof google !== 'undefined' && google.script && google.script.run;
+    }
+
+    // Expor funções globalmente
+    window.apiCall = apiCall;
+    window.isGoogleScriptEnvironment = isGoogleScriptEnvironment;
+</script>

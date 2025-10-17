@@ -1,0 +1,133 @@
+<script>
+    // ============================================================================
+    // SISTEMA DE NAVEGAÇÃO
+    // Gerencia navegação entre páginas (tabs) e menu mobile
+    // ============================================================================
+
+    /**
+     * Inicializa sistema de navegação
+     */
+    function initNavigation() {
+        const tabs = document.querySelectorAll('.nav-tab');
+        const mobileItems = document.querySelectorAll('.mobile-nav-item');
+        const pages = document.querySelectorAll('.page-content');
+
+        function navigateToPage(targetPage) {
+            // Remove active de todas as tabs e mobile items
+            tabs.forEach(t => t.classList.remove('active'));
+            mobileItems.forEach(m => m.classList.remove('active'));
+
+            // Adiciona active nos elementos corretos
+            tabs.forEach(t => {
+                if (t.dataset.page === targetPage) t.classList.add('active');
+            });
+            mobileItems.forEach(m => {
+                if (m.dataset.page === targetPage) m.classList.add('active');
+            });
+
+            // Esconde todas as páginas
+            pages.forEach(p => p.classList.add('hidden'));
+            // Mostra a página alvo
+            const targetPageEl = document.getElementById(targetPage);
+            if (targetPageEl) {
+                targetPageEl.classList.remove('hidden');
+            }
+
+            // Inicializa funcionalidades específicas da página
+            if (targetPage === 'practices' && typeof initPractices === 'function') {
+                initPractices();
+            } else if (targetPage === 'reports' && typeof initReports === 'function') {
+                initReports();
+            } else if (targetPage === 'activities' && typeof initActivities === 'function') {
+                initActivities();
+            }
+
+            // Fecha menu mobile se estiver aberto
+            closeMobileMenu();
+        }
+
+        // Expor função globalmente
+        window.navigateToPage = navigateToPage;
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                navigateToPage(tab.dataset.page);
+            });
+        });
+
+        mobileItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navigateToPage(item.dataset.page);
+            });
+        });
+    }
+
+    /**
+     * Toggle menu mobile
+     */
+    function toggleMobileMenu() {
+        const modal = document.getElementById('mobile-menu-modal');
+        if (modal) {
+            modal.classList.toggle('hidden');
+        }
+    }
+
+    /**
+     * Fecha menu mobile
+     */
+    function closeMobileMenu() {
+        const modal = document.getElementById('mobile-menu-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    // Fechar menu ao clicar fora
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('mobile-menu-modal');
+        const menuBtn = document.querySelector('.mobile-menu-btn');
+        const menu = document.querySelector('.mobile-menu');
+
+        if (modal && !modal.classList.contains('hidden') &&
+            menu && !menu.contains(event.target) &&
+            menuBtn && !menuBtn.contains(event.target)) {
+            closeMobileMenu();
+        }
+    });
+
+    /**
+     * Sistema de tema (dark/light)
+     */
+    function toggleTheme() {
+        const body = document.body;
+        const themeIcon = document.getElementById('theme-icon');
+        const currentTheme = body.getAttribute('data-theme');
+
+        if (currentTheme === 'light') {
+            body.setAttribute('data-theme', 'dark');
+            if (themeIcon) themeIcon.textContent = '☀️';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            body.setAttribute('data-theme', 'light');
+            if (themeIcon) themeIcon.textContent = '🌙';
+            localStorage.setItem('theme', 'light');
+        }
+    }
+
+    /**
+     * Carrega tema salvo
+     */
+    function loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        const body = document.body;
+        const themeIcon = document.getElementById('theme-icon');
+
+        body.setAttribute('data-theme', savedTheme);
+        if (themeIcon) {
+            themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        }
+    }
+
+    // Carregar tema ao iniciar
+    document.addEventListener('DOMContentLoaded', loadTheme);
+</script>

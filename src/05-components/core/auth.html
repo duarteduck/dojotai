@@ -1,0 +1,385 @@
+<script>
+    // ============================================================================
+    // SISTEMA DE AUTENTICAÇÃO
+    // Gerencia login, logout e verificação de sessão
+    // ============================================================================
+
+    /**
+     * Verifica autenticação e inicializa app
+     */
+    function checkAuthAndInit() {
+        const sessionId = localStorage.getItem('sessionId');
+        const uid = localStorage.getItem('uid');
+
+        if (sessionId && uid) {
+            // Usuário já logado, mostrar app
+            showApp();
+        } else {
+            // Mostrar tela de login
+            showLogin();
+        }
+    }
+
+    /**
+     * Mostra tela de login
+     */
+    function showLogin() {
+        // Esconder todo o conteúdo da aplicação
+        const appContent = document.querySelector('.app-container');
+        const header = document.querySelector('.app-header');
+        const navTabs = document.querySelector('.nav-tabs');
+        const mobileNav = document.querySelector('.mobile-nav');
+        const pageContents = document.querySelectorAll('.page-content');
+
+        if (appContent) appContent.style.display = 'none';
+        if (header) header.style.display = 'none';
+        if (navTabs) navTabs.style.display = 'none';
+        if (mobileNav) mobileNav.style.display = 'none';
+        pageContents.forEach(page => page.style.display = 'none');
+
+        // Criar tela de login completa
+        const loginScreen = document.createElement('div');
+        loginScreen.id = 'login-screen';
+        loginScreen.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                min-height: 100vh;
+            ">
+                <div style="
+                    background: white;
+                    padding: 3rem;
+                    border-radius: 16px;
+                    min-width: 400px;
+                    max-width: 90vw;
+                    text-align: center;
+                    box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+                ">
+                    <!-- Logo/Título -->
+                    <div style="margin-bottom: 2rem;">
+                        <div style="
+                            width: 80px; height: 80px;
+                            background: var(--gradient-primary);
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 2rem;
+                            margin: 0 auto 1rem;
+                            color: white;
+                        ">🏯</div>
+                        <h1 style="margin: 0 0 0.5rem; color: var(--text); font-size: 1.75rem; font-weight: 700;">Sistema Dojotai</h1>
+                        <p style="margin: 0; color: var(--text-light); font-size: 1rem;">Acesse sua conta para continuar</p>
+                    </div>
+
+                    <!-- Formulário de Login -->
+                    <form onsubmit="doLogin(event)" style="margin-bottom: 2rem;">
+                        <div style="margin-bottom: 1rem; text-align: left;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: var(--text); font-weight: 600; font-size: 0.875rem;">Usuário</label>
+                            <input type="text" id="login-usuario" required style="
+                                width: 100%; padding: 14px 16px; border: 2px solid var(--gray-light);
+                                border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+                                transition: border-color 0.2s;
+                            " onchange="this.style.borderColor = this.value ? 'var(--primary)' : 'var(--gray-light)';" placeholder="Seu nome de usuário">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem; text-align: left;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: var(--text); font-weight: 600; font-size: 0.875rem;">Senha</label>
+                            <input type="password" id="login-password" required style="
+                                width: 100%; padding: 14px 16px; border: 2px solid var(--gray-light);
+                                border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+                                transition: border-color 0.2s;
+                            " onchange="this.style.borderColor = this.value ? 'var(--primary)' : 'var(--gray-light)';">
+                        </div>
+
+                        <button type="submit" id="login-btn" style="
+                            width: 100%; padding: 14px;
+                            background: var(--gradient-primary);
+                            color: white; border: none; border-radius: 8px;
+                            cursor: pointer; font-weight: 600; font-size: 1rem;
+                            transition: all 0.2s;
+                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            Entrar no Sistema
+                        </button>
+                    </form>
+
+                    <!-- Loading State (hidden inicialmente) -->
+                    <div id="login-loading" style="display: none; margin-top: 1rem;">
+                        <div style="
+                            width: 20px; height: 20px; border: 2px solid var(--gray-light);
+                            border-top: 2px solid var(--primary); border-radius: 50%;
+                            animation: spin 1s linear infinite; margin: 0 auto 0.5rem;
+                        "></div>
+                        <p style="color: var(--text-light); font-size: 0.875rem;">Validando credenciais...</p>
+                    </div>
+
+                    <!-- Erro (hidden inicialmente) -->
+                    <div id="login-error" style="display: none; margin-top: 1rem; padding: 12px; background: #fee; border: 1px solid #fcc; border-radius: 6px;">
+                        <p style="color: #c33; font-size: 0.875rem; margin: 0;"></p>
+                    </div>
+
+                    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--gray-light);">
+                        <p style="margin: 0; font-size: 0.875rem; color: var(--text-light);">
+                            Sistema migrado - Versão Protótipo<br>
+                            <small style="opacity: 0.7;">© 2025 Sistema Dojotai</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
+        document.body.appendChild(loginScreen);
+
+        // Focus no campo de usuário
+        setTimeout(() => {
+            const usuarioInput = document.getElementById('login-usuario');
+            if (usuarioInput) usuarioInput.focus();
+        }, 100);
+    }
+
+    /**
+     * Processa login
+     */
+    function doLogin(event) {
+        if (event) event.preventDefault();
+
+        const usuario = document.getElementById('login-usuario').value;
+        const password = document.getElementById('login-password').value;
+        const loginBtn = document.getElementById('login-btn');
+        const loginLoading = document.getElementById('login-loading');
+        const loginError = document.getElementById('login-error');
+
+        // Resetar estados
+        loginError.style.display = 'none';
+
+        if (!usuario || !password) {
+            showLoginError('Por favor, preencha todos os campos');
+            return;
+        }
+
+        // Mostrar loading
+        loginBtn.style.display = 'none';
+        loginLoading.style.display = 'block';
+
+        // Conectar com API real de autenticação
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    console.log('🔍 Frontend - Resposta do login:', result);
+                    if (result && result.success && result.user) {
+                        // Login real bem-sucedido
+                        localStorage.setItem('sessionId', result.session.id);
+                        localStorage.setItem('uid', result.user.uid); // UID real do usuário
+                        localStorage.setItem('userName', result.user.nome);
+
+                        // Sucesso - remover tela de login e mostrar app
+                        const loginScreen = document.getElementById('login-screen');
+                        if (loginScreen) {
+                            loginScreen.remove();
+                        }
+                        showApp();
+                    } else {
+                        showLoginError('Credenciais inválidas. Tente novamente.');
+                        loginBtn.style.display = 'block';
+                        loginLoading.style.display = 'none';
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Erro na API de login:', error);
+                    showLoginError('Erro de conexão. Tente novamente.');
+                    loginBtn.style.display = 'block';
+                    loginLoading.style.display = 'none';
+                })
+                .authenticateUser(usuario, password);
+        } else {
+            // Fallback para desenvolvimento
+            setTimeout(() => {
+                showLoginError('Sistema não disponível. Tente novamente.');
+                loginBtn.style.display = 'block';
+                loginLoading.style.display = 'none';
+            }, 1500);
+        }
+    }
+
+    /**
+     * Mostra erro de login
+     */
+    function showLoginError(message) {
+        const loginError = document.getElementById('login-error');
+        const errorText = loginError.querySelector('p');
+
+        if (errorText) errorText.textContent = message;
+        loginError.style.display = 'block';
+
+        // Auto-hide após 5 segundos
+        setTimeout(() => {
+            loginError.style.display = 'none';
+        }, 5000);
+    }
+
+    /**
+     * Mostra aplicação após login
+     */
+    function showApp() {
+        console.log('🚀 Mostrando aplicação após login válido');
+
+        // Mostrar todo o conteúdo da aplicação
+        const appContent = document.querySelector('.app-container');
+        const header = document.querySelector('.app-header');
+        const navTabs = document.querySelector('.nav-tabs');
+        const mobileNav = document.querySelector('.mobile-nav');
+        const pageContents = document.querySelectorAll('.page-content');
+
+        if (appContent) appContent.style.display = '';
+        if (header) header.style.display = '';
+        if (navTabs) navTabs.style.display = '';
+        if (mobileNav) mobileNav.style.display = '';
+        pageContents.forEach(page => {
+            page.style.display = '';
+            // Manter apenas o dashboard visível inicialmente
+            if (page.id !== 'dashboard') {
+                page.classList.add('hidden');
+            }
+        });
+
+        // Garantir que dashboard esteja ativo e visível
+        const dashboard = document.getElementById('dashboard');
+        if (dashboard) {
+            dashboard.classList.remove('hidden');
+        }
+
+        // Marcar tab do dashboard como ativa
+        const dashboardTab = document.querySelector('[data-page="dashboard"]');
+        if (dashboardTab) {
+            dashboardTab.classList.add('active');
+        }
+
+        // Atualizar informações do usuário no menu após login
+        if (typeof loadCurrentUser === 'function') {
+            loadCurrentUser();
+        }
+
+        // PRE-CARREGAR categorias e responsáveis no cache APÓS login bem-sucedido
+        if (typeof preLoadCachedData === 'function') {
+            preLoadCachedData();
+        }
+    }
+
+    /**
+     * Logout do sistema
+     */
+    async function logout() {
+        console.log('🚪 Iniciando processo de logout...');
+
+        // Mostrar loading overlay se existe
+        if (typeof showLogoutLoading === 'function') {
+            showLogoutLoading(true);
+        }
+
+        try {
+            // Obter sessionId atual
+            const sessionId = localStorage.getItem('sessionId');
+            console.log('🔍 SessionId para logout:', sessionId);
+
+            // Destruir sessão no servidor se existe sessionId
+            if (sessionId && typeof google !== 'undefined' && google.script && google.script.run) {
+                console.log('🔄 Destruindo sessão no servidor...');
+
+                try {
+                    await new Promise((resolve, reject) => {
+                        google.script.run
+                            .withSuccessHandler((result) => {
+                                console.log('✅ Resultado do logout no servidor:', result);
+                                if (result && result.ok) {
+                                    console.log('✅ Sessão destruída com sucesso no servidor');
+                                } else {
+                                    console.warn('⚠️ Logout no servidor retornou erro:', result?.error);
+                                }
+                                resolve(result);
+                            })
+                            .withFailureHandler((error) => {
+                                console.error('❌ Erro ao destruir sessão no servidor:', error);
+                                // Continuar com logout local mesmo se falhar no servidor
+                                resolve(null);
+                            })
+                            .logoutUser(sessionId);
+                    });
+                } catch (serverError) {
+                    console.warn('⚠️ Erro na chamada do servidor, continuando com logout local:', serverError);
+                }
+            } else {
+                console.log('📝 Sem sessionId ou Google Script indisponível, fazendo logout local apenas');
+            }
+
+        } catch (error) {
+            console.warn('⚠️ Erro durante logout no servidor, continuando com limpeza local:', error);
+        }
+
+        // Limpar TODOS os dados de sessão local
+        console.log('🧹 Limpando dados locais...');
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('uid');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('user');
+        sessionStorage.clear();
+
+        // Usar State.clear() se disponível
+        if (typeof State !== 'undefined' && typeof State.clear === 'function') {
+            State.clear();
+        }
+
+        // Esconder todo o conteúdo da aplicação
+        console.log('🔄 Ocultando interface da aplicação...');
+        const appContent = document.querySelector('.app-container');
+        const header = document.querySelector('.app-header');
+        const navTabs = document.querySelector('.nav-tabs');
+        const mobileNav = document.querySelector('.mobile-nav');
+        const pageContents = document.querySelectorAll('.page-content');
+
+        if (appContent) appContent.style.display = 'none';
+        if (header) header.style.display = 'none';
+        if (navTabs) navTabs.style.display = 'none';
+        if (mobileNav) mobileNav.style.display = 'none';
+        pageContents.forEach(page => page.style.display = 'none');
+
+        // Mostrar tela de login novamente
+        console.log('🔄 Redirecionando para tela de login...');
+        showLogin();
+
+        // Esconder loading overlay
+        if (typeof showLogoutLoading === 'function') {
+            showLogoutLoading(false);
+        }
+
+        console.log('✅ Logout completo realizado com sucesso!');
+    }
+
+    /**
+     * Trata sessão expirada
+     */
+    window.handleSessionExpired = function handleSessionExpired() {
+        console.log('🔴 Sessão expirada detectada - fazendo logout...');
+
+        // Limpar dados locais
+        localStorage.clear();
+        sessionStorage.clear();
+
+        if (typeof State !== 'undefined' && typeof State.clear === 'function') {
+            State.clear();
+        }
+
+        // Mostrar login
+        showLogin();
+    };
+</script>
