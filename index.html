@@ -7,12 +7,15 @@
     <base target="_top">
 
     <!-- ===== STYLES: Design System ===== -->
-    <?!= include('05-components/core/styles'); ?>
+    <?!= include('src/05-components/core/styles'); ?>
 </head>
 <body data-theme="light">
 
     <!-- ===== STATE: Gerenciamento de Estado Global ===== -->
-    <?!= include('05-components/core/state'); ?>
+    <?!= include('src/05-components/core/state'); ?>
+
+    <!-- ===== USER MENU DROPDOWN ===== -->
+    <?!= include('src/05-components/userMenuDropdown'); ?>
 
     <!-- ===== TEMPORÁRIO: Carrega arquivo antigo enquanto migramos ===== -->
     <?!= include('app_migrated'); ?>
