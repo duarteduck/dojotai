@@ -1,0 +1,168 @@
+<style>
+    /* ===== LOADING OVERLAY ===== */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        backdrop-filter: blur(4px);
+    }
+
+    .loading-overlay.hidden {
+        display: none;
+    }
+
+    .loading-content {
+        background: var(--white);
+        padding: var(--spacing-xl);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        text-align: center;
+        min-width: 200px;
+    }
+
+    .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid var(--gray-light);
+        border-top: 4px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto var(--spacing-md);
+    }
+
+    .loading-text {
+        font-size: var(--font-size-sm);
+        color: var(--text);
+        font-weight: 500;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Loading inline (para usar dentro de elementos) */
+    .loading-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .loading-inline .spinner-small {
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--gray-light);
+        border-top: 2px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+</style>
+
+<script>
+    // ============================================================================
+    // SISTEMA DE LOADING
+    // Gerencia overlays e indicadores de carregamento
+    // ============================================================================
+
+    /**
+     * Mostra/esconde overlay de loading global
+     * @param {boolean} show - true para mostrar, false para esconder
+     * @param {string} message - Mensagem opcional a ser exibida
+     */
+    function showLoadingOverlay(show, message = 'Carregando...') {
+        let overlay = document.getElementById('loading-overlay');
+
+        if (show) {
+            // Criar overlay se não existir
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'loading-overlay';
+                overlay.className = 'loading-overlay';
+                document.body.appendChild(overlay);
+            }
+
+            overlay.innerHTML = `
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">${message}</div>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
+        } else {
+            // Esconder overlay
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }
+    }
+
+    /**
+     * Cria um spinner inline
+     * @param {string} text - Texto opcional ao lado do spinner
+     * @returns {HTMLElement} - Elemento do loading inline
+     */
+    function createLoadingInline(text = '') {
+        const loading = document.createElement('div');
+        loading.className = 'loading-inline';
+        loading.innerHTML = `
+            <div class="spinner-small"></div>
+            ${text ? `<span>${text}</span>` : ''}
+        `;
+        return loading;
+    }
+
+    /**
+     * Mostra loading inline em um container
+     * @param {string} containerId - ID do container
+     * @param {string} text - Texto opcional
+     */
+    function showLoadingInline(containerId, text = 'Carregando...') {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.innerHTML = '';
+        container.appendChild(createLoadingInline(text));
+    }
+
+    /**
+     * Overlay de logout (usado no auth.html)
+     */
+    function showLogoutLoading(show) {
+        let overlay = document.getElementById('logout-overlay');
+
+        if (show) {
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'logout-overlay';
+                overlay.className = 'loading-overlay';
+                document.body.appendChild(overlay);
+            }
+
+            overlay.innerHTML = `
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Encerrando sessão...</div>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
+        } else {
+            if (overlay) {
+                overlay.classList.add('hidden');
+                setTimeout(() => overlay.remove(), 300);
+            }
+        }
+    }
+
+    // Expor funções globalmente
+    window.showLoadingOverlay = showLoadingOverlay;
+    window.createLoadingInline = createLoadingInline;
+    window.showLoadingInline = showLoadingInline;
+    window.showLogoutLoading = showLogoutLoading;
+</script>

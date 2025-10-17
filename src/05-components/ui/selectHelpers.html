@@ -1,0 +1,208 @@
+<script>
+    // ============================================================================
+    // SELECT HELPERS
+    // Funções auxiliares para carregar e popular elementos <select>
+    // ============================================================================
+
+    /**
+     * Popula um elemento select com itens
+     * @param {HTMLSelectElement} select - Elemento select
+     * @param {Array} items - Array de itens
+     * @param {string} valueField - Nome do campo para o value
+     * @param {string} textField - Nome do campo para o texto
+     * @param {string} placeholder - Texto placeholder (opcional)
+     */
+    function populateSelect(select, items, valueField, textField, placeholder) {
+        select.innerHTML = '';
+
+        // Adicionar placeholder apenas se não for select múltiplo e placeholder foi fornecido
+        if (!select.multiple && placeholder) {
+            const placeholderOption = document.createElement('option');
+            placeholderOption.value = '';
+            placeholderOption.textContent = placeholder;
+            placeholderOption.disabled = true;
+            placeholderOption.selected = true;
+            select.appendChild(placeholderOption);
+        }
+
+        // Adicionar opções
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item[valueField];
+            option.textContent = item[textField];
+            select.appendChild(option);
+        });
+    }
+
+    /**
+     * Carrega categorias de atividades em um select
+     * @param {string} selectId - ID do elemento select
+     */
+    function loadCategories(selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+
+        // Se cache existe, usar diretamente (instantâneo!)
+        if (window.cachedCategorias) {
+            populateSelect(select, window.cachedCategorias, 'id', 'nome',
+                          select.multiple ? null : 'Selecione uma categoria...');
+            return;
+        }
+
+        // Mostrar loading no select
+        select.innerHTML = '<option disabled selected>🔄 Carregando categorias...</option>';
+
+        // Carregar da API apenas se cache não existe ainda
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            (async () => {
+                try {
+                    const result = await apiCall('listCategoriasAtividadesApi');
+
+                    if (result && result.ok && result.items) {
+                        window.cachedCategorias = result.items; // Salvar no cache
+                        populateSelect(select, result.items, 'id', 'nome',
+                                     select.multiple ? null : 'Selecione uma categoria...');
+                    } else {
+                        loadCategoriesFallback(select);
+                    }
+                } catch (error) {
+                    // Erro de sessão já tratado por apiCall()
+                    if (!error.message || !error.message.includes('Sessão')) {
+                        console.error('Erro ao carregar categorias:', error);
+                        loadCategoriesFallback(select);
+                    }
+                }
+            })();
+        } else {
+            loadCategoriesFallback(select);
+        }
+    }
+
+    /**
+     * Fallback quando falha carregar categorias
+     */
+    function loadCategoriesFallback(select) {
+        console.error('❌ Erro ao carregar categorias da API');
+
+        select.innerHTML = select.multiple ?
+            '<option disabled>❌ Erro ao carregar categorias</option>' :
+            '<option disabled selected>❌ Erro ao carregar categorias</option>';
+    }
+
+    /**
+     * Carrega usuários responsáveis em um select
+     * @param {string} selectId - ID do elemento select
+     */
+    function loadResponsibleUsers(selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+
+        // Se cache existe, usar diretamente (instantâneo!)
+        if (window.cachedResponsaveis) {
+            populateSelect(select, window.cachedResponsaveis, 'uid', 'nome',
+                          'Selecione um responsável...');
+            return;
+        }
+
+        // Mostrar loading
+        select.innerHTML = '<option disabled selected>🔄 Carregando usuários...</option>';
+
+        // Carregar da API apenas se cache não existe ainda
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            (async () => {
+                try {
+                    const result = await apiCall('listUsuariosApi');
+
+                    if (result && result.ok && result.items) {
+                        window.cachedResponsaveis = result.items; // Salvar no cache
+                        populateSelect(select, result.items, 'uid', 'nome',
+                                     'Selecione um responsável...');
+                    } else {
+                        loadResponsibleUsersFallback(select);
+                    }
+                } catch (error) {
+                    // Erro de sessão já tratado por apiCall()
+                    if (!error.message || !error.message.includes('Sessão')) {
+                        console.error('Erro ao carregar usuários:', error);
+                        loadResponsibleUsersFallback(select);
+                    }
+                }
+            })();
+        } else {
+            loadResponsibleUsersFallback(select);
+        }
+    }
+
+    /**
+     * Fallback quando falha carregar usuários
+     */
+    function loadResponsibleUsersFallback(select) {
+        console.error('❌ Erro ao carregar usuários da API');
+
+        select.innerHTML = '<option disabled selected>❌ Erro ao carregar usuários</option>';
+    }
+
+    /**
+     * Carrega dados para o modal de nova atividade
+     */
+    function loadActivityModalData() {
+        loadCategories('activity-category');
+        loadResponsibleUsers('activity-responsible');
+    }
+
+    /**
+     * Carrega dados para o modal de edição de atividade
+     */
+    function loadEditActivityModalData() {
+        loadCategories('edit-activity-category');
+        loadResponsibleUsers('edit-activity-responsible');
+    }
+
+    /**
+     * PRE-CARREGA dados de categorias e responsáveis no cache após login
+     * Deve ser chamado uma única vez após login bem-sucedido
+     */
+    function preLoadCachedData() {
+        console.log('🚀 PRE-CARREGANDO dados no cache...');
+
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            // Pré-carregar categorias
+            if (!window.cachedCategorias) {
+                (async () => {
+                    try {
+                        const result = await apiCall('listCategoriasAtividadesApi');
+                        if (result && result.ok && result.items) {
+                            window.cachedCategorias = result.items;
+                            console.log('✅ Categorias pré-carregadas no cache:', result.items.length);
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Erro ao pré-carregar categorias:', error);
+                    }
+                })();
+            }
+
+            // Pré-carregar responsáveis
+            if (!window.cachedResponsaveis) {
+                (async () => {
+                    try {
+                        const result = await apiCall('listUsuariosApi');
+                        if (result && result.ok && result.items) {
+                            window.cachedResponsaveis = result.items;
+                            console.log('✅ Responsáveis pré-carregados no cache:', result.items.length);
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Erro ao pré-carregar responsáveis:', error);
+                    }
+                })();
+            }
+        }
+    }
+
+    // Expor funções globalmente
+    window.populateSelect = populateSelect;
+    window.loadCategories = loadCategories;
+    window.loadResponsibleUsers = loadResponsibleUsers;
+    window.loadActivityModalData = loadActivityModalData;
+    window.loadEditActivityModalData = loadEditActivityModalData;
+    window.preLoadCachedData = preLoadCachedData;
+</script>

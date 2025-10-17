@@ -1,0 +1,89 @@
+<style>
+    /* ===== EMPTY STATES ===== */
+    .empty-state {
+        text-align: center;
+        padding: var(--spacing-2xl);
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        color: var(--text);
+    }
+
+    .empty-state-icon {
+        font-size: var(--font-size-3xl);
+        margin-bottom: var(--spacing-lg);
+        opacity: 0.5;
+    }
+
+    .empty-state-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .empty-state-description {
+        font-size: var(--font-size-sm);
+        margin-bottom: var(--spacing-lg);
+    }
+</style>
+
+<script>
+    // ============================================================================
+    // COMPONENTE DE EMPTY STATE
+    // Exibe mensagens quando não há dados para mostrar
+    // ============================================================================
+
+    /**
+     * Cria e retorna um elemento de empty state
+     * @param {Object} options - Opções de configuração
+     * @param {string} options.icon - Emoji do ícone
+     * @param {string} options.title - Título do empty state
+     * @param {string} options.description - Descrição do empty state
+     * @param {string} options.buttonText - Texto do botão (opcional)
+     * @param {Function} options.buttonAction - Ação do botão (opcional)
+     * @returns {HTMLElement} - Elemento do empty state
+     */
+    function createEmptyState(options) {
+        const { icon, title, description, buttonText, buttonAction } = options;
+
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+
+        let html = `
+            <div class="empty-state-icon">${icon}</div>
+            <div class="empty-state-title">${title}</div>
+            <div class="empty-state-description">${description}</div>
+        `;
+
+        if (buttonText && buttonAction) {
+            html += `<button class="btn btn-primary empty-state-btn">${buttonText}</button>`;
+        }
+
+        emptyState.innerHTML = html;
+
+        // Adicionar event listener no botão se fornecido
+        if (buttonText && buttonAction) {
+            const btn = emptyState.querySelector('.empty-state-btn');
+            btn.addEventListener('click', buttonAction);
+        }
+
+        return emptyState;
+    }
+
+    /**
+     * Exibe empty state em um container
+     * @param {string} containerId - ID do container
+     * @param {Object} options - Opções do empty state
+     */
+    function showEmptyState(containerId, options) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.innerHTML = '';
+        container.appendChild(createEmptyState(options));
+    }
+
+    // Expor funções globalmente
+    window.createEmptyState = createEmptyState;
+    window.showEmptyState = showEmptyState;
+</script>
