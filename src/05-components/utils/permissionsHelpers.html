@@ -1,0 +1,121 @@
+<script>
+    // ============================================================================
+    // PERMISSIONS HELPERS
+    // Funções utilitárias para controle de permissões e autorização
+    // ============================================================================
+
+    /**
+     * Lista de UIDs de administradores (temporário - futuramente será por roles/cargos)
+     */
+    const ADMIN_UIDS = ['U001', 'U002', 'U003', 'U004'];
+
+    /**
+     * Verifica se o usuário atual é administrador
+     * @returns {boolean} - true se for admin
+     */
+    function isCurrentUserAdmin() {
+        const currentUserUid = State.uid || localStorage.getItem('uid');
+        return ADMIN_UIDS.includes(currentUserUid);
+    }
+
+    /**
+     * Verifica se o usuário atual é responsável por uma atividade
+     * @param {string} responsavelUid - UID do responsável
+     * @returns {boolean} - true se for responsável
+     */
+    function isCurrentUserResponsavel(responsavelUid) {
+        const currentUserUid = State.uid || localStorage.getItem('uid');
+        return currentUserUid === responsavelUid;
+    }
+
+    /**
+     * Verifica se usuário pode ver participantes de uma atividade
+     * @param {string} responsavelUid - UID do responsável
+     * @returns {boolean} - true se pode ver
+     */
+    function canViewParticipants(responsavelUid) {
+        return isCurrentUserAdmin() || isCurrentUserResponsavel(responsavelUid);
+    }
+
+    /**
+     * Verifica se usuário pode editar uma atividade
+     * @param {Object} activity - Objeto da atividade
+     * @returns {boolean} - true se pode editar
+     */
+    function canEditActivity(activity) {
+        if (!activity) return false;
+
+        const statusInfo = getSmartStatus(activity.status, activity.data);
+        const atividadeJaPassou = isActivityPast(activity.data);
+
+        // Só admin pode editar
+        // Status não pode ser Concluída
+        // Data não pode ter passado
+        return isCurrentUserAdmin() &&
+               statusInfo.text !== 'Concluída' &&
+               !atividadeJaPassou;
+    }
+
+    /**
+     * Verifica se usuário pode completar uma atividade
+     * @param {Object} activity - Objeto da atividade
+     * @returns {boolean} - true se pode completar
+     */
+    function canCompleteActivity(activity) {
+        if (!activity) return false;
+
+        const statusInfo = getSmartStatus(activity.status, activity.data);
+
+        // Só admin pode completar
+        // Status não pode ser Concluída
+        return isCurrentUserAdmin() && statusInfo.text !== 'Concluída';
+    }
+
+    /**
+     * Retorna o UID do usuário atual
+     * @returns {string|null} - UID ou null
+     */
+    function getCurrentUserUid() {
+        return State.uid || localStorage.getItem('uid');
+    }
+
+    /**
+     * Retorna objeto com todas as permissões para uma atividade
+     * @param {Object} activity - Objeto da atividade
+     * @returns {Object} - Objeto com permissões
+     */
+    function getActivityPermissions(activity) {
+        if (!activity) {
+            return {
+                canView: false,
+                canEdit: false,
+                canComplete: false,
+                canViewParticipants: false,
+                isAdmin: false,
+                isResponsavel: false
+            };
+        }
+
+        const isAdmin = isCurrentUserAdmin();
+        const isResponsavel = isCurrentUserResponsavel(activity.atribuido_uid);
+
+        return {
+            canView: true, // TODO: Implementar lógica de visualização
+            canEdit: canEditActivity(activity),
+            canComplete: canCompleteActivity(activity),
+            canViewParticipants: canViewParticipants(activity.atribuido_uid),
+            isAdmin,
+            isResponsavel
+        };
+    }
+
+    // Expor funções globalmente
+    window.ADMIN_UIDS = ADMIN_UIDS;
+    window.isCurrentUserAdmin = isCurrentUserAdmin;
+    window.isCurrentUserResponsavel = isCurrentUserResponsavel;
+    window.canViewParticipants = canViewParticipants;
+    window.canEditActivity = canEditActivity;
+    window.canCompleteActivity = canCompleteActivity;
+    window.getCurrentUserUid = getCurrentUserUid;
+    window.getActivityPermissions = getActivityPermissions;
+</script>
