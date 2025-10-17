@@ -3433,10 +3433,25 @@
 
             const atividadeJaPassou = dataAtividade < hoje;
 
+            // ===== CONTROLE DE PERMISSÕES =====
+            // Obter usuário logado
+            const currentUserUid = State.uid || localStorage.getItem('uid');
+
+            // Lista de administradores (permissão total)
+            const admins = ['U001', 'U002', 'U003', 'U004'];
+            const isAdmin = admins.includes(currentUserUid);
+
+            // Verificar se é o responsável pela atividade
+            const isResponsavel = activity.atribuido_uid === currentUserUid;
+
+            // Permissões específicas
+            const podeVerParticipantes = isAdmin || isResponsavel;
+
             // Botão editar só aparece se:
             // 1. Status não é Concluída
             // 2. Data da atividade ainda não passou (hoje ou futuro)
-            const podeEditar = statusInfo.text !== 'Concluída' && !atividadeJaPassou;
+            // 3. Usuário é admin (U001-U004)
+            const podeEditar = statusInfo.text !== 'Concluída' && !atividadeJaPassou && isAdmin;
 
             return `
                 <div class="card activity-card ${categoryClass}" data-activity-id="${activity.id}" style="display: flex; flex-direction: column; min-height: 280px;">
@@ -3507,12 +3522,14 @@
 
                             <!-- Botões de ação -->
                             <div class="activity-actions" style="display: flex; gap: var(--spacing-xs); justify-content: center;">
-                                ${statusInfo.text !== 'Concluída'
-                                    ? `<button class="btn btn-primary" onclick="openParticipants('${activity.id}', \`${(activity.titulo || '').replace(/`/g, '')}\`, \`${(activity.descricao || '').replace(/`/g, '')}\`)" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">👥 Participantes</button>`
-                                    : `<button class="btn btn-outline" disabled style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center; opacity: 0.5; cursor: not-allowed;">📊 Resumo</button>`
+                                ${podeVerParticipantes
+                                    ? (statusInfo.text !== 'Concluída'
+                                        ? `<button class="btn btn-primary" onclick="openParticipants('${activity.id}', \`${(activity.titulo || '').replace(/`/g, '')}\`, \`${(activity.descricao || '').replace(/`/g, '')}\`)" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">👥 Participantes</button>`
+                                        : `<button class="btn btn-outline" disabled style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center; opacity: 0.5; cursor: not-allowed;">📊 Resumo</button>`)
+                                    : ''
                                 }
                                 ${podeEditar ? `<button class="btn btn-outline" onclick="editActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✏️ Editar</button>` : ''}
-                                ${statusInfo.text !== 'Concluída' ? `<button class="btn btn-complete" onclick="completeActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✅ Concluir</button>` : ''}
+                                ${statusInfo.text !== 'Concluída' && isAdmin ? `<button class="btn btn-complete" onclick="completeActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✅ Concluir</button>` : ''}
                             </div>
                         </div>
                     </div>
