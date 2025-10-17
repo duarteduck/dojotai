@@ -1,8 +1,8 @@
-// main_migrated.gs — ponto de entrada web para aplicação migrada
+// main.gs — ponto de entrada web da aplicação
 function doGet(e) {
-  const tmpl = HtmlService.createTemplateFromFile('app_migrated');
+  const tmpl = HtmlService.createTemplateFromFile('index');
   return tmpl.evaluate()
-    .setTitle('Sistema Dojotai - Migrado')
+    .setTitle('Sistema Dojotai')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

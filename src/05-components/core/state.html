@@ -1,0 +1,53 @@
+<!-- Sistema de Estado da Aplicação -->
+<script>
+    // ============================================================================
+    // CACHE GLOBAL: Categorias e Responsáveis
+    // Carregados UMA ÚNICA VEZ no DOMContentLoaded e reutilizados em toda a app
+    // ============================================================================
+    // NOTA: Quando implementar cadastro de categorias/usuários, invalidar cache:
+    //       window.cachedCategorias = null; carregarCategorias();
+    //       window.cachedResponsaveis = null; carregarResponsaveis();
+    // ============================================================================
+    window.cachedCategorias = null;
+    window.cachedResponsaveis = null;
+
+    window.State = {
+      get uid(){ return localStorage.getItem('uid'); },
+      set uid(v){ localStorage.setItem('uid', v); },
+
+      get user(){
+        const userData = localStorage.getItem('user');
+        return userData ? JSON.parse(userData) : null;
+      },
+      set user(v){
+        if(v) {
+          localStorage.setItem('user', JSON.stringify(v));
+        } else {
+          localStorage.removeItem('user');
+        }
+      },
+
+      get session(){
+        const sessionData = localStorage.getItem('session');
+        return sessionData ? JSON.parse(sessionData) : null;
+      },
+      set session(v){
+        if(v) {
+          localStorage.setItem('session', JSON.stringify(v));
+          console.log('💾 State.session salva:', v.id);
+        } else {
+          localStorage.removeItem('session');
+        }
+      },
+
+      clear(){
+        localStorage.removeItem('uid');
+        localStorage.removeItem('user');
+        localStorage.removeItem('session');
+        console.log('🧹 State limpo - uid, user, session removidos');
+      },
+
+      cache: { atividades: [] },
+      ui: { minhas:false, nomeFiltro:"" }
+    };
+</script>

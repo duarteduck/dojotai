@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Dojotai</title>
+    <base target="_top">
+
+    <!-- ===== STYLES: Design System ===== -->
+    <?!= include('05-components/core/styles'); ?>
+</head>
+<body data-theme="light">
+
+    <!-- ===== STATE: Gerenciamento de Estado Global ===== -->
+    <?!= include('05-components/core/state'); ?>
+
+    <!-- ===== TEMPORÁRIO: Carrega arquivo antigo enquanto migramos ===== -->
+    <?!= include('app_migrated'); ?>
+
+</body>
+</html>
