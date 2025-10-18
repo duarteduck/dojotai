@@ -1,0 +1,2471 @@
+<!-- ===== PÁGINA: ATIVIDADES ===== -->
+<div id="activities" class="page-content hidden">
+    <!-- Sistema de Filtros com Modal e Chips -->
+    <div class="filters-container">
+        <!-- Linha 1: Botão Filtros, Chips e Nova Atividade -->
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
+
+            <!-- Botão principal "Filtros" -->
+            <button id="btn-filtros" class="btn btn-primary" style="border: none !important; outline: none !important;">
+                <span>🔍</span>
+                <span id="filtros-text">Filtros</span>
+            </button>
+
+            <!-- Container dos chips -->
+            <div id="chips-container" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
+
+            <!-- Botão Limpar Tudo (será mostrado via JS) -->
+            <button id="btn-limpar-filtros" class="btn-limpar-filtros" style="display: none;">
+                <span>×</span>
+                <span>Limpar Tudo</span>
+            </button>
+
+            <!-- Botão Nova Atividade -->
+            <div style="margin-left: auto;">
+                <button class="btn btn-primary" id="btn-nova-atividade">
+                    <span>➕</span>
+                    <span>Nova Atividade</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Linha 2: Campo de busca e Nova Categoria -->
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <!-- Campo de busca -->
+            <div style="position: relative; flex: 1;">
+                <span style="
+                    position: absolute;
+                    left: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: var(--text-light);
+                    pointer-events: none;
+                    font-size: 16px;
+                ">🔎</span>
+                <input
+                    type="text"
+                    id="search-activities"
+                    placeholder="Buscar por título ou descrição..."
+                    style="
+                        width: 100%;
+                        padding: 10px 40px 10px 40px;
+                        border: 2px solid #d1d5db;
+                        border-radius: 8px;
+                        font-size: var(--font-size-sm);
+                        outline: none;
+                        transition: all 0.2s;
+                        background: white;
+                    "
+                    onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                    onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'"
+                    onkeyup="filterActivitiesByText(this.value)"
+                />
+                <button
+                    id="clear-search"
+                    onclick="clearSearchText()"
+                    style="
+                        position: absolute;
+                        right: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        background: var(--surface);
+                        border: none;
+                        color: var(--text-light);
+                        cursor: pointer;
+                        font-size: 20px;
+                        padding: 4px 8px;
+                        display: none;
+                        border-radius: 4px;
+                        line-height: 1;
+                        transition: all 0.2s;
+                    "
+                    onmouseover="this.style.background='var(--border-color)'; this.style.color='var(--text-primary)'"
+                    onmouseout="this.style.background='var(--surface)'; this.style.color='var(--text-light)'"
+                >×</button>
+            </div>
+
+            <!-- Botão Nova Categoria -->
+            <button class="btn btn-outline" id="btn-nova-categoria" disabled style="opacity: 0.5; cursor: not-allowed;">
+                <span>➕</span>
+                <span>Nova Categoria</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Grid de Atividades -->
+    <div class="cards-grid" id="activities-grid">
+        <!-- Carregando atividades... -->
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Carregando atividades...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+
+        // ===== SISTEMA DE ATIVIDADES =====
+        function initActivities() {
+            // LAZY INIT: Inicializar sistema de filtros apenas na primeira vez
+            if (!filtrosSystemInitialized) {
+                initFiltrosSystem();
+                filtrosSystemInitialized = true;
+            }
+
+            // Configurar filtros
+            setupActivityFilters();
+
+            // Aplicar filtros padrão (Pendente + Usuário logado)
+            // NOTA: aplicarFiltrosPadrao() já chama loadActivities() via aplicarFiltros()
+            if (typeof aplicarFiltrosPadrao === 'function') {
+                aplicarFiltrosPadrao();
+            }
+
+            // REMOVIDO: Chamada duplicada de loadActivities()
+            // A função aplicarFiltrosPadrao() acima já carrega as atividades
+
+            // Configurar botão Nova Atividade com validação de sessão
+            const btnNova = document.getElementById('btn-nova-atividade');
+            if (btnNova) {
+                btnNova.addEventListener('click', function() {
+                    // Validar sessão antes de abrir modal (instantâneo - valida em background)
+                    const sessionValid = checkSessionBeforeModal();
+                    if (sessionValid) {
+                        openActivityModal();
+                    }
+                    // Se sessão inválida, checkSessionBeforeModal() já mostrou o modal de sessão expirada
+                });
+            }
+        }
+
+        function setupActivityFilters() {
+            const categoryFilter = document.getElementById('activities-category-filter');
+            const statusFilter = document.getElementById('activities-status-filter');
+            const periodFilter = document.getElementById('activities-period-filter');
+            const ownerFilter = document.getElementById('activities-owner-filter');
+
+            if (categoryFilter) {
+                categoryFilter.addEventListener('change', function() {
+                    loadActivities();
+                });
+            }
+
+            if (statusFilter) {
+                statusFilter.addEventListener('change', function() {
+                    loadActivities();
+                });
+            }
+
+            if (periodFilter) {
+                periodFilter.addEventListener('change', function() {
+                    loadActivities();
+                });
+            }
+
+            if (ownerFilter) {
+                ownerFilter.addEventListener('change', function() {
+                    loadActivities();
+                });
+            }
+        }
+
+        // Guard para evitar chamadas simultâneas
+        let isLoadingActivities = false;
+
+        function loadActivities() {
+            // Prevenir chamadas simultâneas
+            if (isLoadingActivities) {
+                console.log('⚠️ loadActivities já está em execução, ignorando chamada duplicada');
+                return;
+            }
+            isLoadingActivities = true;
+
+            const grid = document.getElementById('activities-grid');
+            if (!grid) {
+                isLoadingActivities = false;
+                return;
+            }
+
+            // Mostrar estado de carregamento bonito
+            grid.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-spinner-dots">
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                    </div>
+                    <div class="loading-text">Carregando atividades</div>
+                    <div class="loading-subtext">Buscando dados mais recentes...</div>
+                </div>
+            `;
+
+            // Tentar usar API real
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                // Preparar filtros para enviar ao backend
+                const filtrosBackend = {
+                    status: filtrosState.status || [],
+                    categorias: filtrosState.categorias || [],
+                    periodo: filtrosState.periodo || [],
+                    responsavel: filtrosState.responsavel || []
+                };
+
+                // Conectar com API real usando apiCall()
+                (async () => {
+                    try {
+                        const result = await apiCall('listActivitiesApi', filtrosBackend);
+
+                        isLoadingActivities = false; // Liberar lock
+
+                        if (result && result.ok && result.items) {
+                            const activitiesWithCategory = result.items.map(activity => {
+                                return {
+                                    ...activity,
+                                    // Manter compatibilidade com campos de categoria única
+                                    categoria: activity.categoria_atividade_nome || 'Geral',
+                                    categoria_icone: activity.categoria_atividade_icone || '📋',
+                                    categoria_cor: activity.categoria_atividade_cor || '#6b7280',
+                                    // PRESERVAR o array de múltiplas categorias
+                                    categorias: activity.categorias || []
+                                };
+                            });
+
+                            // Backend já filtrou, aplicar apenas filtro de texto (se houver)
+                            const filteredActivities = applyActivityFilters(activitiesWithCategory);
+                            renderActivities(filteredActivities);
+                        } else {
+                            console.error('Erro ao carregar atividades:', result);
+                            loadActivitiesFallback();
+                        }
+                    } catch (error) {
+                        isLoadingActivities = false; // Liberar lock
+
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('Erro na API de atividades:', error);
+                            loadActivitiesFallback();
+                        }
+                    }
+                })();
+            } else {
+                // Fallback se API não estiver disponível
+                isLoadingActivities = false;
+                loadActivitiesFallback();
+            }
+        }
+
+        function applyActivityFilters(activities) {
+            if (!activities || !Array.isArray(activities)) return [];
+
+            // Backend já aplicou filtros de status, categoria, período e responsável
+            // Aqui aplicamos apenas o filtro de TEXTO (busca por título/descrição)
+            let filtered = activities;
+
+            if (filtrosState.searchText && filtrosState.searchText.trim().length > 0) {
+                const searchTerm = filtrosState.searchText.toLowerCase().trim();
+                filtered = filtered.filter(atividade => {
+                    const titulo = (atividade.titulo || '').toLowerCase();
+                    const descricao = (atividade.descricao || '').toLowerCase();
+                    return titulo.includes(searchTerm) || descricao.includes(searchTerm);
+                });
+                console.log('🔍 Filtro de texto aplicado:', filtered.length, 'de', activities.length);
+            }
+
+            return filtered;
+        }
+
+
+        function loadActivitiesFallback() {
+            console.error('❌ Não foi possível carregar as atividades da API');
+
+            // Mostrar mensagem de erro para o usuário
+            const activitiesList = document.getElementById('activities-list');
+            if (activitiesList) {
+                activitiesList.innerHTML = `
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Não foi possível carregar as atividades. Verifique sua conexão.
+                    </div>
+                `;
+            }
+        }
+
+        function getCategoryFromId(categoryId) {
+            const categories = {
+                '1': 'Okiyome',
+                '2': 'Estudo',
+                '3': 'Cerimônia',
+                '4': 'Reunião',
+                '5': 'Evento'
+            };
+            return categories[categoryId] || 'Geral';
+        }
+
+        // Remove um card com animação
+        function removeActivityCardWithAnimation(activityId, onComplete) {
+            // Validação de entrada
+            if (!activityId) {
+                console.warn('⚠️ removeActivityCardWithAnimation: activityId inválido');
+                return;
+            }
+
+            // Buscar card no DOM
+            const card = document.querySelector(`[data-activity-id="${activityId}"]`);
+            if (!card) {
+                console.log('ℹ️ Card não encontrado no DOM para remover');
+                return;
+            }
+
+            // Adicionar classe de animação
+            card.classList.add('card-removing');
+
+            // Aguardar animação terminar e remover do DOM
+            setTimeout(() => {
+                if (card.parentNode) {
+                    card.parentNode.removeChild(card);
+                }
+
+                // Callback opcional
+                if (onComplete && typeof onComplete === 'function') {
+                    onComplete();
+                }
+            }, 300); // Duração da animação fadeOutSlide
+        }
+
+        function openParticipants(activityId, titulo = '', descricao = '') {
+            console.log('🟢 PASSO 1: openParticipants chamada com ID:', activityId);
+            console.log('🟢 PASSO 2: Prestes a chamar openEditActivityModal');
+            openEditActivityModal(activityId, 'participants', titulo, descricao);
+            console.log('🟢 PASSO 3: openEditActivityModal chamada finalizada');
+        }
+
+        function editActivity(activityId) {
+            // Verificar se há modal de edição aberto
+            const existingModal = document.getElementById('editActivityModal');
+            if (existingModal) {
+                console.log('⏳ Modal de edição já aberto, aguardando limpeza...');
+                setTimeout(() => {
+                    editActivity(activityId); // Tentar novamente após delay
+                }, 200);
+                return;
+            }
+
+            console.log('🔄 Abrindo modal de edição para:', activityId);
+            openEditActivityModal(activityId);
+        }
+
+        async function completeActivity(activityId) {
+            // Mostrar loading no botão
+            const button = document.querySelector(`button[onclick="completeActivity('${activityId}')"]`);
+            const originalContent = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
+
+            try {
+                // Usar apiCall() que detecta sessão expirada automaticamente
+                const response = await apiCall('completeActivity', activityId);
+
+                // Restaurar botão
+                button.disabled = false;
+                button.innerHTML = originalContent;
+
+                if (response && response.ok) {
+                    showToast('Atividade marcada como concluída com sucesso!', 'success');
+                    updateSingleActivityCard(activityId);
+                } else {
+                    console.error('❌ Erro ao marcar atividade como concluída:', response);
+                    showToast('Erro ao marcar atividade como concluída: ' + (response.error || 'Erro desconhecido'), 'error');
+                }
+
+            } catch (error) {
+                // Restaurar botão em caso de erro
+                button.disabled = false;
+                button.innerHTML = originalContent;
+
+                // Erro de sessão expirada já foi tratado por apiCall()
+                if (!error.message.includes('Sessão')) {
+                    console.error('❌ Erro ao marcar atividade como concluída:', error);
+                    showToast('Erro ao marcar atividade como concluída: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // ===== SISTEMA DE MODAIS DE ATIVIDADES =====
+
+        function createActivityModal() {
+            const modalHTML = `
+                <div id="activityModal" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    background: rgba(0, 0, 0, 0.6);
+                    backdrop-filter: blur(3px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    padding: 20px;
+                    box-sizing: border-box;
+                " onclick="closeActivityModal(event)">
+                    <div style="
+                        background: white;
+                        border-radius: 12px;
+                        width: 100%;
+                        max-width: 600px;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                        animation: modalFadeIn 0.2s ease;
+                    " onclick="event.stopPropagation()">
+                        <div style="padding: 24px; border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h2 style="font-size: var(--font-size-xl); font-weight: 600; margin: 0;">Nova Atividade</h2>
+                                <button onclick="closeActivityModal()" style="
+                                    background: none;
+                                    border: none;
+                                    font-size: 24px;
+                                    cursor: pointer;
+                                    padding: 8px;
+                                    border-radius: 50%;
+                                    width: 40px;
+                                    height: 40px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">&times;</button>
+                            </div>
+                        </div>
+                        <div id="createActivityFormContent" style="padding: 24px;">
+                            <form id="activityForm">
+                                <div class="form-group">
+                                    <label class="form-label">Nome da Atividade *</label>
+                                    <input type="text" id="activity-name" class="form-input" placeholder="Digite o nome da atividade" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Descrição</label>
+                                    <textarea id="activity-description" class="form-input" placeholder="Descreva a atividade" rows="3"></textarea>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Data *</label>
+                                        <input type="date" id="activity-date" class="form-input" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Horário *</label>
+                                        <input type="time" id="activity-time" class="form-input" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Categorias *</label>
+                                    <select id="activity-category" class="form-input" multiple style="min-height: 80px;" required>
+                                        <option value="okiyome">Okiyome</option>
+                                        <option value="estudo">Estudo</option>
+                                        <option value="cerimonia">Cerimônia</option>
+                                    </select>
+                                    <small class="form-help">Segure Ctrl/Cmd para selecionar múltiplas categorias</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Responsável *</label>
+                                    <select id="activity-responsible" class="form-input" required>
+                                        <option value="">Carregando usuários...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tags</label>
+                                    <input type="text" id="activity-tags" class="form-input" placeholder="Ex: kata, básico, manhã (separadas por vírgula)">
+                                    <small class="form-help">Digite tags separadas por vírgula para facilitar a busca</small>
+                                </div>
+                            </form>
+
+                            <!-- Seção de Definir Alvos (retrátil) -->
+                            <div id="targetsSection" style="display: none; margin-top: 24px; padding: 20px; background: var(--light); border-radius: 8px; border: 1px solid var(--border-color); transition: all 0.3s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <h3 style="font-size: var(--font-size-lg); font-weight: 600; margin: 0; color: var(--text);">🎯 Definir Alvos da Atividade</h3>
+                                    <button onclick="toggleTargetsSection('create')" style="
+                                        background: none;
+                                        border: none;
+                                        font-size: 20px;
+                                        cursor: pointer;
+                                        padding: 8px;
+                                        border-radius: 50%;
+                                        width: 32px;
+                                        height: 32px;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        color: var(--text-light);
+                                    ">×</button>
+                                </div>
+
+                                <!-- Filtros para seleção de membros -->
+                                <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+                                    <!-- Busca por Nome -->
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">🔍 Busca por Nome</label>
+                                        <input type="text" id="target-name-filter" class="form-input" placeholder="Digite o nome do membro..." style="font-size: var(--font-size-sm);">
+                                    </div>
+
+                                    <!-- Loading de filtros -->
+                                    <div id="target-filters-loading" style="display: none; text-align: center; padding: 20px;">
+                                        <div style="width: 24px; height: 24px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div>
+                                        <p style="color: var(--text-light); margin: 0; font-size: var(--font-size-sm);">Carregando filtros...</p>
+                                    </div>
+
+                                    <!-- Filtros Multi-Select -->
+                                    <div id="target-filters-content" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px;">
+                                        <!-- Linha 1: Dojo / Status -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Dojo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-dojo')">
+                                                <span id="target-dojo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-dojo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Status</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-status')">
+                                                <span id="target-status-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-status-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 2: Categoria Grupo / Categoria Membro -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cat. Grupo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-categoria-grupo')">
+                                                <span id="target-categoria-grupo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-categoria-grupo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cat. Membro</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-categoria-membro')">
+                                                <span id="target-categoria-membro-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-categoria-membro-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 3: Cargo / Buntai -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cargo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-cargo')">
+                                                <span id="target-cargo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-cargo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Buntai</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-buntai')">
+                                                <span id="target-buntai-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-buntai-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 4: Omitama / Sexo -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Omitama</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-omitama')">
+                                                <span id="target-omitama-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-omitama-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Sexo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('target-sexo')">
+                                                <span id="target-sexo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="target-sexo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Botões de Ação -->
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearTargetFilters('create')" style="font-size: 0.75rem; padding: 4px 8px;">Limpar</button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="searchMembersForTargets('create')" style="font-size: 0.75rem; padding: 4px 8px;">🔍 Buscar</button>
+                                    </div>
+                                </div>
+
+                                <!-- Loading para busca -->
+                                <div id="targetsLoading" style="display: none; text-align: center; padding: 40px;">
+                                    <div style="width: 32px; height: 32px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                                    <p style="color: var(--text-light); margin: 0;">Buscando membros...</p>
+                                </div>
+
+                                <!-- Lista Superior: Resultados da Pesquisa -->
+                                <div id="targetsResults" style="display: none;">
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                                        <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                            <span id="targetsCount" style="font-weight: 600; color: var(--text);">📋 Membros Encontrados (0)</span>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-sm btn-outline-primary" onclick="selectAllTargets()" style="font-size: var(--font-size-xs);">Selecionar Todos</button>
+                                            </div>
+                                        </div>
+                                        <div id="targetsList" style="max-height: 250px; overflow-y: auto; padding: 8px;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Lista Inferior: Membros Selecionados (sempre visível quando há seleções) -->
+                                <div id="targetsSelectedContainer" style="display: none;">
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--primary); border-width: 2px;">
+                                        <div style="padding: 16px; border-bottom: 1px solid var(--primary); display: flex; justify-content: space-between; align-items: center; background: var(--primary-light);">
+                                            <span id="targetsSelected" style="font-weight: 600; color: var(--primary);">🎯 Alvos Selecionados (0)</span>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="unselectAllTargets()" style="font-size: var(--font-size-xs);">Remover Todos</button>
+                                            </div>
+                                        </div>
+                                        <div id="targetsSelectedList" style="max-height: 200px; overflow-y: auto; padding: 8px; min-height: 60px;">
+                                            <div style="text-align: center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                                                Nenhum membro selecionado ainda.<br>
+                                                <small>Clique nos membros acima para adicioná-los como alvos.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Estado vazio -->
+                                <div id="targetsEmpty" style="display: none; text-align: center; padding: 40px; color: var(--text-light);">
+                                    <p style="margin: 0;">Use os filtros acima para buscar membros e defini-los como alvos da atividade.</p>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                                <button type="button" onclick="toggleTargetsSection('create')" class="btn btn-outline-primary" id="targets-toggle-btn" style="font-size: var(--font-size-sm);">🎯 Definir Alvos</button>
+                                <div style="display: flex; gap: 12px;">
+                                    <button type="button" onclick="closeActivityModal()" class="btn btn-secondary" id="cancel-activity-btn">Cancelar</button>
+                                    <button type="button" onclick="submitActivity()" class="btn btn-primary" id="save-activity-btn">Salvar Atividade</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loading State - substitui o conteúdo -->
+                        <div id="createActivityLoadingState" style="
+                            padding: 60px 24px;
+                            display: none;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 300px;
+                        ">
+                            <div style="
+                                width: 48px;
+                                height: 48px;
+                                border: 4px solid var(--gray-light);
+                                border-top: 4px solid var(--primary);
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                                margin-bottom: 24px;
+                            "></div>
+                            <p style="
+                                color: var(--text);
+                                font-size: var(--font-size-lg);
+                                margin: 0 0 8px 0;
+                                font-weight: 500;
+                            ">Salvando atividade...</p>
+                            <p style="
+                                color: var(--text-light);
+                                font-size: var(--font-size-md);
+                                margin: 0;
+                            ">Por favor, aguarde</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return modalHTML;
+        }
+
+        function openActivityModal() {
+            // Remove modal existente se houver
+            const existingModal = document.getElementById('activityModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Criar e inserir novo modal
+            const modalHTML = createActivityModal();
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Prevenir scroll do body
+            document.body.style.overflow = 'hidden';
+
+            // Carregar dados para os selects
+            loadActivityModalData();
+
+            // Focus no primeiro campo
+            setTimeout(() => {
+                const firstInput = document.getElementById('activity-name');
+                if (firstInput) firstInput.focus();
+            }, 100);
+        }
+
+        function closeActivityModal(event) {
+            // Se há event e não clicou no próprio modal (fundo), ignora
+            if (event && event.target !== event.currentTarget) return;
+
+            // Limpar seleções de alvos não persistidas
+            console.log('🧼 Limpando seleções de alvos ao fechar modal de criação');
+            selectedTargets.clear();
+            currentTargetsData = [];
+            window.allMembersCache = new Map();
+
+            const modal = document.getElementById('activityModal');
+            if (modal) {
+                modal.remove();
+                document.body.style.overflow = '';
+            }
+        }
+
+        function createEditActivityModal(activityId, mode = 'edit') {
+            console.log('🔵 PASSO 6: createEditActivityModal INICIADO');
+            const isParticipantsMode = mode === 'participants';
+            const modalTitle = isParticipantsMode ? 'Participantes da Atividade' : 'Editar Atividade';
+            console.log('🔵 PASSO 7: Variáveis definidas, isParticipantsMode:', isParticipantsMode);
+
+            const modalHTML = `
+                <div id="editActivityModal" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    background: rgba(0, 0, 0, 0.6);
+                    backdrop-filter: blur(3px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    padding: 20px;
+                    box-sizing: border-box;
+                " onclick="closeEditActivityModal(event)">
+                    <div style="
+                        background: white;
+                        border-radius: 12px;
+                        width: 100%;
+                        max-width: 600px;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                        animation: modalFadeIn 0.2s ease;
+                        position: relative;
+                    " onclick="event.stopPropagation()">
+                        <div style="padding: 24px; border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h2 style="font-size: var(--font-size-xl); font-weight: 600; margin: 0;">${modalTitle}</h2>
+                                <button onclick="closeEditActivityModal()" style="
+                                    background: none;
+                                    border: none;
+                                    font-size: 24px;
+                                    cursor: pointer;
+                                    padding: 8px;
+                                    border-radius: 50%;
+                                    width: 40px;
+                                    height: 40px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">&times;</button>
+                            </div>
+                        </div>
+
+                        <!-- Loading State - carregando dados -->
+                        <div id="editActivityLoadingState" style="
+                            padding: 60px 24px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 300px;
+                        ">
+                            <div style="
+                                width: 48px;
+                                height: 48px;
+                                border: 4px solid var(--gray-light);
+                                border-top: 4px solid var(--primary);
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                                margin-bottom: 24px;
+                            "></div>
+                            <p style="
+                                color: var(--text);
+                                font-size: var(--font-size-lg);
+                                margin: 0 0 8px 0;
+                                font-weight: 500;
+                            ">Carregando atividade...</p>
+                            <p style="
+                                color: var(--text-light);
+                                font-size: var(--font-size-md);
+                                margin: 0;
+                            ">Por favor, aguarde</p>
+                        </div>
+
+                        <!-- Form Content - dados da atividade -->
+                        <div id="editActivityFormContent" style="padding: 24px; display: none;">
+                            <form id="editActivityForm">
+                                <div class="form-group">
+                                    <label class="form-label">Nome da Atividade</label>
+                                    <input type="text" id="edit-activity-name" class="form-input" readonly style="background: var(--gray-light); cursor: not-allowed;" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Descrição</label>
+                                    <textarea id="edit-activity-description" class="form-input" placeholder="Descreva a atividade" rows="3" ${isParticipantsMode ? 'readonly style="background: var(--gray-light); cursor: not-allowed;"' : ''}></textarea>
+                                </div>
+                                ${!isParticipantsMode ? `
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Data *</label>
+                                        <input type="date" id="edit-activity-date" class="form-input" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Horário *</label>
+                                        <input type="time" id="edit-activity-time" class="form-input" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Categorias *</label>
+                                    <select id="edit-activity-category" class="form-input" multiple style="min-height: 80px;" required>
+                                        <option value="okiyome">Okiyome</option>
+                                        <option value="estudo">Estudo</option>
+                                        <option value="cerimonia">Cerimônia</option>
+                                    </select>
+                                    <small class="form-help">Segure Ctrl/Cmd para selecionar múltiplas categorias</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Responsável *</label>
+                                    <select id="edit-activity-responsible" class="form-input" required>
+                                        <option value="">Carregando usuários...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tags</label>
+                                    <input type="text" id="edit-activity-tags" class="form-input" placeholder="Ex: kata, básico, manhã (separadas por vírgula)">
+                                    <small class="form-help">Digite tags separadas por vírgula para facilitar a busca</small>
+                                </div>
+                                ` : ''}
+                            </form>
+
+                            ${!isParticipantsMode ? `
+                            <!-- Seção de Definir Alvos para Edição -->
+                            <div id="editTargetsSection" style="display: none; margin-top: 24px; padding: 20px; background: var(--light); border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <h3 style="font-size: var(--font-size-lg); font-weight: 600; margin: 0; color: var(--text);">🎯 Editar Alvos da Atividade</h3>
+                                    <button onclick="toggleTargetsSection('edit')" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; color: var(--text-light);">&times;</button>
+                                </div>
+
+                                <!-- Alvos atuais (seção removida - agora integrada no sistema de lista dupla) -->
+
+                                <!-- Filtros para buscar e gerenciar alvos -->
+                                <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+                                    <h4 style="font-size: var(--font-size-md); font-weight: 600; margin: 0 0 12px 0; color: var(--text);">Buscar e Gerenciar Alvos</h4>
+
+                                    <!-- Busca por Nome -->
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; color: var(--text);">🔍 Busca por Nome</label>
+                                        <input type="text" id="edit-target-name-filter" class="form-input" placeholder="Digite o nome do membro..." style="font-size: var(--font-size-sm);">
+                                    </div>
+
+                                    <!-- Loading de filtros -->
+                                    <div id="edit-target-filters-loading" style="display: none; text-align: center; padding: 20px;">
+                                        <div style="width: 24px; height: 24px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div>
+                                        <p style="color: var(--text-light); margin: 0; font-size: var(--font-size-sm);">Carregando filtros...</p>
+                                    </div>
+
+                                    <!-- Filtros Multi-Select -->
+                                    <div id="edit-target-filters-content" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px;">
+                                        <!-- Linha 1: Dojo / Status -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Dojo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-dojo')">
+                                                <span id="edit-target-dojo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-dojo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Status</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-status')">
+                                                <span id="edit-target-status-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-status-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 2: Categoria Grupo / Categoria Membro -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cat. Grupo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-categoria-grupo')">
+                                                <span id="edit-target-categoria-grupo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-categoria-grupo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cat. Membro</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-categoria-membro')">
+                                                <span id="edit-target-categoria-membro-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-categoria-membro-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 3: Cargo / Buntai -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Cargo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-cargo')">
+                                                <span id="edit-target-cargo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-cargo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Buntai</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-buntai')">
+                                                <span id="edit-target-buntai-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-buntai-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <!-- Linha 4: Omitama / Sexo -->
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Omitama</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-omitama')">
+                                                <span id="edit-target-omitama-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-omitama-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+
+                                        <div class="filter-multiselect">
+                                            <label style="display: block; font-size: var(--font-size-xs); font-weight: 600; margin-bottom: 2px; color: var(--text-light);">Sexo</label>
+                                            <div class="filter-dropdown" onclick="toggleFilterDropdown('edit-target-sexo')">
+                                                <span id="edit-target-sexo-label" style="font-size: var(--font-size-sm);">Todos</span>
+                                                <span style="font-size: 0.7rem;">▼</span>
+                                            </div>
+                                            <div id="edit-target-sexo-options" class="filter-options" style="display: none;"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Botões de Ação -->
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearTargetFilters('edit')" style="font-size: 0.75rem; padding: 4px 8px;">Limpar</button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="searchMembersForTargets('edit')" style="font-size: 0.75rem; padding: 4px 8px;">🔍 Buscar</button>
+                                    </div>
+                                </div>
+
+                                <!-- Loading para busca -->
+                                <div id="editTargetsLoading" style="display: none; text-align: center; padding: 40px;">
+                                    <div style="width: 32px; height: 32px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                                    <p style="color: var(--text-light); margin: 0;">Buscando membros...</p>
+                                </div>
+
+                                <!-- Lista Superior: Resultados da Pesquisa -->
+                                <div id="editTargetsResults" style="display: none;">
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                                        <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                            <span id="editTargetsCount" style="font-weight: 600; color: var(--text);">📋 Membros Encontrados (0)</span>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-sm btn-outline-primary" onclick="selectAllTargets('edit')" style="font-size: var(--font-size-xs);">Selecionar Todos</button>
+                                            </div>
+                                        </div>
+                                        <div id="editTargetsList" style="max-height: 250px; overflow-y: auto; padding: 8px;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Lista Inferior: Membros Selecionados (sempre visível quando há seleções) -->
+                                <div id="editTargetsSelectedContainer" style="display: none;">
+                                    <div style="background: white; border-radius: 8px; border: 1px solid var(--primary); border-width: 2px;">
+                                        <div style="padding: 16px; border-bottom: 1px solid var(--primary); display: flex; justify-content: space-between; align-items: center; background: var(--primary-light);">
+                                            <span id="editTargetsSelected" style="font-weight: 600; color: var(--primary);">🎯 Alvos Selecionados (0)</span>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="unselectAllTargets('edit')" style="font-size: var(--font-size-xs);">Remover Todos</button>
+                                            </div>
+                                        </div>
+                                        <div id="editTargetsSelectedList" style="max-height: 200px; overflow-y: auto; padding: 8px; min-height: 60px;">
+                                            <div style="text-align: center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                                                Nenhum membro selecionado ainda.<br>
+                                                <small>Clique nos membros acima para adicioná-los como alvos.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Estado vazio -->
+                                <div id="editTargetsEmpty" style="display: none; text-align: center; padding: 40px; color: var(--text-light);">
+                                    <p style="margin: 0;">Use os filtros acima para buscar membros e defini-los como alvos da atividade.</p>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${isParticipantsMode ? `
+                            <!-- Seção de Participantes -->
+                            <div id="participantsSection" style="margin-top: 24px; padding: 20px; background: var(--light); border-radius: 8px; border: 1px solid var(--border-color);">
+                                <h3 style="font-size: var(--font-size-lg); font-weight: 600; margin: 0 0 20px 0; color: var(--text);">👥 Participantes da Atividade</h3>
+
+                                <!-- Loading state -->
+                                <div id="participantsLoading" style="text-align: center; padding: 40px;">
+                                    <div style="width: 32px; height: 32px; border: 3px solid var(--gray-light); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                                    <p style="color: var(--text-light); margin: 0;">Carregando participantes...</p>
+                                </div>
+
+                                <!-- Lista de participantes -->
+                                <div id="participantsList" style="display: none;"></div>
+
+                                <!-- Campo de busca para adicionar membros extras -->
+                                <div id="addExtraMemberSection" style="display: none; margin-top: 24px; padding: 16px; background: var(--bg-secondary); border-radius: 8px; border: 1px dashed var(--border-color);">
+                                    <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text); font-size: var(--font-size-md);">
+                                        ➕ Adicionar Membro Extra
+                                    </label>
+                                    <small style="color: var(--text-light); display: block; margin-bottom: 12px; font-size: var(--font-size-sm);">
+                                        Membros que participaram mas não eram alvos da atividade
+                                    </small>
+                                    <div style="position: relative;">
+                                        <input
+                                            type="text"
+                                            id="search-extra-member"
+                                            placeholder="Buscar membro por nome..."
+                                            autocomplete="off"
+                                            style="
+                                                width: 100%;
+                                                padding: 10px 12px;
+                                                border: 2px solid #d1d5db;
+                                                border-radius: 8px;
+                                                font-size: var(--font-size-md);
+                                                outline: none;
+                                                transition: all 0.2s;
+                                                background: white;
+                                            "
+                                            onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                                            onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'"
+                                        />
+                                        <div id="member-suggestions" class="autocomplete-suggestions" style="display: none;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Estado vazio -->
+                                <div id="participantsEmpty" style="display: none; text-align: center; padding: 40px; color: var(--text-light);">
+                                    <p style="margin: 0;">Nenhum alvo definido para esta atividade ainda.</p>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            <div style="display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                                ${isParticipantsMode ? `
+                                    <div></div>
+                                    <div style="display: flex; gap: 12px;">
+                                        <button type="button" onclick="closeEditActivityModal()" class="btn btn-secondary">Fechar</button>
+                                        <button type="button" onclick="saveAllParticipations('${activityId}')" class="btn btn-primary" id="save-participations-btn">Salvar Participações</button>
+                                    </div>
+                                ` : `
+                                    <button type="button" onclick="toggleTargetsSection('edit', '${activityId}')" class="btn btn-outline-primary" id="edit-targets-toggle-btn" style="font-size: var(--font-size-sm);">🎯 Definir Alvos</button>
+                                    <div style="display: flex; gap: 12px;">
+                                        <button type="button" onclick="closeEditActivityModal()" class="btn btn-secondary" id="edit-cancel-btn">Cancelar</button>
+                                        <button type="button" onclick="updateActivity('${activityId}')" class="btn btn-primary" id="edit-save-btn">Salvar Alterações</button>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- Loading State - salvando alterações -->
+                        <div id="editActivitySavingState" style="
+                            padding: 60px 24px;
+                            display: none;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 300px;
+                        ">
+                            <div style="
+                                width: 48px;
+                                height: 48px;
+                                border: 4px solid var(--gray-light);
+                                border-top: 4px solid var(--primary);
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                                margin-bottom: 24px;
+                            "></div>
+                            <p style="
+                                color: var(--text);
+                                font-size: var(--font-size-lg);
+                                margin: 0 0 8px 0;
+                                font-weight: 500;
+                            ">Salvando alterações...</p>
+                            <p style="
+                                color: var(--text-light);
+                                font-size: var(--font-size-md);
+                                margin: 0;
+                            ">Por favor, aguarde</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return modalHTML;
+        }
+
+        function openEditActivityModal(activityId, mode = 'edit', titulo = '', descricao = '') {
+            console.log('🟡 PASSO 4: openEditActivityModal INICIADO com mode:', mode, 'activityId:', activityId);
+            if (!activityId) {
+                console.error('❌ ID da atividade não fornecido!');
+                return;
+            }
+            console.log('🟡 PASSO 5: Validação de ID passou, continuando...');
+
+            // Remove modal existente se houver
+            const existingModal = document.getElementById('editActivityModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Criar e inserir novo modal
+            console.log('🟡 PASSO 8: Prestes a chamar createEditActivityModal');
+            const modalHTML = createEditActivityModal(activityId, mode);
+            console.log('🟡 PASSO 9: Modal HTML criado, inserindo no DOM');
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            console.log('🟡 PASSO 10: Modal inserido no DOM com sucesso');
+
+            // Prevenir scroll do body
+            document.body.style.overflow = 'hidden';
+
+            if (mode === 'participants') {
+                console.log('🔧 Modo participantes detectado, carregando dados...');
+
+                // Se título e descrição foram passados, preencher diretamente (otimização)
+                if (titulo) {
+                    const nameField = document.getElementById('edit-activity-name');
+                    const descField = document.getElementById('edit-activity-description');
+                    if (nameField) nameField.value = titulo;
+                    if (descField) descField.value = descricao;
+
+                    // Mostrar form content imediatamente
+                    const loadingState = document.getElementById('editActivityLoadingState');
+                    const formContent = document.getElementById('editActivityFormContent');
+                    if (loadingState) loadingState.style.display = 'none';
+                    if (formContent) formContent.style.display = 'block';
+                }
+
+                // Modo participantes: carregar apenas participações
+                setTimeout(() => {
+                    console.log('🔧 Chamando loadActivityForParticipants para:', activityId);
+                    loadActivityForParticipants(activityId);
+                }, 100);
+            } else {
+                // Modo edição: carregar dados para os selects primeiro
+                loadEditActivityModalData();
+
+                // Aguardar um pouco e depois carregar dados da atividade
+                setTimeout(() => {
+                    loadActivityForEdit(activityId);
+                }, 500); // Aumentando delay para dar tempo da API se estabilizar
+            }
+        }
+
+        function closeEditActivityModal(event) {
+            // Se há event e não clicou no próprio modal (fundo), ignora
+            if (event && event.target !== event.currentTarget) return;
+
+            // Limpar seleções de alvos não persistidas
+            console.log('🧼 Limpando seleções de alvos ao fechar modal de edição');
+            selectedTargets.clear();
+            currentTargetsData = [];
+            window.allMembersCache = new Map();
+            pendingExtraMembers = []; // Limpar membros extras pendentes
+            currentParticipations = []; // Limpar participações carregadas
+            extraMemberSearchInitialized = false; // Resetar flag para permitir reinicialização
+            console.log('🧼 Membros extras pendentes limpos ao fechar modal');
+
+            const modal = document.getElementById('editActivityModal');
+            if (modal) {
+                modal.remove();
+                document.body.style.overflow = '';
+            }
+        }
+
+        // ===== MODAL DE PARTICIPANTES (usa editActivityModal em modo 'participants') =====
+
+        async function loadActivityForParticipants(activityId, tentativa = 1) {
+            try {
+                console.log('📊 [PARTICIPANTES] Iniciando carregamento para atividade:', activityId, '(tentativa', tentativa + ')');
+
+                // Verificar se State está disponível
+                if (typeof State === 'undefined') {
+                    if (tentativa >= 5) {
+                        throw new Error('State não carregado após 5 tentativas. Verifique se app_state.html está sendo incluído corretamente.');
+                    }
+                    console.warn('⚠️ State não definido na tentativa', tentativa, '- tentando novamente em 200ms...');
+                    setTimeout(() => loadActivityForParticipants(activityId, tentativa + 1), 200);
+                    return;
+                }
+
+                console.log('✅ [PARTICIPANTES] State carregado! User:', State?.user);
+
+                if (!activityId) {
+                    throw new Error('ID da atividade não fornecido');
+                }
+
+                // Verificar se o Google Apps Script está disponível
+                if (typeof google === 'undefined' || !google.script) {
+                    throw new Error('Google Apps Script não está disponível');
+                }
+
+                console.log('📊 [PARTICIPANTES] Carregando participações...');
+
+                // Carregar participações da atividade usando apiCall()
+                const participationsResult = await apiCall('listParticipacoes', activityId);
+
+                console.log('👥 Participações carregadas:', participationsResult);
+
+                // Esconder loading (compatível com ambos os modais)
+                const loadingNew = document.getElementById('participants-loading');
+                const loadingOld = document.getElementById('participantsLoading');
+                if (loadingNew) loadingNew.style.display = 'none';
+                if (loadingOld) loadingOld.style.display = 'none';
+
+                if (participationsResult && participationsResult.ok && participationsResult.items && participationsResult.items.length > 0) {
+                    // Filtrar apenas registros não deletados
+                    const activeParticipations = participationsResult.items.filter(p => p.deleted !== 'x');
+
+                    // Armazenar participações para validação de duplicatas
+                    currentParticipations = activeParticipations;
+
+                    console.log('👥 Total de participações:', participationsResult.items.length);
+                    console.log('👥 Participações ativas (não deletadas):', activeParticipations.length);
+
+                    if (activeParticipations.length > 0) {
+                        // Mostrar lista de participações ativas (compatível com ambos modais)
+                        const listNew = document.getElementById('participants-list');
+                        const listOld = document.getElementById('participantsList');
+                        if (listNew) listNew.style.display = 'block';
+                        if (listOld) listOld.style.display = 'block';
+
+                        // Renderizar participantes
+                        renderParticipantsForModal(activeParticipations);
+                    } else {
+                        // Mostrar mensagem de sem alvos ativos (novo modal)
+                        const noTargets = document.getElementById('participants-no-targets');
+                        if (noTargets) noTargets.style.display = 'block';
+
+                        // Modal antigo - mostrar mensagem
+                        const emptyOld = document.getElementById('participantsEmpty');
+                        if (emptyOld) emptyOld.style.display = 'block';
+                    }
+                } else {
+                    // Armazenar array vazio para validação
+                    currentParticipations = [];
+
+                    // Mostrar mensagem de sem alvos (novo modal)
+                    const noTargets = document.getElementById('participants-no-targets');
+                    if (noTargets) noTargets.style.display = 'block';
+
+                    // Modal antigo - mostrar mensagem
+                    const emptyOld = document.getElementById('participantsEmpty');
+                    if (emptyOld) emptyOld.style.display = 'block';
+                }
+
+                // ========== MOSTRAR SEÇÃO DE BUSCA DE MEMBROS EXTRAS ==========
+                const extraSection = document.getElementById('addExtraMemberSection');
+                if (extraSection) {
+                    extraSection.style.display = 'block';
+                    console.log('✅ Seção de busca de membros extras exibida');
+                }
+
+                // ========== INICIALIZAR BUSCA DE MEMBROS EXTRAS ==========
+                initExtraMemberSearch(activityId);
+                console.log('✅ Busca de membros extras inicializada');
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados para participações:', error);
+
+                // Garantir que o loading desapareça e mostrar erro
+                const loadingElement = document.getElementById('participants-loading');
+
+                if (loadingElement) {
+                    loadingElement.innerHTML = `
+                        <div style="text-align: center; color: #ef4444; padding: 20px;">
+                            ❌ Erro ao carregar participações
+                            <br><small>${error.message || error}</small>
+                            <br><br>
+                            <button onclick="loadActivityForParticipants('${activityId}', 1)" class="btn btn-primary btn-sm" style="
+                                padding: 8px 16px;
+                                background: var(--primary);
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                cursor: pointer;
+                            ">
+                                🔄 Tentar Novamente
+                            </button>
+                        </div>
+                    `;
+                    loadingElement.style.display = 'block';
+                }
+            }
+        }
+
+        function renderParticipantsForModal(participations) {
+            // Compatível com ambos os modais
+            const containerNew = document.getElementById('participants-items');
+            const containerOld = document.getElementById('participantsList');
+            const container = containerNew || containerOld;
+
+            if (!container) {
+                console.error('❌ Container de participantes não encontrado');
+                return;
+            }
+
+            // CONVERTER PENDENTES EM FORMATO DE PARTICIPAÇÃO
+            const pendingAsParticipations = pendingExtraMembers.map(m => ({
+                id: `temp-${m.uid}`, // ID temporário
+                id_membro: m.uid,
+                nome_membro: m.nome,
+                tipo: 'extra',
+                participou: 'sim', // ✅ Já marcado como participou
+                chegou_tarde: '',
+                saiu_cedo: '',
+                observacoes: '',
+                deleted: '',
+                isPending: true // Flag para identificar
+            }));
+
+            // COMBINAR: participações do banco + pendentes
+            const allParticipations = [...participations, ...pendingAsParticipations];
+
+            console.log('👥 [PARTICIPANTES] Renderizando:', participations.length, 'do banco +', pendingExtraMembers.length, 'pendentes');
+
+            // Backend já retorna nome_membro - não precisa buscar todos os membros
+            let html = '';
+            allParticipations.forEach(participation => {
+                console.log('👥 [PARTICIPANTES] Processando participação:', participation.id_membro, participation.nome_membro);
+                const memberName = participation.nome_membro || `Nome não encontrado (ID: ${participation.id_membro})`;
+                const isPending = participation.isPending || false;
+
+                        html += `
+                            <div class="participant-item"
+                                 data-deleted="${participation.deleted || ''}"
+                                 data-table-id="${participation.id}"
+                                 data-pending="${isPending}"
+                                 style="
+                                background: ${isPending ? '#fffbeb' : 'white'};
+                                border: 1px solid ${isPending ? '#fbbf24' : 'var(--border-color)'};
+                                border-radius: 8px;
+                                padding: 16px;
+                                margin-bottom: 12px;
+                                ${isPending ? 'border-left: 4px solid #f59e0b;' : ''}
+                                ${participation.deleted === 'x' ? 'opacity: 0.5; background: #fee; border-color: var(--danger);' : ''}
+                            ">${isPending ? `
+                                <div style="color: #f59e0b; font-size: 12px; font-weight: 600; margin-bottom: 8px;">
+                                    ⏳ PENDENTE - Será salvo ao clicar em "Salvar Participações"
+                                </div>
+                            ` : ''}
+                                <!-- Linha 1: Nome + Checkbox Participou -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                    <div style="display: flex; align-items: center;">
+                                        <div style="
+                                            width: 40px;
+                                            height: 40px;
+                                            background: var(--primary-light);
+                                            border-radius: 50%;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            margin-right: 12px;
+                                            font-weight: 600;
+                                            color: var(--primary);
+                                            flex-shrink: 0;
+                                        ">
+                                            ${memberName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <h5 style="margin: 0; font-weight: 600; color: var(--text);">
+                                            ${memberName}
+                                        </h5>
+                                    </div>
+
+                                    <label style="
+                                        display: flex;
+                                        align-items: center;
+                                        cursor: pointer;
+                                        font-weight: 500;
+                                        color: #374151;
+                                        white-space: nowrap;
+                                    ">
+                                        <input
+                                            type="checkbox"
+                                            id="participou-${participation.id}"
+                                            data-participation-id="${participation.id}"
+                                            data-member-id="${participation.id_membro}"
+                                            onchange="toggleParticipationOptions(this)"
+                                            ${participation.participou === 'sim' ? 'checked' : ''}
+                                            style="
+                                                margin-right: 8px;
+                                                width: 18px;
+                                                height: 18px;
+                                                accent-color: var(--primary);
+                                                cursor: pointer;
+                                            "
+                                        >
+                                        Participou
+                                    </label>
+                                </div>
+
+                                <!-- Linha 2: -- (esquerda) + Checkboxes lado a lado (direita, alinhados abaixo do Participou) -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-left: 52px;">
+                                    <div style="color: #6b7280; font-size: 14px;">
+                                        --
+                                    </div>
+
+                                    <div id="options-${participation.id}" style="
+                                        display: ${participation.participou === 'sim' ? 'flex' : 'none'};
+                                        gap: 16px;
+                                        flex-wrap: nowrap;
+                                    ">
+                                        <label style="
+                                            display: flex;
+                                            align-items: center;
+                                            cursor: pointer;
+                                            font-size: 14px;
+                                            color: #6b7280;
+                                            white-space: nowrap;
+                                        ">
+                                            <input
+                                                type="checkbox"
+                                                id="chegou-tarde-${participation.id}"
+                                                ${participation.chegou_tarde === 'sim' ? 'checked' : ''}
+                                                style="
+                                                    margin-right: 6px;
+                                                    width: 16px;
+                                                    height: 16px;
+                                                    accent-color: var(--warning);
+                                                "
+                                            >
+                                            Chegou tarde
+                                        </label>
+
+                                        <label style="
+                                            display: flex;
+                                            align-items: center;
+                                            cursor: pointer;
+                                            font-size: 14px;
+                                            color: #6b7280;
+                                            white-space: nowrap;
+                                        ">
+                                            <input
+                                                type="checkbox"
+                                                id="saiu-cedo-${participation.id}"
+                                                ${participation.saiu_cedo === 'sim' ? 'checked' : ''}
+                                                style="
+                                                    margin-right: 6px;
+                                                    width: 16px;
+                                                    height: 16px;
+                                                    accent-color: var(--warning);
+                                                "
+                                            >
+                                            Saiu cedo
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Campo Observações -->
+                                <div style="padding-left: 52px;">
+                                    <label style="
+                                        display: block;
+                                        font-size: 14px;
+                                        color: #6b7280;
+                                        margin-bottom: 6px;
+                                    ">
+                                        Observações
+                                    </label>
+                                    <textarea
+                                        id="observacoes-${participation.id}"
+                                        placeholder="Adicione observações sobre a participação..."
+                                        style="
+                                            width: 100%;
+                                            min-height: 60px;
+                                            padding: 8px 12px;
+                                            border: 1px solid #d1d5db;
+                                            border-radius: 6px;
+                                            font-size: 14px;
+                                            font-family: inherit;
+                                            resize: vertical;
+                                            color: #374151;
+                                        "
+                                    >${participation.observacoes || ''}</textarea>
+                                </div>
+                            </div>
+                        `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // ===== BUSCA E ADIÇÃO DE MEMBROS EXTRAS =====
+
+        let searchTimeout;
+        let currentActivityIdForExtraMember = null;
+        let extraMemberSearchInitialized = false;
+        let pendingExtraMembers = []; // Membros extras adicionados localmente, ainda não salvos no banco
+        let currentParticipations = []; // Participações carregadas do banco (para validação de duplicatas)
+
+        function initExtraMemberSearch(activityId) {
+            currentActivityIdForExtraMember = activityId;
+            const searchInput = document.getElementById('search-extra-member');
+            const suggestionsContainer = document.getElementById('member-suggestions');
+
+            if (!searchInput) return;
+
+            // Evitar adicionar múltiplos event listeners
+            if (extraMemberSearchInitialized) return;
+            extraMemberSearchInitialized = true;
+
+            // Event listener para busca com debounce
+            searchInput.addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+                const searchTerm = e.target.value.trim();
+
+                if (searchTerm.length < 2) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+
+                // Debounce: aguarda 300ms após parar de digitar
+                searchTimeout = setTimeout(() => {
+                    searchMembersForExtra(searchTerm);
+                }, 300);
+            });
+
+            // Fechar sugestões ao clicar fora
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#addExtraMemberSection')) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+
+        function searchMembersForExtra(searchTerm) {
+            const suggestionsContainer = document.getElementById('member-suggestions');
+
+            // Mostrar loading
+            suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">🔄 Buscando...</div>';
+            suggestionsContainer.style.display = 'block';
+
+            // Buscar membros usando apiCall()
+            (async () => {
+                try {
+                    // Enviar filtros como objeto único: {nome: 'termo', status: ['ativo', 'afastado']}
+                    const result = await apiCall('searchMembersByCriteria', {
+                        nome: searchTerm,
+                        status: ['Ativo', 'Afastado'] // Array = filtro IN (múltiplos valores)
+                    });
+                    showMemberSuggestions(result);
+                } catch (error) {
+                    // Erro de sessão já tratado por apiCall()
+                    if (!error.message || !error.message.includes('Sessão')) {
+                        console.error('❌ Erro ao buscar membros:', error);
+                        suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">❌ Erro ao buscar membros</div>';
+                    }
+                }
+            })();
+        }
+
+        function showMemberSuggestions(result) {
+            const suggestionsContainer = document.getElementById('member-suggestions');
+
+            if (!result || !result.ok || !result.items || result.items.length === 0) {
+                suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">Nenhum membro encontrado</div>';
+                suggestionsContainer.style.display = 'block';
+                return;
+            }
+
+            const members = result.items;
+            const html = members.map(member => `
+                <div class="suggestion-item" onclick="addExtraMember('${member.codigo_sequencial}', '${escapeHtml(member.nome)}', '${escapeHtml(member.dojo || '')}')">
+                    <div class="member-avatar">${member.nome.charAt(0).toUpperCase()}</div>
+                    <div class="member-info">
+                        <div class="member-name">${member.nome}</div>
+                        <div class="member-dojo">${member.dojo || 'Sem dojo'}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            suggestionsContainer.innerHTML = html;
+            suggestionsContainer.style.display = 'block';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function addExtraMember(memberId, memberName, memberDojo) {
+            const activityId = currentActivityIdForExtraMember;
+
+            if (!activityId) {
+                showToast('Erro: ID da atividade não encontrado', 'error');
+                return;
+            }
+
+            // Verificar se membro já existe nas participações do banco
+            const memberIdStr = String(memberId);
+            const jaExisteNoBanco = currentParticipations.some(p => {
+                return String(p.id_membro) === memberIdStr;
+            });
+
+            if (jaExisteNoBanco) {
+                showToast('Este membro já está na lista de participantes', 'warning');
+                return;
+            }
+
+            // Verificar se membro já foi adicionado localmente (pendente)
+            const jaAdicionadoPendente = pendingExtraMembers.some(m => {
+                return String(m.uid) === memberIdStr;
+            });
+
+            if (jaAdicionadoPendente) {
+                showToast('Este membro já foi adicionado à lista', 'warning');
+                return;
+            }
+
+            // Adicionar membro em memória (não faz INSERT imediato)
+            pendingExtraMembers.push({
+                uid: memberId,
+                nome: memberName,
+                dojo: memberDojo || ''
+            });
+
+            // Re-renderizar lista combinada (banco + pendentes)
+            loadActivityForParticipants(activityId);
+
+            // Limpar campo de busca e sugestões
+            const searchInput = document.getElementById('search-extra-member');
+            const suggestionsContainer = document.getElementById('member-suggestions');
+            if (searchInput) searchInput.value = '';
+            if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+
+            // Feedback ao usuário
+            showToast(`${memberName} adicionado. Clique em "Salvar Participações" para confirmar.`, 'info');
+        }
+
+        function toggleParticipationOptions(checkbox) {
+            const participationId = checkbox.dataset.participationId;
+            const optionsDiv = document.getElementById(`options-${participationId}`);
+
+            if (checkbox.checked) {
+                optionsDiv.style.display = 'flex';
+            } else {
+                optionsDiv.style.display = 'none';
+                // Limpar subcampos quando desmarcar participação
+                document.getElementById(`chegou-tarde-${participationId}`).checked = false;
+                document.getElementById(`saiu-cedo-${participationId}`).checked = false;
+            }
+        }
+
+        async function saveAllParticipations(activityId) {
+            const saveBtn = document.getElementById('save-participations-btn');
+            const originalContent = saveBtn.innerHTML;
+
+            try {
+                console.log('💾 Salvando todas as participações para atividade:', activityId);
+
+                // Mostrar loading
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
+
+                // ========== 1. COLETAR E INSERIR NOVOS EXTRAS PENDENTES (SE HOUVER) ==========
+                if (pendingExtraMembers.length > 0) {
+                    console.log('➕ Inserindo', pendingExtraMembers.length, 'membros extras...');
+
+                    // Coletar dados da interface para cada pendente
+                    const membrosData = pendingExtraMembers.map(m => {
+                        const tempId = `temp-${m.uid}`;
+                        const participouCheckbox = document.getElementById(`participou-${tempId}`);
+                        const chegouTardeCheckbox = document.getElementById(`chegou-tarde-${tempId}`);
+                        const saiuCedoCheckbox = document.getElementById(`saiu-cedo-${tempId}`);
+                        const observacoesTextarea = document.getElementById(`observacoes-${tempId}`);
+
+                        return {
+                            memberId: m.uid,
+                            tipo: 'extra',
+                            participou: (participouCheckbox && participouCheckbox.checked) ? 'sim' : 'nao',
+                            chegou_tarde: (chegouTardeCheckbox && chegouTardeCheckbox.checked) ? 'sim' : 'nao',
+                            saiu_cedo: (saiuCedoCheckbox && saiuCedoCheckbox.checked) ? 'sim' : 'nao',
+                            observacoes: observacoesTextarea ? observacoesTextarea.value.trim() : ''
+                        };
+                    });
+
+                    const insertResult = await apiCall('createMultipleParticipacoes',
+                        activityId,
+                        membrosData,
+                        State.user?.uid || ''
+                    );
+
+                    if (!insertResult.ok) {
+                        throw new Error('Falha ao criar membros extras: ' + (insertResult.error || 'Erro desconhecido'));
+                    }
+
+                    console.log('✅ Membros extras criados:', insertResult.created);
+                }
+
+                // ========== 2. COLETAR UPDATES DOS EXISTENTES ==========
+                const participationUpdates = [];
+                const participantItems = document.querySelectorAll('.participant-item');
+
+                participantItems.forEach(item => {
+                    // IGNORAR PENDENTES (já foram inseridos acima)
+                    if (item.dataset.pending === 'true') {
+                        console.log('⏭️ Pulando item pendente (já inserido no banco)');
+                        return;
+                    }
+
+                    const participouCheckbox = item.querySelector('input[data-participation-id]');
+                    const participationId = participouCheckbox.dataset.participationId;
+                    const memberId = participouCheckbox.dataset.memberId;
+                    const tableId = item.dataset.tableId; // ID da tabela participações
+
+                    // Verificar se o registro está marcado como deletado nos dados originais
+                    // O campo deleted tem valor "x" quando deletado
+                    const isDeleted = item.dataset.deleted === 'x';
+
+                    if (isDeleted) {
+                        console.log('🗑️ Pulando participação marcada como deletada (deleted = x):', participationId);
+                        return; // Não processa itens deletados
+                    }
+
+                    const chegouTardeCheckbox = item.querySelector(`#chegou-tarde-${participationId}`);
+                    const saiuCedoCheckbox = item.querySelector(`#saiu-cedo-${participationId}`);
+                    const observacoesTextarea = item.querySelector(`#observacoes-${participationId}`);
+
+                    const participationData = {
+                        tableId: tableId, // ID da tabela para update direto
+                        participationId: participationId,
+                        memberId: memberId,
+                        participou: participouCheckbox.checked ? 'sim' : 'nao',
+                        chegou_tarde: (chegouTardeCheckbox && chegouTardeCheckbox.checked) ? 'sim' : 'nao',
+                        saiu_cedo: (saiuCedoCheckbox && saiuCedoCheckbox.checked) ? 'sim' : 'nao',
+                        observacoes: observacoesTextarea ? observacoesTextarea.value.trim() : ''
+                    };
+
+                    participationUpdates.push(participationData);
+                });
+
+                console.log('📊 Dados coletados para salvar:', participationUpdates);
+                console.log('🔍 [DEBUG] Primeiro item completo:', JSON.stringify(participationUpdates[0], null, 2));
+
+                // Salvar cada participação no backend usando ID da tabela participações
+                const savePromises = participationUpdates.map(async (data) => {
+                    console.log('💾 Salvando participação ID:', data.tableId, 'com dados:', {
+                        participou: data.participou,
+                        chegou_tarde: data.chegou_tarde,
+                        saiu_cedo: data.saiu_cedo,
+                        observacoes: data.observacoes
+                    });
+
+                    return await apiCall('saveParticipacaoDirectly', null, null, {
+                        id: data.tableId, // ID específico da tabela participações
+                        participou: data.participou,
+                        chegou_tarde: data.chegou_tarde,
+                        saiu_cedo: data.saiu_cedo,
+                        observacoes: data.observacoes
+                    }, '');
+                });
+
+                const results = await Promise.all(savePromises);
+                console.log('✅ Resultados do salvamento:', results);
+
+                // Verificar se todos foram salvos com sucesso
+                const failures = results.filter(result => !result.ok);
+                if (failures.length > 0) {
+                    throw new Error(`${failures.length} participações falharam ao salvar`);
+                }
+
+                // ========== 3. LIMPAR PENDENTES ==========
+                pendingExtraMembers = [];
+                console.log('🧹 Membros extras pendentes limpos da memória');
+
+                // Fechar modal
+                closeEditActivityModal();
+
+                // Atualizar card para refletir novos contadores
+                console.log('🔄 Chamando updateSingleActivityCard para:', activityId);
+                updateSingleActivityCard(activityId);
+
+                // Mostrar mensagem de sucesso
+                showToast('Participações salvas com sucesso!', 'success');
+
+            } catch (error) {
+                console.error('❌ Erro ao salvar participações:', error);
+                showToast('Erro ao salvar participações: ' + (error.message || error), 'error');
+            } finally {
+                // Restaurar botão
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalContent;
+            }
+        }
+
+
+
+        async function loadActivityForEdit(activityId, retryCount = 0) {
+            console.log(`Carregando atividade para edição: ${activityId} (tentativa ${retryCount + 1})`);
+
+            // Tentar carregar dados reais da API
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                try {
+                    const result = await apiCall('getActivityById', activityId);
+
+                    console.log('📥 Resposta da API getActivityById:', result);
+                    console.log('🔍 Tipo da resposta:', typeof result);
+                    console.log('🔍 Resposta serializada:', JSON.stringify(result));
+
+                    // Verificação mais robusta com retry
+                    if (result === null || result === undefined) {
+                        console.error(`❌ Resposta nula da API (tentativa ${retryCount + 1}) - possível problema de serialização`);
+
+                        if (retryCount < 2) {
+                            console.log(`⏳ Tentando novamente em 1 segundo... (retry ${retryCount + 1})`);
+                            setTimeout(() => {
+                                loadActivityForEdit(activityId, retryCount + 1);
+                            }, 1000);
+                            return;
+                        } else {
+                            showEditActivityDataLoading(false);
+                            showToast('Erro de comunicação persistente com o servidor. Tente novamente mais tarde.', 'error');
+                            return;
+                        }
+                    }
+
+                    if (result && result.ok === true && result.activity) {
+                        const activity = result.activity;
+
+                        // Mostrar formulário e esconder loading
+                        showEditActivityDataLoading(false);
+
+                        // Preencher campos básicos
+                        document.getElementById('edit-activity-name').value = activity.titulo || '';
+                        document.getElementById('edit-activity-description').value = activity.descricao || '';
+                        document.getElementById('edit-activity-tags').value = activity.tags || '';
+
+                            // Processar data/hora
+                            if (activity.data) {
+                                const dataString = activity.data.toString();
+                                console.log('📅 Processando data recebida:', dataString);
+
+                                // Tentar diferentes formatos de data
+                                let date;
+                                if (dataString.includes('T')) {
+                                    // Formato ISO: 2025-09-25T14:30:00
+                                    date = new Date(dataString);
+                                } else if (dataString.includes(' ')) {
+                                    // Formato brasileiro: 2025-09-25 14:30:00
+                                    date = new Date(dataString.replace(' ', 'T'));
+                                } else {
+                                    // Só data: 2025-09-25
+                                    date = new Date(dataString + 'T00:00:00');
+                                }
+
+                                if (!isNaN(date.getTime())) {
+                                    const year = date.getFullYear();
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const hours = String(date.getHours()).padStart(2, '0');
+                                    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+                                    document.getElementById('edit-activity-date').value = `${year}-${month}-${day}`;
+                                    document.getElementById('edit-activity-time').value = `${hours}:${minutes}`;
+                                    console.log('✅ Data/hora definida:', `${year}-${month}-${day} ${hours}:${minutes}`);
+                                }
+                            }
+
+                            // Processar categorias múltiplas - aguardar carregamento
+                            if (activity.categorias_ids) {
+                                const selectCategories = () => {
+                                    const catSelect = document.getElementById('edit-activity-category');
+                                    if (catSelect && catSelect.options.length > 3) { // Verificar se carregou (> opções padrão)
+                                        const categoriaIds = activity.categorias_ids.split(',').map(id => id.trim());
+                                        console.log('🏷️ Categorias a selecionar:', categoriaIds);
+
+                                        // Limpar seleções anteriores
+                                        Array.from(catSelect.options).forEach(option => {
+                                            option.selected = false;
+                                        });
+
+                                        // Selecionar categorias corretas
+                                        Array.from(catSelect.options).forEach(option => {
+                                            if (categoriaIds.includes(option.value)) {
+                                                option.selected = true;
+                                                console.log('🏷️ Categoria selecionada:', option.value, option.text);
+                                            }
+                                        });
+                                    } else {
+                                        // Tentar novamente se ainda não carregou
+                                        setTimeout(selectCategories, 200);
+                                    }
+                                };
+                                setTimeout(selectCategories, 100);
+                            }
+
+                            // Selecionar responsável - aguardar carregamento
+                            if (activity.atribuido_uid) {
+                                const selectResponsible = () => {
+                                    const respSelect = document.getElementById('edit-activity-responsible');
+                                    if (respSelect && respSelect.options.length > 1) { // Verificar se carregou
+                                        respSelect.value = activity.atribuido_uid;
+                                        if (respSelect.value === activity.atribuido_uid) {
+                                            console.log('👤 Responsável definido:', activity.atribuido_uid);
+                                        } else {
+                                            console.warn('⚠️ Responsável não encontrado nas opções:', activity.atribuido_uid);
+                                        }
+                                    } else {
+                                        // Tentar novamente se ainda não carregou
+                                        setTimeout(selectResponsible, 200);
+                                    }
+                                };
+                                setTimeout(selectResponsible, 100);
+                            }
+                    } else {
+                        console.error('Erro ao carregar atividade:', result);
+                        showEditActivityDataLoading(false);
+                        showToast('Erro ao carregar atividade: ' + (result?.error || 'Erro desconhecido'), 'error');
+                    }
+                } catch (error) {
+                    // Erro de sessão já tratado por apiCall()
+                    if (!error.message || !error.message.includes('Sessão')) {
+                        console.error('Erro na API ao carregar atividade:', error);
+                        showEditActivityDataLoading(false);
+                        showToast('Erro ao conectar com o servidor.', 'error');
+                    }
+                }
+            } else {
+                console.log('⚠️ API não disponível, usando fallback');
+                showEditActivityDataLoading(false);
+                showToast('Sistema em modo de desenvolvimento. API não disponível.', 'warning');
+            }
+        }
+
+        function showEditActivityDataLoading(show) {
+            const loadingState = document.getElementById('editActivityLoadingState');
+            const formContent = document.getElementById('editActivityFormContent');
+
+            if (show) {
+                // Mostrar loading, esconder formulário
+                if (loadingState) {
+                    loadingState.style.display = 'flex';
+                }
+                if (formContent) {
+                    formContent.style.display = 'none';
+                }
+            } else {
+                // Mostrar formulário, esconder loading
+                if (loadingState) {
+                    loadingState.style.display = 'none';
+                }
+                if (formContent) {
+                    formContent.style.display = 'block';
+                }
+            }
+        }
+
+        function showEditActivitySaveLoading(show) {
+            const formContent = document.getElementById('editActivityFormContent');
+            const savingState = document.getElementById('editActivitySavingState');
+
+            if (show) {
+                // Mostrar loading de salvar, esconder formulário
+                if (formContent) {
+                    formContent.style.display = 'none';
+                }
+                if (savingState) {
+                    savingState.style.display = 'flex';
+                }
+            } else {
+                // Mostrar formulário, esconder loading de salvar
+                if (formContent) {
+                    formContent.style.display = 'block';
+                }
+                if (savingState) {
+                    savingState.style.display = 'none';
+                }
+            }
+        }
+
+        function updateActivity(activityId) {
+            console.log('🔄 Atualizando atividade:', activityId);
+
+            // Coletar dados do formulário com debug
+            console.log('🔍 DEBUG: Coletando dados do formulário...');
+
+            const categorySelect = document.getElementById('edit-activity-category');
+            const selectedCategories = Array.from(categorySelect.selectedOptions).map(option => option.value);
+
+            // Debug individual dos campos
+            const tituloEl = document.getElementById('edit-activity-name');
+            const dateEl = document.getElementById('edit-activity-date');
+            const timeEl = document.getElementById('edit-activity-time');
+            const descricaoEl = document.getElementById('edit-activity-description');
+            const responsibleEl = document.getElementById('edit-activity-responsible');
+            const tagsEl = document.getElementById('edit-activity-tags');
+
+            console.log('🔍 DEBUG: Elementos encontrados:', {
+                tituloEl: !!tituloEl,
+                dateEl: !!dateEl,
+                timeEl: !!timeEl,
+                descricaoEl: !!descricaoEl,
+                responsibleEl: !!responsibleEl,
+                tagsEl: !!tagsEl,
+                categorySelect: !!categorySelect
+            });
+
+            const formData = {
+                id: activityId,
+                titulo: tituloEl ? tituloEl.value : '',
+                categorias: selectedCategories,
+                data: (dateEl ? dateEl.value : '') + 'T' + (timeEl ? timeEl.value : ''),
+                descricao: descricaoEl ? descricaoEl.value : '',
+                atribuido_uid: responsibleEl ? responsibleEl.value : '',
+                tags: tagsEl ? tagsEl.value : '',
+                alvos: Array.from(selectedTargets) // Adicionar alvos selecionados
+            };
+
+            console.log('📝 Dados para atualização:', formData);
+            console.log('🔍 DEBUG: Título coletado:', `"${formData.titulo}"`, 'Length:', formData.titulo.length);
+
+            // Validação básica
+            if (!formData.titulo) {
+                showToast('Nome da atividade é obrigatório', 'warning');
+                return;
+            }
+
+            if (!selectedCategories.length) {
+                showToast('Selecione pelo menos uma categoria', 'warning');
+                return;
+            }
+
+            if (!formData.data || formData.data === 'T') {
+                showToast('Data e horário são obrigatórios', 'warning');
+                return;
+            }
+
+            if (!formData.atribuido_uid) {
+                showToast('Selecione um responsável pela atividade', 'warning');
+                return;
+            }
+
+            // Mostrar loading de salvar
+            showEditActivitySaveLoading(true);
+
+            // Tentar conectar com API real
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                (async () => {
+                    try {
+                        const result = await apiCall('updateActivityWithTargets', {
+                            id: formData.id,
+                            patch: {
+                                titulo: formData.titulo,
+                                descricao: formData.descricao,
+                                data: formData.data,
+                                atribuido_uid: formData.atribuido_uid,
+                                categorias_ids: Array.isArray(formData.categorias) ? formData.categorias.join(',') : formData.categorias, // Converter array para string CSV
+                                tags: formData.tags // String de tags separadas por vírgula
+                            },
+                            alvos: formData.alvos
+                        });
+
+                        // Esconder loading
+                        showEditActivitySaveLoading(false);
+
+                        if (result && result.ok) {
+                            showToast('Atividade atualizada com sucesso!', 'success');
+                            closeEditActivityModal();
+
+                            // Aguardar modal fechar antes de atualizar card
+                            setTimeout(() => {
+                                updateSingleActivityCard(formData.id); // Atualizar card específico
+                            }, 300);
+                        } else {
+                            showToast('Erro ao atualizar atividade: ' + (result.error || 'Erro desconhecido'), 'error');
+                            closeEditActivityModal(); // Fechar mesmo com erro
+                        }
+                    } catch (error) {
+                        // Esconder loading
+                        showEditActivitySaveLoading(false);
+
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('Erro na API:', error);
+                            showToast('Erro ao conectar com o servidor. Tente novamente.', 'error');
+                        }
+
+                        closeEditActivityModal(); // Fechar mesmo com erro
+                    }
+                })();
+                return;
+            }
+
+            // Não há API disponível - esconder loading e mostrar erro
+            showEditActivitySaveLoading(false);
+            showToast('Erro: Sistema não conseguiu conectar com o servidor. Verifique sua conexão e tente novamente.', 'error');
+            closeEditActivityModal(); // Fechar mesmo com erro
+        }
+
+        function submitActivity(event) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            // Coletar categorias selecionadas
+            const categorySelect = document.getElementById('activity-category');
+            const selectedCategories = Array.from(categorySelect.selectedOptions).map(option => option.value);
+
+            const formData = {
+                titulo: document.getElementById('activity-name').value,
+                categorias: selectedCategories, // Array de categorias
+                data: document.getElementById('activity-date').value + 'T' + document.getElementById('activity-time').value,
+                // status será definido como 'Pendente' automaticamente no backend (valor padrão)
+                descricao: document.getElementById('activity-description').value,
+                atribuido_uid: document.getElementById('activity-responsible').value,
+                tags: document.getElementById('activity-tags').value
+            };
+
+            console.log('Criando nova atividade:', formData);
+
+            // Validação básica
+            if (!formData.titulo) {
+                showToast('Nome da atividade é obrigatório', 'warning');
+                return;
+            }
+
+            if (!selectedCategories.length) {
+                showToast('Selecione pelo menos uma categoria', 'warning');
+                return;
+            }
+
+            if (!formData.data || formData.data === 'T') {
+                showToast('Data e horário são obrigatórios', 'warning');
+                return;
+            }
+
+            if (!formData.atribuido_uid) {
+                showToast('Selecione um responsável pela atividade', 'warning');
+                return;
+            }
+
+            // Mostrar loading overlay
+            showCreateActivityLoading(true);
+
+            // Tentar conectar com API real
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                const uid = localStorage.getItem('uid') || 'U001';
+
+                (async () => {
+                    try {
+                        const result = await apiCall('createActivity', formData, uid);
+
+                        if (result && result.ok) {
+                            console.log('✅ Atividade criada com sucesso, ID:', result.id);
+
+                            // Verificar se há alvos selecionados para salvar
+                            if (selectedTargets.size > 0) {
+                                console.log('💾 Salvando alvos da atividade...');
+                                saveTargetsAfterActivity(result.id);
+                            } else {
+                                // Sem alvos, finalizar processo
+                                showCreateActivityLoading(false);
+                                showToast('Atividade criada com sucesso!', 'success');
+                                closeActivityModal();
+                                loadActivities();
+                            }
+                        } else {
+                            showCreateActivityLoading(false);
+                            showToast('Erro ao criar atividade: ' + (result.error || 'Erro desconhecido'), 'error');
+                        }
+                    } catch (error) {
+                        showCreateActivityLoading(false);
+
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('Erro na API:', error);
+                            showToast('Erro ao conectar com o servidor. Tente novamente.', 'error');
+                        }
+                    }
+                })();
+                return;
+            }
+
+            // Não há API disponível - esconder loading e mostrar erro
+            showCreateActivityLoading(false);
+            showToast('Erro: Sistema não conseguiu conectar com o servidor. Verifique sua conexão e tente novamente.', 'error');
+            console.error('Erro: Google Apps Script não disponível');
+        }
+
+        function showCreateActivityLoading(show) {
+            const formContent = document.getElementById('createActivityFormContent');
+            const loadingState = document.getElementById('createActivityLoadingState');
+
+            if (show) {
+                // Esconder formulário e mostrar loading
+                if (formContent) {
+                    formContent.style.display = 'none';
+                }
+                if (loadingState) {
+                    loadingState.style.display = 'flex';
+                }
+            } else {
+                // Mostrar formulário e esconder loading
+                if (formContent) {
+                    formContent.style.display = 'block';
+                }
+                if (loadingState) {
+                    loadingState.style.display = 'none';
+                }
+            }
+        }
+
+        // Função removida - agora usamos updateActivity()
+
+        // Fechar modal ao pressionar ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const activityModal = document.getElementById('activityModal');
+                const editActivityModal = document.getElementById('editActivityModal');
+                const participantsModal = document.getElementById('participantsModal');
+
+                if (activityModal && activityModal.style.display === 'flex') {
+                    closeActivityModal();
+                }
+                if (editActivityModal && editActivityModal.style.display === 'flex') {
+                    closeEditActivityModal();
+                }
+                if (participantsModal && participantsModal.style.display === 'flex') {
+                    closeParticipantsModal();
+                }
+            }
+        });
+
+        // ===== CARREGAMENTO DINÂMICO DO USUÁRIO =====
+        function loadCurrentUser() {
+            // Método 1: Tentar primeiro do localStorage (dados reais do login)
+            try {
+                const uid = localStorage.getItem('uid');
+                const userName = localStorage.getItem('userName');
+
+                if (uid && userName) {
+                    updateUserMenuInfo({ uid, nome: userName });
+                    return;
+                }
+            } catch (error) {
+                console.error('Erro ao ler localStorage:', error);
+            }
+
+            // Método 2: Tentar via app_state (backup)
+            try {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    if (user && user.nome) {
+                        updateUserMenuInfo(user);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao ler app_state:', error);
+            }
+
+            // Método 3: Fallback para API apenas se necessário
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(user) {
+                        if (user && user.nome) {
+                            updateUserMenuInfo(user);
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('Erro ao carregar usuário via API:', error);
+                    })
+                    .getCurrentLoggedUser();
+            }
+        }
+
+        function updateUserMenuInfo(user) {
+            try {
+                const userNameEl = document.getElementById('userMenuName');
+                const userAvatarEl = document.getElementById('userMenuAvatar');
+                const userRoleEl = document.getElementById('userMenuRole');
+
+                if (userNameEl && user.nome) {
+                    userNameEl.textContent = user.nome;
+                }
+
+                if (userAvatarEl && user.nome) {
+                    // Gerar iniciais a partir do nome
+                    const initials = user.nome
+                        .split(' ')
+                        .slice(0, 2)
+                        .map(n => n.charAt(0).toUpperCase())
+                        .join('');
+                    userAvatarEl.textContent = initials;
+                }
+
+                if (userRoleEl) {
+                    // Manter "--" como especificado
+                    userRoleEl.textContent = '--';
+                }
+
+                // Atualizar dropdown se a função existir
+                if (typeof updateDropdownUserInfo === 'function') {
+                    updateDropdownUserInfo(user);
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao atualizar informações do usuário:', error);
+            }
+        }
+
+        // ============================================================================
+        // PRE-LOAD: Carregar categorias e responsáveis no cache ao iniciar a aplicação
+        // ============================================================================
+        function preLoadCachedData() {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                // Carregar categorias em paralelo usando apiCall()
+                (async () => {
+                    try {
+                        const result = await apiCall('listCategoriasAtividadesApi');
+                        if (result && result.ok && result.items) {
+                            window.cachedCategorias = result.items;
+                            console.log('⚡ Cache de categorias pré-carregado:', result.items.length);
+                        }
+                    } catch (error) {
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('❌ Erro ao pré-carregar categorias:', error);
+                        }
+                    }
+                })();
+
+                // Carregar responsáveis em paralelo usando apiCall()
+                (async () => {
+                    try {
+                        const result = await apiCall('listUsuariosApi');
+                        if (result && result.ok && result.items) {
+                            window.cachedResponsaveis = result.items;
+                            console.log('⚡ Cache de responsáveis pré-carregado:', result.items.length);
+                        }
+                    } catch (error) {
+                        // Erro de sessão já tratado por apiCall()
+                        if (!error.message || !error.message.includes('Sessão')) {
+                            console.error('❌ Erro ao pré-carregar responsáveis:', error);
+                        }
+                    }
+                })();
+            }
+        }
+
+        // ===== INICIALIZAÇÃO =====
+        // NOTA: Inicialização agora é feita em src/05-components/core/init.html
+        // Removido DOMContentLoaded duplicado que causava carregamentos duplos
+
+        // ===== FUNÇÕES DE GESTÃO DE ALVOS =====
+
+        // Variáveis globais para gestão de alvos
+        let currentActivityId = null;
+        let currentTargetsData = [];
+        let selectedTargets = new Set();
+        // Cache global para manter dados de membros selecionados de buscas anteriores
+        window.allMembersCache = new Map();
+
+        // Função para mostrar/esconder botão após salvar atividade
+        function showTargetsButton(mode = 'create') {
+            const button = document.getElementById(mode === 'create' ? 'targets-toggle-btn' : 'edit-targets-toggle-btn');
+            if (button) {
+                button.style.display = 'inline-flex';
+            }
+        }
+
+        // Função principal para toggle da seção de alvos
+        function toggleTargetsSection(mode = 'create', activityId = null) {
+            console.log('🎯 Toggle targets section:', mode, activityId);
+
+            const sectionId = mode === 'create' ? 'targetsSection' : 'editTargetsSection';
+            const section = document.getElementById(sectionId);
+
+            if (!section) {
+                console.error('❌ Seção de alvos não encontrada:', sectionId);
+                return;
+            }
+
+            const isVisible = section.style.display !== 'none';
+
+            if (isVisible) {
+                // Esconder seção
+                console.log('🔽 Escondendo seção de alvos');
+                section.style.display = 'none';
+                resetTargetsSection(mode);
+            } else {
+                // Mostrar seção
+                console.log('🔼 Mostrando seção de alvos');
+                section.style.display = 'block';
+
+                // Debug CSS
+                console.log('🔍 Estado da seção após mostrar:');
+                console.log('- display:', section.style.display);
+                console.log('- offsetHeight:', section.offsetHeight);
+                console.log('- clientHeight:', section.clientHeight);
+                console.log('- visibility:', getComputedStyle(section).visibility);
+                console.log('- opacity:', getComputedStyle(section).opacity);
+
+                currentActivityId = activityId;
+
+                // Scroll suave para a seção
+                setTimeout(() => {
+                    console.log('🎯 Fazendo scroll para a seção');
+                    section.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 200);
+
+                // Inicializar dados da seção
+                initializeTargetsSection(mode, activityId);
+            }
+        }
+
+        // Inicializar seção de alvos
+        function initializeTargetsSection(mode = 'create', activityId = null) {
+            console.log('🔄 Inicializando seção de alvos:', mode, activityId);
+
+            // Carregar filtros
+            loadTargetFilters(mode);
+
+            // Se modo edição e há activityId, mostrar lista de selecionados imediatamente e carregar alvos existentes
+            if (mode === 'edit' && activityId) {
+                // Mostrar container de selecionados imediatamente
+                showSelectedTargetsContainerWithLoading(mode);
+                loadExistingTargets(activityId);
+            } else if (mode === 'edit') {
+                // Só mostrar empty se não há activityId (caso impossível, mas por segurança)
+                showTargetsEmpty(mode);
+            } else {
+                // No modo create, mostrar apenas a mensagem explicativa (filtros ficam sempre visíveis)
+                const emptyEl = document.getElementById('targetsEmpty');
+                if (emptyEl) {
+                    emptyEl.style.display = 'block';
+                    console.log('✅ Mostrando mensagem explicativa no modo create');
+                }
+            }
+        }
+
+
+
+</script>

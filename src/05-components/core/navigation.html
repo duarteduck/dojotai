@@ -128,6 +128,39 @@
         }
     }
 
-    // Carregar tema ao iniciar
-    document.addEventListener('DOMContentLoaded', loadTheme);
+    // NOTA: loadTheme() agora é chamado em src/05-components/core/init.html
 </script>
+
+<!-- Mobile Menu Modal -->
+<div id="mobile-menu-modal" class="mobile-menu-overlay hidden">
+    <div class="mobile-menu">
+        <div class="mobile-menu-header">
+            <div class="mobile-menu-title">Menu</div>
+            <button class="btn-close" onclick="closeMobileMenu()">✕</button>
+        </div>
+        <button class="mobile-nav-item active" data-page="dashboard">
+            <span>🏠</span>
+            <span>Dashboard</span>
+        </button>
+        <button class="mobile-nav-item" data-page="activities">
+            <span>📅</span>
+            <span>Atividades</span>
+        </button>
+        <button class="mobile-nav-item" data-page="members">
+            <span>👥</span>
+            <span>Membros</span>
+        </button>
+        <button class="mobile-nav-item" data-page="practices">
+            <span>🎯</span>
+            <span>Práticas</span>
+        </button>
+        <button class="mobile-nav-item" data-page="reports">
+            <span>📊</span>
+            <span>Relatórios</span>
+        </button>
+        <button class="mobile-nav-item" data-page="settings">
+            <span>⚙️</span>
+            <span>Configurações</span>
+        </button>
+    </div>
+</div>

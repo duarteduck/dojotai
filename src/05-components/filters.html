@@ -1,0 +1,519 @@
+<!-- ============================================================================ -->
+<!-- SISTEMA DE FILTROS DE ATIVIDADES -->
+<!-- Gerencia filtros multi-seleção para Status, Categorias, Período e Responsável -->
+<!-- ============================================================================ -->
+
+<script>
+    // Estado dos filtros
+    const filtrosState = {
+        status: [],
+        categorias: [],
+        periodo: [],
+        responsavel: [],
+        searchText: ''  // Novo: filtro de busca por texto
+    };
+
+    // Categorias disponíveis (carregadas dinamicamente)
+    let categoriasDisponiveis = [];
+    let responsaveisDisponiveis = [];
+
+    // Flag de controle: garantir que initFiltrosSystem só execute uma vez
+    let filtrosSystemInitialized = false;
+
+    // Inicializar sistema de filtros
+    function initFiltrosSystem() {
+        // Event listeners
+        const btnFiltros = document.getElementById('btn-filtros');
+        const btnFechar = document.getElementById('btn-fechar-modal');
+        const btnAplicar = document.getElementById('btn-aplicar-filtros');
+        const btnLimpar = document.getElementById('btn-limpar-filtros');
+        const backdrop = document.querySelector('.modal-backdrop');
+
+        if (btnFiltros) btnFiltros.addEventListener('click', function() {
+            // Validar sessão antes de abrir modal (instantâneo - valida em background)
+            const sessionValid = checkSessionBeforeModal();
+            if (sessionValid) {
+                abrirModalFiltros();
+            }
+            // Se sessão inválida, checkSessionBeforeModal() já mostrou o modal de sessão expirada
+        });
+        if (btnFechar) btnFechar.addEventListener('click', fecharModalFiltros);
+        if (btnAplicar) btnAplicar.addEventListener('click', aplicarFiltros);
+        if (btnLimpar) btnLimpar.addEventListener('click', limparTodosFiltros);
+        if (backdrop) backdrop.addEventListener('click', fecharModalFiltros);
+
+        // Fechar modal com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('modal-filtros');
+                if (modal && modal.style.display !== 'none') {
+                    fecharModalFiltros();
+                }
+            }
+        });
+
+        // NOTA: Dados de categorias e responsáveis são pré-carregados no DOMContentLoaded
+        // via preLoadCachedData() - não precisa carregar aqui!
+
+        // NÃO aplicar filtros aqui - será aplicado ao abrir a tela de atividades
+
+        // Event listeners para checkboxes
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'checkbox' && e.target.dataset.filter) {
+                handleCheckboxChange(e.target);
+            }
+        });
+    }
+
+    // Aplicar filtros padrão (Status: Pendente + Responsável: Usuário logado)
+    function aplicarFiltrosPadrao() {
+        // 1. Status: Pendente (sempre aplicar primeiro)
+        filtrosState.status = ['pendente'];
+        const checkboxPendente = document.querySelector('input[data-filter="status"][data-value="pendente"]');
+        if (checkboxPendente) {
+            checkboxPendente.checked = true;
+        }
+
+        // Buscar usuário do localStorage
+        const userUid = localStorage.getItem('uid');
+        const userName = localStorage.getItem('userName');
+        const currentUser = userUid ? { uid: userUid, nome: userName } : null;
+
+        if (!currentUser || !currentUser.uid) {
+            console.warn('⚠️ Usuário logado não encontrado no localStorage');
+            atualizarContadorFiltros();
+            renderizarChips();
+            aplicarFiltros();
+            return;
+        }
+
+        // 2. Responsável: Carregar dados e aplicar filtro COM CALLBACK
+        carregarResponsaveis(function() {
+            // ✅ Callback executado quando dados estão disponíveis (cache ou backend)
+            filtrosState.responsavel = [currentUser.uid];
+
+            // Marcar checkbox do responsável
+            setTimeout(() => {
+                const checkboxUser = document.querySelector(`input[data-filter="responsavel"][data-value="${currentUser.uid}"]`);
+                if (checkboxUser) {
+                    checkboxUser.checked = true;
+                }
+
+                // Atualizar UI e aplicar filtros
+                atualizarContadorFiltros();
+                renderizarChips(); // ✅ Agora renderiza COM dados disponíveis
+                aplicarFiltros();
+            }, 100);
+        });
+    }
+
+    // Sincronizar checkboxes com filtrosState
+    function sincronizarCheckboxesComEstado() {
+        // Sincronizar Status (checkboxes estáticos)
+        filtrosState.status.forEach(statusValue => {
+            const checkbox = document.querySelector(`input[data-filter="status"][data-value="${statusValue}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+
+        // Categorias e Responsáveis são sincronizados em suas funções populate
+    }
+
+    // Abrir modal de filtros
+    function abrirModalFiltros() {
+        const modal = document.getElementById('modal-filtros');
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+
+            // Popular opções do modal (usa cache se disponível, instantâneo!)
+            carregarCategorias();
+            carregarResponsaveis();
+
+            // Sincronizar checkboxes de status com estado
+            sincronizarCheckboxesComEstado();
+        }
+    }
+
+    // Fechar modal de filtros
+    function fecharModalFiltros() {
+        const modal = document.getElementById('modal-filtros');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+
+    // Handle mudança de checkbox
+    function handleCheckboxChange(checkbox) {
+        const filterType = checkbox.dataset.filter;
+        const value = checkbox.dataset.value;
+
+        if (checkbox.checked) {
+            if (!filtrosState[filterType].includes(value)) {
+                filtrosState[filterType].push(value);
+            }
+        } else {
+            filtrosState[filterType] = filtrosState[filterType].filter(v => v !== value);
+        }
+
+        console.log('🔍 Filtros atualizados:', filtrosState);
+        atualizarContadorFiltros();
+    }
+
+    // Aplicar filtros
+    function aplicarFiltros() {
+        fecharModalFiltros();
+        renderizarChips();
+        filtrarAtividades();
+    }
+
+    // Atualizar contador de filtros no botão
+    function atualizarContadorFiltros() {
+        const total = Object.values(filtrosState).reduce((acc, arr) => acc + arr.length, 0);
+        const texto = total > 0 ? `Filtros (${total})` : 'Filtros';
+        const textElement = document.getElementById('filtros-text');
+        if (textElement) {
+            textElement.textContent = texto;
+        }
+    }
+
+    // Renderizar chips dos filtros ativos
+    function renderizarChips() {
+        const container = document.getElementById('chips-container');
+        const btnLimpar = document.getElementById('btn-limpar-filtros');
+
+        if (!container) return;
+
+        container.innerHTML = '';
+        let hasChips = false;
+
+        // Chips de Status
+        filtrosState.status.forEach(status => {
+            const nome = status === 'pendente' ? '📋 Pendentes' : '✅ Concluídas';
+            const chip = criarChip(nome, '#64748b', 'status', status);
+            container.appendChild(chip);
+            hasChips = true;
+        });
+
+        // Chips de Categorias
+        filtrosState.categorias.forEach(catId => {
+            const categoria = categoriasDisponiveis.find(c => c.id === catId);
+            if (categoria) {
+                const chip = criarChip(`${categoria.icone || '📋'} ${categoria.nome}`, categoria.cor || '#8b5cf6', 'categorias', catId);
+                container.appendChild(chip);
+                hasChips = true;
+            }
+        });
+
+        // Chips de Período
+        filtrosState.periodo.forEach(periodo => {
+            const nomes = {
+                'atrasadas': '⏰ Atrasadas',
+                'hoje': '📅 Hoje',
+                'proximos_10': '🔜 Próximos 10 dias',
+                'mes_atual': '📆 Mês atual'
+            };
+            const chip = criarChip(nomes[periodo] || periodo, '#64748b', 'periodo', periodo);
+            container.appendChild(chip);
+            hasChips = true;
+        });
+
+        // Chips de Responsável
+        filtrosState.responsavel.forEach(respId => {
+            const responsavel = responsaveisDisponiveis.find(r => r.uid === respId);
+            if (responsavel) {
+                const chip = criarChip(`👤 ${responsavel.nome}`, '#64748b', 'responsavel', respId);
+                container.appendChild(chip);
+                hasChips = true;
+            }
+        });
+
+        // Mostrar/esconder botão limpar
+        if (btnLimpar) {
+            btnLimpar.style.display = hasChips ? 'flex' : 'none';
+        }
+    }
+
+    // Criar chip individual
+    function criarChip(nome, cor, tipo, valor) {
+        const chip = document.createElement('span');
+        chip.className = 'filter-chip';
+        chip.style.backgroundColor = cor;
+
+        chip.innerHTML = `
+            ${nome}
+            <button class="remove-chip" onclick="removerFiltro('${tipo}', '${valor}')">×</button>
+        `;
+
+        return chip;
+    }
+
+    // Remover filtro específico
+    function removerFiltro(tipo, valor) {
+        filtrosState[tipo] = filtrosState[tipo].filter(v => v !== valor);
+
+        // Atualizar checkbox no modal
+        const checkbox = document.querySelector(`input[data-filter="${tipo}"][data-value="${valor}"]`);
+        if (checkbox) checkbox.checked = false;
+
+        atualizarContadorFiltros();
+        renderizarChips();
+        filtrarAtividades();
+    }
+
+    // Limpar todos os filtros
+    function limparTodosFiltros() {
+        Object.keys(filtrosState).forEach(key => {
+            if (key === 'searchText') {
+                filtrosState[key] = '';
+            } else {
+                filtrosState[key] = [];
+            }
+        });
+
+        // Limpar todos os checkboxes
+        document.querySelectorAll('#modal-filtros input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
+
+        // Limpar campo de busca por texto
+        clearSearchText();
+
+        atualizarContadorFiltros();
+        renderizarChips();
+        filtrarAtividades();
+    }
+
+    // Carregar categorias do backend
+    function carregarCategorias(callback) {
+        // Se já existe cache, usar diretamente
+        if (window.cachedCategorias) {
+            categoriasDisponiveis = window.cachedCategorias;
+            populateCategoriasOptions();
+            if (callback) callback(); // ✅ Chamar callback quando dados disponíveis
+            return;
+        }
+
+        // Carregar do backend apenas se não há cache
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            (async () => {
+                try {
+                    const result = await apiCall('listCategoriasAtividadesApi');
+                    if (result && result.ok && result.items) {
+                        window.cachedCategorias = result.items; // Salvar no cache
+                        categoriasDisponiveis = result.items;
+                        populateCategoriasOptions();
+                        console.log('✅ Categorias carregadas e cacheadas:', result.items.length);
+                        if (callback) callback(); // ✅ Chamar callback após carregar
+                    }
+                } catch (error) {
+                    // Erro de sessão já tratado por apiCall()
+                    if (!error.message || !error.message.includes('Sessão')) {
+                        console.error('❌ Erro ao carregar categorias:', error);
+                    }
+                }
+            })();
+        }
+    }
+
+    // Carregar responsáveis do backend
+    function carregarResponsaveis(callback) {
+        // Se já existe cache, usar diretamente
+        if (window.cachedResponsaveis) {
+            responsaveisDisponiveis = window.cachedResponsaveis;
+            populateResponsaveisOptions();
+            if (callback) callback(); // ✅ Chamar callback quando dados disponíveis
+            return;
+        }
+
+        // Carregar do backend apenas se não há cache
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            (async () => {
+                try {
+                    const result = await apiCall('listUsuariosApi');
+                    if (result && result.ok && result.items) {
+                        window.cachedResponsaveis = result.items; // Salvar no cache
+                        responsaveisDisponiveis = result.items;
+                        populateResponsaveisOptions();
+                        console.log('✅ Responsáveis carregados e cacheados:', result.items.length);
+                        if (callback) callback(); // ✅ Chamar callback após carregar
+                    }
+                } catch (error) {
+                    // Erro de sessão já tratado por apiCall()
+                    if (!error.message || !error.message.includes('Sessão')) {
+                        console.error('❌ Erro ao carregar responsáveis:', error);
+                    }
+                }
+            })();
+        }
+    }
+
+    // Popular opções de categorias no modal
+    function populateCategoriasOptions() {
+        const container = document.getElementById('categorias-filter-options');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        categoriasDisponiveis.forEach(categoria => {
+            const label = document.createElement('label');
+            label.className = 'filter-option';
+
+            // Verificar se esta categoria está no filtrosState
+            const isChecked = filtrosState.categorias.includes(categoria.id);
+
+            label.innerHTML = `
+                <input type="checkbox" data-filter="categorias" data-value="${categoria.id}" ${isChecked ? 'checked' : ''}>
+                <span>${categoria.icone || '📋'} ${categoria.nome}</span>
+            `;
+
+            container.appendChild(label);
+        });
+    }
+
+    // Popular opções de responsáveis no modal
+    function populateResponsaveisOptions() {
+        const container = document.getElementById('responsavel-filter-options');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        responsaveisDisponiveis.forEach(usuario => {
+            const label = document.createElement('label');
+            label.className = 'filter-option';
+
+            // Verificar se este usuário está no filtrosState
+            const isChecked = filtrosState.responsavel.includes(usuario.uid);
+
+            label.innerHTML = `
+                <input type="checkbox" data-filter="responsavel" data-value="${usuario.uid}" ${isChecked ? 'checked' : ''}>
+                <span>👤 ${usuario.nome}</span>
+            `;
+
+            container.appendChild(label);
+        });
+    }
+
+    // Filtrar atividades (integrar com sistema existente)
+    function filtrarAtividades() {
+        // Recarregar atividades aplicando filtros
+        if (typeof loadActivities === 'function') {
+            loadActivities();
+        }
+    }
+
+    // FUNÇÃO REMOVIDA: window.aplicarFiltrosNasAtividades
+    // Motivo: Lógica duplicada - Backend já filtra (activities.gs:224-288)
+    // O filtro de texto é aplicado em applyActivityFilters() (linha 3123-3141)
+    // Removido em: 06/10/2025
+
+    // Função de filtro por texto (chamada pelo input)
+    function filterActivitiesByText(searchText) {
+        filtrosState.searchText = searchText;
+
+        // Mostrar/ocultar botão limpar
+        const clearBtn = document.getElementById('clear-search');
+        if (clearBtn) {
+            clearBtn.style.display = searchText.length > 0 ? 'block' : 'none';
+        }
+
+        // Aplicar filtros
+        loadActivities();
+    }
+
+    // Limpar busca por texto
+    function clearSearchText() {
+        const searchInput = document.getElementById('search-activities');
+        if (searchInput) {
+            searchInput.value = '';
+            filterActivitiesByText('');
+        }
+    };
+
+    // NOTA: initFiltrosSystem() agora é chamado via lazy init no initActivities()
+    // Removido DOMContentLoaded pois não precisa inicializar se usuário não entrar em Atividades
+
+    // Expor função para uso externo
+    window.getFiltrosAtivos = function() {
+        return filtrosState;
+    };
+</script>
+
+<!-- Modal de Filtros (fora de containers para centralizar) -->
+<div id="modal-filtros" class="modal-filtros" style="display: none;">
+    <!-- Backdrop -->
+    <div class="modal-backdrop"></div>
+
+    <!-- Caixa do Modal -->
+    <div class="modal-content">
+        <!-- Cabeçalho -->
+        <div class="modal-header">
+            <h3>Filtros</h3>
+            <button id="btn-fechar-modal" class="btn-fechar-modal">×</button>
+        </div>
+
+        <!-- Conteúdo do Modal -->
+        <div class="modal-body">
+            <!-- Seção: Status -->
+            <div class="filter-group">
+                <h4>Status</h4>
+                <div class="filter-options">
+                    <label class="filter-option">
+                        <input type="checkbox" data-filter="status" data-value="pendente">
+                        <span>📋 Pendentes</span>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" data-filter="status" data-value="concluida">
+                        <span>✅ Concluídas</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Seção: Categorias -->
+            <div class="filter-group">
+                <h4>Categorias</h4>
+                <div class="filter-options" id="categorias-filter-options">
+                    <!-- Carregadas dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Seção: Período -->
+            <div class="filter-group">
+                <h4>Período</h4>
+                <div class="filter-options">
+                    <label class="filter-option">
+                        <input type="checkbox" data-filter="periodo" data-value="atrasadas">
+                        <span>⏰ Atrasadas</span>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" data-filter="periodo" data-value="hoje">
+                        <span>📅 Hoje</span>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" data-filter="periodo" data-value="proximos_10">
+                        <span>🔜 Próximos 10 dias</span>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" data-filter="periodo" data-value="mes_atual">
+                        <span>📆 Mês atual</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Seção: Responsável -->
+            <div class="filter-group">
+                <h4>Responsável</h4>
+                <div class="filter-options" id="responsavel-filter-options">
+                    <!-- Carregadas dinamicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Rodapé -->
+        <div class="modal-footer">
+            <button id="btn-aplicar-filtros" class="btn-aplicar-filtros">
+                Aplicar Filtros
+            </button>
+        </div>
+    </div>
+</div>

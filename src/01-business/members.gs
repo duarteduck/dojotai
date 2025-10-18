@@ -5,10 +5,10 @@
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} { ok: boolean, items: Array }
  */
-function listMembersApi(sessionId) {
+async function listMembersApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Members');
+    const auth = await requireSession(sessionId, 'Members');
     if (!auth.ok) return auth;
 
     const result = _listMembersCore();

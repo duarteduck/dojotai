@@ -1,0 +1,379 @@
+        <!-- Reports Page -->
+        <div id="reports" class="page-content hidden">
+            <!-- Header do Relatório -->
+            <div class="card">
+                <div style="background: var(--gradient-primary); color: var(--white); padding: var(--spacing-xl); margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) var(--spacing-lg);">
+                    <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Relatório de Práticas</h1>
+                    <p style="opacity: 0.9;">Acompanhe sua evolução e progresso mensal</p>
+                </div>
+
+                <!-- Controles de Período -->
+                <div style="background: var(--light); padding: var(--spacing-md) var(--spacing-lg); border-bottom: 1px solid var(--gray-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--spacing-md);">
+                    <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
+                        <button class="btn btn-secondary" onclick="previousReportPeriod()" style="padding: var(--spacing-sm); min-width: 2.5rem;">‹</button>
+                        <div style="font-weight: 600; color: var(--text); min-width: 150px; text-align: center;" id="report-period-display">Setembro 2025</div>
+                        <button class="btn btn-secondary" onclick="nextReportPeriod()" style="padding: var(--spacing-sm); min-width: 2.5rem;">›</button>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="setReportViewMode('month')" id="btn-report-month">Mensal</button>
+                        <button class="btn btn-outline" onclick="setReportViewMode('comparison')" id="btn-report-comparison">Comparativo</button>
+                    </div>
+                </div>
+
+                <!-- Resumo Estatísticas -->
+                <div style="padding: var(--spacing-lg); display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg);">
+                    <div style="background: var(--white); border: 2px solid var(--gray-light); border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--spacing-sm); color: var(--success);" id="report-total-days">23</div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm);">Dias com Registros</div>
+                        <div class="badge badge-success" style="margin-top: var(--spacing-sm);" id="report-days-change">+5 que mês anterior</div>
+                    </div>
+
+                    <div style="background: var(--white); border: 2px solid var(--gray-light); border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--spacing-sm); color: var(--info);" id="report-completion-rate">76%</div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm);">Taxa de Completude</div>
+                        <div class="badge badge-info" style="margin-top: var(--spacing-sm);" id="report-completion-change">+12% que mês anterior</div>
+                    </div>
+
+                    <div style="background: var(--white); border: 2px solid var(--gray-light); border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--spacing-sm); color: var(--warning);" id="report-total-practices">189</div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm);">Total de Práticas</div>
+                        <div class="badge badge-warning" style="margin-top: var(--spacing-sm);" id="report-practices-change">+34 que mês anterior</div>
+                    </div>
+
+                    <div style="background: var(--white); border: 2px solid var(--gray-light); border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-3xl); font-weight: 700; margin-bottom: var(--spacing-sm); color: var(--estudo);" id="report-consistency">18</div>
+                        <div style="color: var(--text-light); font-size: var(--font-size-sm);">Dias Consecutivos</div>
+                        <div class="badge badge-success" style="margin-top: var(--spacing-sm);" id="report-consistency-change">Recorde pessoal!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráfico de Progresso -->
+            <div class="card" id="report-chart-section">
+                <div style="padding: var(--spacing-lg);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg); flex-wrap: wrap; gap: var(--spacing-lg);">
+                        <h3 style="font-size: var(--font-size-xl); font-weight: 600; color: var(--text);">Evolução Mensal das Práticas</h3>
+                        <div style="display: flex; gap: var(--spacing-lg); font-size: var(--font-size-sm); flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                <div style="width: 12px; height: 12px; background: var(--okiyome); border-radius: var(--radius-sm);"></div>
+                                <span>Okiyome para Pessoas</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                <div style="width: 12px; height: 12px; background: var(--estudo); border-radius: var(--radius-sm);"></div>
+                                <span>Outros Okiyome</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                <div style="width: 12px; height: 12px; background: var(--success); border-radius: var(--radius-sm);"></div>
+                                <span>Receber Okiyome</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; height: 300px; background: var(--light); border-radius: var(--radius-lg); padding: var(--spacing-lg); display: flex; align-items: flex-end; justify-content: space-around; gap: var(--spacing-xs); overflow-x: auto;" id="report-progress-chart">
+                        <!-- Barras serão inseridas via JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalhamento por Prática -->
+            <div class="card" id="report-practices-section">
+                <div style="padding: var(--spacing-lg);">
+                    <h3 style="margin-bottom: var(--spacing-lg); color: var(--text); font-size: var(--font-size-xl); font-weight: 600;">
+                        Detalhamento por Prática - <span id="report-detail-period">Setembro 2025</span>
+                    </h3>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--spacing-lg);">
+                        <div style="border: 2px solid var(--okiyome-light); border-radius: var(--radius-lg); overflow: hidden;">
+                            <div style="padding: var(--spacing-lg); font-weight: 600; color: var(--white); font-size: var(--font-size-sm); background: var(--okiyome);">
+                                Okiyome para Pessoas
+                            </div>
+                            <div style="padding: var(--spacing-lg); background: var(--white);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Total no mês</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-pessoas-total">67 pessoas</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Média diária</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-pessoas-media">2.9 pessoas/dia</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Maior sequência</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-pessoas-sequencia">12 dias consecutivos</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0;">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Meta mensal</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-pessoas-meta">90 pessoas</span>
+                                </div>
+                                <div class="progress-bar" style="margin-top: var(--spacing-md);">
+                                    <div class="progress-fill" style="width: 74%; background: var(--okiyome);"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border: 2px solid var(--estudo-light); border-radius: var(--radius-lg); overflow: hidden;">
+                            <div style="padding: var(--spacing-lg); font-weight: 600; color: var(--white); font-size: var(--font-size-sm); background: var(--estudo);">
+                                Outros Okiyome
+                            </div>
+                            <div style="padding: var(--spacing-lg); background: var(--white);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Total no mês</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-outros-total">89 okiyome</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Média diária</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-outros-media">3.9 okiyome/dia</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Maior sequência</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-outros-sequencia">18 dias consecutivos</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0;">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Meta mensal</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-outros-meta">120 okiyome</span>
+                                </div>
+                                <div class="progress-bar" style="margin-top: var(--spacing-md);">
+                                    <div class="progress-fill" style="width: 84%; background: var(--estudo);"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border: 2px solid var(--success); border-radius: var(--radius-lg); overflow: hidden;">
+                            <div style="padding: var(--spacing-lg); font-weight: 600; color: var(--white); font-size: var(--font-size-sm); background: var(--success);">
+                                Receber Okiyome
+                            </div>
+                            <div style="padding: var(--spacing-lg); background: var(--white);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Dias que recebeu</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-receber-total">16 dias</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Frequência</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-receber-frequencia">70% dos dias</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--gray-light);">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Maior sequência</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-receber-sequencia">7 dias consecutivos</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0;">
+                                    <span style="color: var(--text-light); font-size: var(--font-size-sm);">Meta mensal</span>
+                                    <span style="font-weight: 600; color: var(--text);" id="report-receber-meta">80% dos dias</span>
+                                </div>
+                                <div class="progress-bar" style="margin-top: var(--spacing-md);">
+                                    <div class="progress-fill" style="width: 88%; background: var(--success);"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparativo Mensal -->
+            <div class="card" id="report-comparison-section" style="display: none;">
+                <div style="padding: var(--spacing-lg);">
+                    <h3 style="margin-bottom: var(--spacing-lg); color: var(--text); font-size: var(--font-size-xl); font-weight: 600;">Comparativo dos Últimos 6 Meses</h3>
+
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: var(--spacing-md);">
+                            <thead>
+                                <tr>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Mês</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Okiyome p/ Pessoas</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Outros Okiyome</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Receber Okiyome</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Taxa Completude</th>
+                                    <th style="padding: var(--spacing-md); text-align: left; border-bottom: 2px solid var(--gray-light); font-size: var(--font-size-sm); background: var(--light); font-weight: 600; color: var(--text);">Total Práticas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-comparison-tbody">
+                                <tr style="background: var(--white);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);"><strong>Set/2025</strong></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">67 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">89 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">16 dias <span style="color: var(--gray); font-weight: 600;">→</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">76%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">189</td>
+                                </tr>
+                                <tr style="background: var(--light);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">Ago/2025</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">54 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">72 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">15 dias <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">64%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--gray); font-weight: 600;">155</td>
+                                </tr>
+                                <tr style="background: var(--white);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">Jul/2025</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">48 <span style="color: var(--gray); font-weight: 600;">→</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">86 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">12 dias <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">58%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">167</td>
+                                </tr>
+                                <tr style="background: var(--light);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">Jun/2025</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">45 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">63 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">18 dias <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">52%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">142</td>
+                                </tr>
+                                <tr style="background: var(--white);">
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">Mai/2025</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">52 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">78 <span style="color: var(--success); font-weight: 600;">↗</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--text);">14 dias <span style="color: var(--gray); font-weight: 600;">→</span></td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">61%</td>
+                                    <td style="padding: var(--spacing-md); border-bottom: 1px solid var(--gray-light); font-size: var(--font-size-sm); color: var(--success); font-weight: 600;">158</td>
+                                </tr>
+                                <tr style="background: var(--light);">
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text);">Abr/2025</td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text);">38 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text);">56 <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text);">13 dias <span style="color: var(--danger); font-weight: 600;">↘</span></td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">45%</td>
+                                    <td style="padding: var(--spacing-md); font-size: var(--font-size-sm); color: var(--danger); font-weight: 600;">124</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<script>
+
+        // ===== SISTEMA DE RELATÓRIOS =====
+        const reportMonthlyData = {
+            'setembro-2025': {
+                totalDays: 23,
+                completionRate: 76,
+                totalPractices: 189,
+                consistency: 18,
+                practices: {
+                    pessoas: { total: 67, media: 2.9, sequencia: 12, meta: 90 },
+                    outros: { total: 89, media: 3.9, sequencia: 18, meta: 120 },
+                    receber: { total: 16, frequencia: 70, sequencia: 7, meta: 80 }
+                },
+                dailyData: [15, 8, 12, 18, 22, 14, 19, 25, 16, 21, 11, 17, 24, 13, 20, 26, 9, 23, 15, 18, 12, 21, 16, 19, 14, 22, 17, 20, 13, 25]
+            },
+            'agosto-2025': {
+                totalDays: 18,
+                completionRate: 64,
+                totalPractices: 155,
+                consistency: 12,
+                practices: {
+                    pessoas: { total: 54, media: 2.4, sequencia: 8, meta: 90 },
+                    outros: { total: 72, media: 3.2, sequencia: 15, meta: 120 },
+                    receber: { total: 15, frequencia: 65, sequencia: 5, meta: 80 }
+                },
+                dailyData: [12, 6, 9, 15, 19, 11, 16, 22, 13, 18, 8, 14, 21, 10, 17, 23, 7, 20, 12, 15, 9, 18, 13, 16, 11, 19, 14, 17, 10, 22, 8]
+            }
+        };
+
+        let currentReportPeriod = 'setembro-2025';
+        let reportViewMode = 'month';
+
+        function initReports() {
+            updateReportDisplay();
+            generateReportChart();
+        }
+
+        function updateReportDisplay() {
+            const data = reportMonthlyData[currentReportPeriod];
+            const [mes, ano] = currentReportPeriod.split('-');
+            const mesCapitalized = mes.charAt(0).toUpperCase() + mes.slice(1);
+
+            document.getElementById('report-period-display').textContent = `${mesCapitalized} ${ano}`;
+            document.getElementById('report-detail-period').textContent = `${mesCapitalized} ${ano}`;
+
+            // Atualizar estatísticas
+            document.getElementById('report-total-days').textContent = data.totalDays;
+            document.getElementById('report-completion-rate').textContent = data.completionRate + '%';
+            document.getElementById('report-total-practices').textContent = data.totalPractices;
+            document.getElementById('report-consistency').textContent = data.consistency;
+
+            // Atualizar detalhes das práticas
+            document.getElementById('report-pessoas-total').textContent = data.practices.pessoas.total + ' pessoas';
+            document.getElementById('report-pessoas-media').textContent = data.practices.pessoas.media + ' pessoas/dia';
+            document.getElementById('report-pessoas-sequencia').textContent = data.practices.pessoas.sequencia + ' dias consecutivos';
+
+            document.getElementById('report-outros-total').textContent = data.practices.outros.total + ' okiyome';
+            document.getElementById('report-outros-media').textContent = data.practices.outros.media + ' okiyome/dia';
+            document.getElementById('report-outros-sequencia').textContent = data.practices.outros.sequencia + ' dias consecutivos';
+
+            document.getElementById('report-receber-total').textContent = data.practices.receber.total + ' dias';
+            document.getElementById('report-receber-frequencia').textContent = data.practices.receber.frequencia + '% dos dias';
+            document.getElementById('report-receber-sequencia').textContent = data.practices.receber.sequencia + ' dias consecutivos';
+        }
+
+        function generateReportChart() {
+            const data = reportMonthlyData[currentReportPeriod];
+            const chartContainer = document.getElementById('report-progress-chart');
+
+            const maxValue = Math.max(...data.dailyData);
+            const bars = data.dailyData.slice(0, 30).map((value, index) => {
+                const height = (value / maxValue) * 180;
+                const day = index + 1;
+
+                // Simular distribuição entre as práticas
+                const pessoas = Math.round(value * 0.4);
+                const outros = Math.round(value * 0.4);
+                const receber = value - pessoas - outros;
+
+                const pessoasHeight = (pessoas / value) * height;
+                const outrosHeight = (outros / value) * height;
+                const receberHeight = (receber / value) * height;
+
+                return `
+                    <div style="display: flex; flex-direction: column; align-items: center; min-width: 60px; flex: 1; max-width: 80px;">
+                        <div style="width: 100%; height: 180px; display: flex; flex-direction: column; justify-content: flex-end; position: relative;">
+                            <div style="position: absolute; top: -1.5rem; left: 50%; transform: translateX(-50%); font-size: var(--font-size-xs); font-weight: 600; color: var(--text);">${value}</div>
+                            <div style="width: 100%; height: ${pessoasHeight}px; background: var(--okiyome); border-radius: var(--radius-sm) var(--radius-sm) 0 0; margin-bottom: 1px; transition: var(--transition); cursor: pointer;" onmouseover="this.style.transform='scaleY(1.05)'" onmouseout="this.style.transform='scaleY(1)'"></div>
+                            <div style="width: 100%; height: ${outrosHeight}px; background: var(--estudo); margin-bottom: 1px; transition: var(--transition); cursor: pointer;" onmouseover="this.style.transform='scaleY(1.05)'" onmouseout="this.style.transform='scaleY(1)'"></div>
+                            <div style="width: 100%; height: ${receberHeight}px; background: var(--success); border-radius: 0 0 var(--radius-sm) var(--radius-sm); transition: var(--transition); cursor: pointer;" onmouseover="this.style.transform='scaleY(1.05)'" onmouseout="this.style.transform='scaleY(1)'"></div>
+                        </div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-light); margin-top: var(--spacing-sm); text-align: center; font-weight: 500;">${day}</div>
+                    </div>
+                `;
+            }).join('');
+
+            chartContainer.innerHTML = bars;
+        }
+
+        function previousReportPeriod() {
+            if (currentReportPeriod === 'setembro-2025') {
+                currentReportPeriod = 'agosto-2025';
+                updateReportDisplay();
+                generateReportChart();
+            }
+        }
+
+        function nextReportPeriod() {
+            if (currentReportPeriod === 'agosto-2025') {
+                currentReportPeriod = 'setembro-2025';
+                updateReportDisplay();
+                generateReportChart();
+            }
+        }
+
+        function setReportViewMode(mode) {
+            reportViewMode = mode;
+
+            // Atualizar botões
+            document.getElementById('btn-report-month').className = mode === 'month' ? 'btn btn-primary' : 'btn btn-outline';
+            document.getElementById('btn-report-comparison').className = mode === 'comparison' ? 'btn btn-primary' : 'btn btn-outline';
+
+            // Mostrar/ocultar seções
+            if (mode === 'month') {
+                document.getElementById('report-chart-section').style.display = 'block';
+                document.getElementById('report-practices-section').style.display = 'block';
+                document.getElementById('report-comparison-section').style.display = 'none';
+            } else {
+                document.getElementById('report-chart-section').style.display = 'none';
+                document.getElementById('report-practices-section').style.display = 'none';
+                document.getElementById('report-comparison-section').style.display = 'block';
+            }
+        }
+
+
+</script>

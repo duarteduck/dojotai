@@ -2,9 +2,9 @@
 
 Sistema de gestão completo para dojos de artes marciais e práticas espirituais.
 
-**Tecnologia:** Google Apps Script + Google Sheets como banco de dados  
-**Arquitetura:** Backend (.gs) + Frontend SPA monolítico (.html)  
-**Status:** ✅ Em produção
+**Tecnologia:** Google Apps Script + Google Sheets como banco de dados
+**Arquitetura:** Backend (15 arquivos .gs) + Frontend Modular (45 componentes .html)
+**Status:** ✅ Em produção | ⚡ **Modularizado em Out/2025**
 
 ---
 
@@ -87,28 +87,20 @@ clasp push
 
 ---
 
-## 🏗️ Arquitetura Simplificada
+## 🏗️ Arquitetura
 
 ```
-┌─────────────────────────────────┐
-│  FRONTEND                       │
-│  app_migrated.html (7.399 lin) │
-│  HTML + CSS + JavaScript        │
-└─────────────────────────────────┘
-            ⬇️ google.script.run
-┌─────────────────────────────────┐
-│  BACKEND                        │
-│  15 arquivos .gs (10.141 lin)  │
-│  Google Apps Script             │
-└─────────────────────────────────┘
-            ⬇️ DatabaseManager
-┌─────────────────────────────────┐
-│  DATABASE                       │
-│  Google Sheets (12 tabelas)    │
-└─────────────────────────────────┘
+FRONTEND (45 arquivos modulares)
+    ↓ google.script.run
+BACKEND (15 arquivos .gs)
+    ↓ DatabaseManager
+DATABASE (Google Sheets - 12 tabelas)
 ```
 
-**Detalhes:** Ver [MAPA_CODIGO.md](MAPA_CODIGO.md)
+**📌 Modularizado em Out/2025:** 1 arquivo monolítico → 45 componentes especializados
+
+**Detalhes completos da arquitetura:** Ver [MAPA_CODIGO.md](MAPA_CODIGO.md)
+**Processo de modularização:** Ver [PARTICIONAMENTO_COMPLETO.md](PARTICIONAMENTO_COMPLETO.md)
 
 ---
 
@@ -135,13 +127,13 @@ clasp pull
 
 ## 📊 Informações do Projeto
 
-- **Versão Atual:** 2.0.0-alpha.4
-- **Última Atualização:** 30/09/2025
-- **Linhas de Código:** ~24.000 linhas
+- **Versão:** 2.0.0-modular (Out/2025)
+- **Arquivos:** 60 (45 frontend modulares + 15 backend)
 - **Linguagens:** JavaScript (Apps Script), HTML5, CSS3
 - **Database:** Google Sheets (12 tabelas)
-- **Performance:** Health Score 100/100
-- **Uptime:** 99.9%
+- **Status:** ✅ Produção | ⚡ Modularizado
+
+**Métricas detalhadas:** Ver [MAPA_CODIGO.md](MAPA_CODIGO.md)
 
 ---
 

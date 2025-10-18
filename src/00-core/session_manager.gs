@@ -65,6 +65,13 @@ async function createSession(userId, deviceInfo = {}) {
     const userSessions = getUserSessions(userId);
     const maxSessions = APP_CONFIG.SESSION.MAX_SESSIONS_PER_USER || 3;
 
+    Logger.info('SessionManager', 'Verificando limite de sessões', {
+      userId,
+      currentActiveSessions: userSessions.length,
+      maxAllowed: maxSessions,
+      willRemoveOldest: userSessions.length >= maxSessions
+    });
+
     if (userSessions.length >= maxSessions) {
       Logger.info('SessionManager', 'Limite de sessões atingido, removendo mais antiga', {
         userId,
@@ -78,10 +85,27 @@ async function createSession(userId, deviceInfo = {}) {
       )[0];
 
       if (oldestSession) {
-        await destroySession(oldestSession.session_id);
-        Logger.info('SessionManager', 'Sessão mais antiga removida', {
-          removedSessionId: oldestSession.session_id,
+        Logger.info('SessionManager', 'Destruindo sessão mais antiga', {
+          sessionId: oldestSession.session_id,
+          createdAt: oldestSession.created_at,
           userId
+        });
+
+        const destroyResult = await destroySession(oldestSession.session_id);
+
+        Logger.info('SessionManager', 'Resultado da destruição da sessão mais antiga', {
+          sessionId: oldestSession.session_id,
+          success: destroyResult.ok,
+          message: destroyResult.message || destroyResult.error,
+          userId
+        });
+
+        // Verificar quantas sessões restaram após destruir
+        const remainingSessions = getUserSessions(userId);
+        Logger.info('SessionManager', 'Sessões restantes após destruição', {
+          userId,
+          remaining: remainingSessions.length,
+          expected: maxSessions - 1
         });
       }
     }
@@ -152,9 +176,9 @@ async function createSession(userId, deviceInfo = {}) {
 /**
  * Validar sessão existente
  * @param {string} sessionId - ID da sessão
- * @returns {Object} Resultado da validação
+ * @returns {Promise<Object>} Resultado da validação
  */
-function validateSession(sessionId) {
+async function validateSession(sessionId) {
   try {
     Logger.debug('SessionManager', 'Validando sessão', { sessionId });
 
@@ -210,7 +234,7 @@ function validateSession(sessionId) {
     const ttlMilliseconds = APP_CONFIG.SESSION.TTL_HOURS * 60 * 60 * 1000;
     const newExpiresAt = new Date(now.getTime() + ttlMilliseconds);
 
-    DatabaseManager.update('sessoes', session.id, {
+    await DatabaseManager.update('sessoes', session.id, {
       last_activity: Utilities.formatDate(now, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss'),
       expires_at: Utilities.formatDate(newExpiresAt, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
     });
@@ -249,7 +273,7 @@ function validateSession(sessionId) {
  *
  * @param {string} sessionId - ID da sessão a validar
  * @param {string} [context='API'] - Nome do módulo/contexto (para logs detalhados)
- * @returns {Object} Resultado da validação
+ * @returns {Promise<Object>} Resultado da validação
  * @returns {boolean} returns.ok - Se a validação foi bem-sucedida
  * @returns {Object} [returns.session] - Dados da sessão se válida
  * @returns {string} [returns.error] - Mensagem de erro se inválida
@@ -257,8 +281,8 @@ function validateSession(sessionId) {
  *
  * @example
  * // Uso em qualquer API:
- * function minhaApi(sessionId) {
- *   const auth = requireSession(sessionId, 'MinhaAPI');
+ * async function minhaApi(sessionId) {
+ *   const auth = await requireSession(sessionId, 'MinhaAPI');
  *   if (!auth.ok) return auth;  // Retorna erro padronizado
  *
  *   // Código da API continua aqui...
@@ -267,7 +291,7 @@ function validateSession(sessionId) {
  *
  * @since 2.0.0-alpha.5
  */
-function requireSession(sessionId, context = 'API') {
+async function requireSession(sessionId, context = 'API') {
   // Validação 1: sessionId foi fornecido?
   if (!sessionId) {
     Logger.warn(context, 'Tentativa sem sessionId');
@@ -279,7 +303,7 @@ function requireSession(sessionId, context = 'API') {
   }
 
   // Validação 2: sessão é válida?
-  const sessionData = validateSession(sessionId);
+  const sessionData = await validateSession(sessionId);
   if (!sessionData || !sessionData.ok || !sessionData.session) {
     Logger.warn(context, 'Sessão inválida');
     return {
@@ -300,12 +324,12 @@ function requireSession(sessionId, context = 'API') {
  * Validação rápida de sessão (apenas verifica se está ativa e não expirou)
  * Usada antes de abrir modais para avisar o usuário precocemente
  * @param {string} sessionId - ID da sessão
- * @returns {Object} { ok: boolean, sessionExpired?: boolean }
+ * @returns {Promise<Object>} { ok: boolean, sessionExpired?: boolean }
  */
-function validateSessionQuick(sessionId) {
+async function validateSessionQuick(sessionId) {
   try {
     // Reutilizar validateSession() completo (já estende sessão)
-    const result = validateSession(sessionId);
+    const result = await validateSession(sessionId);
 
     // Retornar apenas ok/sessionExpired para o frontend
     return {
@@ -321,9 +345,9 @@ function validateSessionQuick(sessionId) {
 /**
  * Destruir/desativar sessão
  * @param {string} sessionId - ID da sessão
- * @returns {Object} Resultado da operação
+ * @returns {Promise<Object>} Resultado da operação
  */
-function destroySession(sessionId) {
+async function destroySession(sessionId) {
   try {
     Logger.info('SessionManager', 'Destruindo sessão', { sessionId });
 
@@ -339,10 +363,12 @@ function destroySession(sessionId) {
     const session = sessions[0];
 
     // Atualizar usando o PRIMARY KEY (id)
-    const updateResult = DatabaseManager.update('sessoes', session.id, {
+    const updateResult = await DatabaseManager.update('sessoes', session.id, {
       active: '',
       destroyed_at: Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
     });
+
+    // DatabaseManager.update() já invalida o cache automaticamente (linha 1559)
 
     // Update executado com sucesso
 
@@ -462,20 +488,15 @@ function getUserSessions(userId) {
       return [];
     }
 
-    // Filtrar apenas sessões não expiradas
-    const now = new Date();
-    const activeSessions = sessions.filter(session => {
-      const expiresAt = new Date(session.expires_at);
-      return now <= expiresAt;
-    });
-
+    // IMPORTANTE: Retornar TODAS as sessões com active='sim', mesmo expiradas
+    // Motivo: Para controle de limite de sessões, precisamos contar todas as sessões marcadas como ativas
+    // A validação de expiração é feita em validateSession(), não aqui
     Logger.debug('SessionManager', 'Sessões ativas encontradas', {
       userId,
-      total: sessions.length,
-      active: activeSessions.length
+      total: sessions.length
     });
 
-    return activeSessions;
+    return sessions;
 
   } catch (error) {
     Logger.error('SessionManager', 'Erro ao buscar sessões do usuário', {

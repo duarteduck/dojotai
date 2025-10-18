@@ -15,7 +15,9 @@
     <?!= include('src/05-components/core/state'); ?>
     <?!= include('src/05-components/core/auth'); ?>
     <?!= include('src/05-components/core/navigation'); ?>
+    <?!= include('src/05-components/core/router'); ?>
     <?!= include('src/05-components/core/api'); ?>
+    <?!= include('src/05-components/core/init'); ?>
 
     <!-- ===== UTILS: Funções utilitárias ===== -->
     <?!= include('src/05-components/utils/dateHelpers'); ?>
@@ -30,9 +32,21 @@
 
     <!-- ===== COMPONENTS: Componentes específicos ===== -->
     <?!= include('src/05-components/userMenuDropdown'); ?>
+    <?!= include('src/05-components/filters'); ?>
 
-    <!-- ===== TEMPORÁRIO: Carrega arquivo antigo enquanto migramos ===== -->
-    <?!= include('app_migrated'); ?>
+    <!-- ===== LAYOUT: Container e navegação ===== -->
+    <?!= include('src/05-components/layout'); ?>
+
+    <!-- ===== VIEWS: Páginas da aplicação ===== -->
+    <?!= include('src/04-views/dashboard'); ?>
+    <?!= include('src/04-views/activities'); ?>
+    <?!= include('src/04-views/members'); ?>
+    <?!= include('src/04-views/practices'); ?>
+    <?!= include('src/04-views/reports'); ?>
+    <?!= include('src/04-views/settings'); ?>
+
+    <!-- ===== FECHAMENTO DO LAYOUT ===== -->
+    <?!= include('src/05-components/layoutClose'); ?>
 
 </body>
 </html>

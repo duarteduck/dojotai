@@ -431,11 +431,5 @@
         }
     }
 
-    // Inicializar quando o DOM estiver pronto
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initUserMenuDropdown);
-    } else {
-        // DOM já carregado
-        setTimeout(initUserMenuDropdown, 100);
-    }
+    // NOTA: initUserMenuDropdown() agora é chamado em src/05-components/core/init.html
 </script>

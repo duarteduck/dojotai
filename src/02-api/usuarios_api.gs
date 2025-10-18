@@ -15,10 +15,10 @@
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} Resultado com lista de usuários
  */
-function listUsuariosApi(sessionId) {
+async function listUsuariosApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'UsuariosAPI');
+    const auth = await requireSession(sessionId, 'UsuariosAPI');
     if (!auth.ok) return auth;
 
     console.log('📋 Listando usuários para seleção...');
@@ -97,6 +97,11 @@ function listUsuariosApi(sessionId) {
 
 /**
  * Autentica usuário e cria sessão usando SecurityManager existente
+ *
+ * NOTA: Esta é a função CORRETA usada pelo frontend (confirmado em app_migrated_BACKUP_20251017.html)
+ * - loginUser() em auth.gs existe mas não é usada pelo frontend
+ * - Esta função era a original funcionando antes da modularização
+ *
  * @param {string} login - Login do usuário
  * @param {string} password - PIN do usuário
  * @returns {Object} Resultado da autenticação

@@ -1,10 +1,10 @@
 // activities.gs – API de atividades (atualizada para categoria_atividade_id)
 
-function listActivitiesApi(sessionId, filtros) {
+async function listActivitiesApi(sessionId, filtros) {
   console.log('🚀 listActivitiesApi chamada - sessionId:', sessionId ? '✓' : '✗', 'filtros:', JSON.stringify(filtros));
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Activities');
+    const auth = await requireSession(sessionId, 'Activities');
     if (!auth.ok) return auth;
 
     const result = _listActivitiesCore(filtros);
@@ -550,7 +550,7 @@ function listActivities() {
  *   removeActivityCardWithAnimation(activityId);
  * }
  */
-function validateActivityAgainstFilters(sessionId, activityId, filtros) {
+async function validateActivityAgainstFilters(sessionId, activityId, filtros) {
   try {
     console.log('🔍 validateActivityAgainstFilters chamada');
     console.log('  → sessionId:', sessionId ? '✓ fornecido' : '✗ ausente');
@@ -560,7 +560,7 @@ function validateActivityAgainstFilters(sessionId, activityId, filtros) {
     // ============================================================================
     // VALIDAÇÃO 1: Sessão
     // ============================================================================
-    const auth = requireSession(sessionId, 'Activities');
+    const auth = await requireSession(sessionId, 'Activities');
     if (!auth.ok) {
       console.error('❌ Sessão inválida ou expirada');
       return auth; // Retorna { ok: false, error: '...' }
@@ -776,7 +776,7 @@ function getUsersMapReadOnly_() {
 async function updateActivityWithTargets(sessionId, input, uidEditor) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Activities');
+    const auth = await requireSession(sessionId, 'Activities');
     if (!auth.ok) return auth;
 
     if (!input || !input.id) {

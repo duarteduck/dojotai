@@ -1,0 +1,57 @@
+<script>
+    /**
+     * ============================================================================
+     * INICIALIZAÇÃO CENTRALIZADA DO SISTEMA
+     * Garante que cada componente seja inicializado apenas UMA VEZ
+     * ============================================================================
+     */
+
+    // Flag para prevenir inicialização duplicada
+    if (!window.systemInitialized) {
+        window.systemInitialized = false;
+
+        /**
+         * Inicialização principal do sistema
+         * Chamado UMA ÚNICA VEZ quando o DOM está pronto
+         */
+        function initSystem() {
+            if (window.systemInitialized) {
+                console.warn('⚠️ Sistema já foi inicializado, pulando...');
+                return;
+            }
+
+            console.log('🚀 Iniciando sistema...');
+            window.systemInitialized = true;
+
+            // 1. Carregar tema salvo
+            if (typeof loadTheme === 'function') {
+                loadTheme();
+            }
+
+            // 2. Inicializar navegação
+            if (typeof initNavigation === 'function') {
+                initNavigation();
+            }
+
+            // 3. Inicializar menu dropdown do usuário
+            if (typeof initUserMenuDropdown === 'function') {
+                initUserMenuDropdown();
+            }
+
+            // 4. Verificar autenticação e mostrar tela apropriada
+            if (typeof checkAuthAndInit === 'function') {
+                checkAuthAndInit();
+            }
+
+            console.log('✅ Sistema inicializado com sucesso');
+        }
+
+        // Executar quando DOM estiver pronto
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSystem);
+        } else {
+            // DOM já carregado
+            initSystem();
+        }
+    }
+</script>

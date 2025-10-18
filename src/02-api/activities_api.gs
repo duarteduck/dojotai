@@ -8,10 +8,10 @@
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} Resultado com lista de categorias
  */
-function listCategoriasAtividadesApi(sessionId) {
+async function listCategoriasAtividadesApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'ActivitiesAPI');
+    const auth = await requireSession(sessionId, 'ActivitiesAPI');
     if (!auth.ok) return auth;
 
     console.log('📋 Listando categorias de atividades...');
@@ -65,7 +65,7 @@ async function createActivity(sessionId, activityData, creatorUid) {
     console.log('📝 Criando nova atividade - sessionId:', sessionId ? '✓' : '✗', 'dados:', activityData);
 
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'ActivitiesAPI');
+    const auth = await requireSession(sessionId, 'ActivitiesAPI');
     if (!auth.ok) return auth;
 
     // Remover qualquer campo 'id' que possa estar vindo do frontend
@@ -241,12 +241,12 @@ async function createActivity(sessionId, activityData, creatorUid) {
  * @param {number} retryCount - Contador de tentativas
  * @returns {Object} Resultado com dados da atividade
  */
-function getActivityById(sessionId, activityId, retryCount = 0) {
+async function getActivityById(sessionId, activityId, retryCount = 0) {
   try {
     console.log(`🔍 Buscando atividade - sessionId: ${sessionId ? '✓' : '✗'}, ID: ${activityId} (tentativa ${retryCount + 1})`);
 
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'ActivitiesAPI');
+    const auth = await requireSession(sessionId, 'ActivitiesAPI');
     if (!auth.ok) return auth;
 
     if (!activityId) {
@@ -371,7 +371,7 @@ async function completeActivity(sessionId, activityId) {
     Logger.info('ActivitiesAPI', 'Marcando atividade como concluída', { activityId, sessionId: sessionId ? '✓' : '✗' });
 
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'ActivitiesAPI');
+    const auth = await requireSession(sessionId, 'ActivitiesAPI');
     if (!auth.ok) return auth;
 
     if (!activityId) {

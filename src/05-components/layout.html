@@ -1,0 +1,57 @@
+<!-- ===== LAYOUT: Container e Navegação Principal ===== -->
+<div class="container">
+    <!-- Header Unificado -->
+    <header class="header app-header">
+        <div class="logo-section">
+            <div class="logo">D</div>
+            <div class="header-text">
+                <h1>Sistema Dojotai</h1>
+                <p>Gestão Unificada de Atividades e Práticas</p>
+            </div>
+        </div>
+        <div class="header-controls">
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()" title="Menu">
+                <span>☰</span>
+            </button>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+                <span id="theme-icon">🌙</span>
+            </button>
+            <div class="user-info">
+                <div class="user-avatar" id="userMenuAvatar">DG</div>
+                <div>
+                    <div style="font-weight: 600; font-size: 0.875rem;" id="userMenuName">Diogo</div>
+                    <div style="font-size: 0.75rem; color: var(--text-light);" id="userMenuRole">--</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação Horizontal Unificada -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" data-page="dashboard">
+            <span>🏠</span>
+            <span>Dashboard</span>
+        </button>
+        <button class="nav-tab" data-page="activities">
+            <span>📅</span>
+            <span>Atividades</span>
+        </button>
+        <button class="nav-tab" data-page="members">
+            <span>👥</span>
+            <span>Membros</span>
+        </button>
+        <button class="nav-tab" data-page="practices">
+            <span>🎯</span>
+            <span>Práticas</span>
+        </button>
+        <button class="nav-tab" data-page="reports">
+            <span>📊</span>
+            <span>Relatórios</span>
+        </button>
+        <button class="nav-tab" data-page="settings">
+            <span>⚙️</span>
+            <span>Configurações</span>
+        </button>
+    </nav>
+
+    <!-- Container permanece aberto - as views serão inseridas aqui -->

@@ -1,6 +1,6 @@
 # 🗺️ MAPA DO CÓDIGO - Sistema Dojotai
 
-**Última atualização:** 01/10/2025 | **Versão:** 2.0.0-alpha.4
+**Última atualização:** 18/10/2025 | **Versão:** 2.0.0-modular
 
 ---
 
@@ -8,426 +8,515 @@
 
 **"Onde está X?"** - Este documento responde essa pergunta.
 
-Mapa visual e detalhado de todos os arquivos, funções e estruturas do projeto.
+Mapa visual e detalhado de todos os arquivos, funções e estruturas do projeto após a **modularização completa**.
 
 ---
 
-## 📊 VISÃO GERAL - 3 CAMADAS
+## 📊 VISÃO GERAL - ARQUITETURA MODULAR
 
 ```
-┌──────────────────────────────────────────┐
-│         FRONTEND (1 arquivo)             │
-│   app_migrated.html (7.399 linhas)      │
-│   HTML + CSS + JavaScript monolítico    │
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│         FRONTEND (45 arquivos modulares)           │
+│   index.html + 44 componentes especializados      │
+│   HTML + CSS + JavaScript componentizado          │
+└────────────────────────────────────────────────────┘
               ⬇️ google.script.run
-┌──────────────────────────────────────────┐
-│         BACKEND (15 arquivos)            │
-│   src/00-core/ + src/01-business/       │
-│   Google Apps Script (10.141 linhas)    │
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│         BACKEND (15 arquivos)                      │
+│   src/00-core/ + src/01-business/                 │
+│   Google Apps Script (10.141 linhas)              │
+└────────────────────────────────────────────────────┘
               ⬇️ DatabaseManager
-┌──────────────────────────────────────────┐
-│         DATABASE                         │
-│   Google Sheets (12 tabelas)            │
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│         DATABASE                                   │
+│   Google Sheets (12 tabelas)                      │
+└────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📦 BACKEND - Estrutura Completa
+## 🎨 FRONTEND - Estrutura Modular (45 arquivos)
 
-### 🔴 src/00-core/ (NÚCLEO - NÃO MEXER)
+### 📄 index.html (51 linhas) - Ponto de Entrada
+
+```html
+index.html
+├── Includes ordenados por responsabilidade:
+│   ├── Core (6 arquivos)
+│   ├── Utils (3 arquivos)
+│   ├── UI Components (4 arquivos)
+│   ├── Components específicos (2 arquivos)
+│   ├── Layout (2 arquivos)
+│   └── Views (6 arquivos)
+└── TOTAL: 44 arquivos incluídos
+```
+
+---
+
+### 🔴 src/05-components/core/ - Sistema Base (6 arquivos)
+
+```
+src/05-components/core/
+├── styles.html (~500 linhas)
+│   └── Design System completo
+│       ├── Variáveis CSS (cores, espaçamentos, fontes)
+│       ├── Reset e estilos base
+│       ├── Componentes (cards, buttons, forms, badges)
+│       ├── Layout (grid, flex, containers)
+│       ├── Modais e overlays
+│       ├── Responsive design
+│       └── Dark mode support
+│
+├── state.html (~50 linhas)
+│   └── Gerenciamento de estado global
+│       ├── State.get(key)
+│       ├── State.set(key, value)
+│       ├── State.clear()
+│       └── Cache de dados (categorias, responsáveis)
+│
+├── auth.html (~504 linhas) ⭐ AUTENTICAÇÃO
+│   ├── Funções principais:
+│   │   ├── checkAuthAndInit()
+│   │   ├── showLogin() - Tela de login completa
+│   │   ├── doLogin(event) - Processa login
+│   │   ├── showLoginError(message)
+│   │   ├── showApp() - Mostra aplicação após login
+│   │   ├── logout() - Async, destroi sessão no servidor
+│   │   ├── showLogoutLoading(show) - Overlay de loading
+│   │   └── handleSessionExpired() - Modal de sessão expirada
+│   └── HTML: Loading Overlay para Logout
+│
+├── navigation.html (~167 linhas)
+│   ├── Funções principais:
+│   │   ├── initNavigation() - Inicializa tabs e mobile menu
+│   │   ├── navigateToPage(targetPage) - Navegação entre páginas
+│   │   ├── toggleMobileMenu()
+│   │   ├── closeMobileMenu()
+│   │   ├── toggleTheme() - Alterna dark/light
+│   │   └── loadTheme() - Carrega tema salvo
+│   └── HTML: Mobile Menu Modal
+│
+├── router.html (~3 linhas)
+│   └── Include do app_router via HtmlService
+│       └── Processa src/03-shared/app_router.html
+│
+├── api.html (~150 linhas)
+│   └── Comunicação com backend
+│       ├── apiCall(functionName, ...args) - Wrapper com sessionId
+│       ├── checkSessionBeforeModal() - Valida sessão
+│       └── Tratamento de erros e sessão expirada
+│
+└── init.html (~58 linhas) ⭐ INICIALIZAÇÃO CENTRALIZADA
+    └── Sistema que garante inicialização única
+        ├── Flag: window.systemInitialized
+        ├── initSystem() - Chama TODAS as inicializações
+        │   ├── 1. loadTheme()
+        │   ├── 2. initNavigation()
+        │   ├── 3. initUserMenuDropdown()
+        │   └── 4. checkAuthAndInit()
+        └── DOMContentLoaded listener (único no sistema!)
+```
+
+---
+
+### 🟢 src/05-components/utils/ - Utilitários (3 arquivos)
+
+```
+src/05-components/utils/
+├── dateHelpers.html (~100 linhas)
+│   ├── formatDate(date, format)
+│   ├── parseDate(dateString)
+│   ├── isOverdue(date)
+│   └── Helpers de data/hora
+│
+├── permissionsHelpers.html (~80 linhas)
+│   ├── hasPermission(user, permission)
+│   ├── canEdit(userId, resourceOwnerId)
+│   └── Controle de permissões
+│
+└── activityHelpers.html (~120 linhas)
+    ├── getStatusBadge(status)
+    ├── getPriorityClass(priority)
+    ├── formatActivityCard(activity)
+    └── Helpers específicos de atividades
+```
+
+---
+
+### 🔵 src/05-components/ui/ - Componentes de UI (4 arquivos)
+
+```
+src/05-components/ui/
+├── toast.html (~150 linhas)
+│   ├── showToast(message, type, duration)
+│   ├── Types: success, error, warning, info
+│   └── Auto-hide configurável
+│
+├── loading.html (~100 linhas)
+│   ├── showLoading(message)
+│   ├── hideLoading()
+│   └── Overlay de loading global
+│
+├── emptyState.html (~80 linhas)
+│   ├── renderEmptyState(message, icon)
+│   └── Estados vazios para listas
+│
+└── selectHelpers.html (~207 linhas)
+    ├── populateCategoriesSelect(selectId)
+    ├── populateUsersSelect(selectId)
+    ├── preLoadCachedData() - Carrega cache de categorias/responsáveis
+    └── Helpers para popular selects
+```
+
+---
+
+### 🟡 src/05-components/ - Componentes Específicos (4 arquivos)
+
+```
+src/05-components/
+├── userMenuDropdown.html (~434 linhas)
+│   ├── Estrutura:
+│   │   ├── Estilos CSS do dropdown
+│   │   ├── Template HTML
+│   │   └── JavaScript de controle
+│   ├── Funções:
+│   │   ├── initUserMenuDropdown() - Inicializa (chamado em init.html)
+│   │   ├── toggleUserMenu()
+│   │   ├── openUserMenu() / closeUserMenu()
+│   │   ├── loadUserMenuItems() - Carrega da planilha
+│   │   ├── renderUserMenuItems(items)
+│   │   ├── handleMenuItemClick(acao, destino)
+│   │   └── updateDropdownUserInfo(user)
+│   └── Integração com menu.gs (backend)
+│
+├── filters.html (~514 linhas) ⭐ SISTEMA DE FILTROS
+│   ├── JavaScript:
+│   │   ├── Estado: filtrosState { status, categorias, periodo, responsavel, searchText }
+│   │   ├── initFiltrosSystem() - Lazy init (chamado em activities)
+│   │   ├── aplicarFiltrosPadrao() - Pendente + Usuário logado
+│   │   ├── abrirModalFiltros() / fecharModalFiltros()
+│   │   ├── handleCheckboxChange(checkbox)
+│   │   ├── aplicarFiltros()
+│   │   ├── atualizarContadorFiltros()
+│   │   ├── renderizarChips() - Chips de filtros ativos
+│   │   ├── criarChip(nome, cor, tipo, valor)
+│   │   ├── removerFiltro(tipo, valor)
+│   │   ├── limparTodosFiltros()
+│   │   ├── carregarCategorias(callback) - Usa cache
+│   │   ├── carregarResponsaveis(callback) - Usa cache
+│   │   ├── populateCategoriasOptions()
+│   │   ├── populateResponsaveisOptions()
+│   │   ├── filtrarAtividades() - Recarrega lista
+│   │   ├── filterActivitiesByText(searchText)
+│   │   ├── clearSearchText()
+│   │   └── window.getFiltrosAtivos() - Exposta globalmente
+│   └── HTML: Modal completo de filtros
+│       ├── Backdrop
+│       ├── Header
+│       ├── Seções: Status, Categorias, Período, Responsável
+│       └── Footer com botão Aplicar
+│
+├── layout.html (~150 linhas)
+│   └── Estrutura HTML principal
+│       ├── Login screen placeholder
+│       ├── App header (logo + user menu + theme toggle)
+│       ├── Navigation tabs (desktop)
+│       ├── Mobile navigation
+│       └── App container (páginas são inseridas aqui)
+│
+└── layoutClose.html (~5 linhas)
+    └── Fecha tags abertas em layout.html
+```
+
+---
+
+### 🟣 src/04-views/ - Páginas da Aplicação (6 arquivos)
+
+```
+src/04-views/
+├── dashboard.html (~100 linhas)
+│   └── Página inicial (estatísticas e resumo)
+│
+├── activities.html (~2.485 linhas) ⭐⭐⭐ MAIOR ARQUIVO
+│   ├── HTML: Estrutura da página de atividades
+│   ├── JavaScript: Sistema completo de atividades
+│   │   ├── initActivities() - Lazy init ao entrar na página
+│   │   ├── loadActivities() - Carrega lista com filtros
+│   │   ├── renderActivities(activities) - Renderiza cards
+│   │   ├── applyActivityFilters(activity) - Aplica filtros locais
+│   │   ├── openActivityModal(mode, activityId)
+│   │   ├── loadActivityModalData() - Popula selects
+│   │   ├── submitActivity(event) - Cria nova atividade
+│   │   ├── openEditActivityModal(activityId)
+│   │   ├── updateActivity(event) - Atualiza existente
+│   │   ├── completeActivity(activityId)
+│   │   ├── deleteActivity(activityId)
+│   │   │
+│   │   ├── SISTEMA DE ALVOS (10+ funções):
+│   │   │   ├── toggleTargetsSection(mode, activityId)
+│   │   │   ├── searchMembers(criteria, mode)
+│   │   │   ├── renderTargetsList(members, mode)
+│   │   │   ├── toggleTargetSelection(memberId, mode)
+│   │   │   ├── saveTargetsAfterActivity(activityId)
+│   │   │   └── clearTargetsState()
+│   │   │
+│   │   ├── SISTEMA DE PARTICIPAÇÕES (15+ funções):
+│   │   │   ├── openParticipantsModal(activityId)
+│   │   │   ├── loadActivityForParticipants(activityId)
+│   │   │   ├── renderParticipantsList(participants)
+│   │   │   ├── togglePresence(participacaoId, field)
+│   │   │   ├── saveParticipants(activityId)
+│   │   │   └── closeParticipantsModal()
+│   │   │
+│   │   ├── CACHE E PRÉ-CARREGAMENTO:
+│   │   │   ├── preLoadCachedData()
+│   │   │   ├── loadCurrentUser()
+│   │   │   └── window.allMembersCache (Map global)
+│   │   │
+│   │   └── MODAIS:
+│   │       ├── Modal criar atividade (inline)
+│   │       ├── Modal editar atividade (inline)
+│   │       ├── Modal participantes (inline)
+│   │       └── Seção de alvos (inline, lista dupla)
+│   │
+│   └── Integração com filters.html via window.getFiltrosAtivos()
+│
+├── members.html (~200 linhas)
+│   ├── loadMembers(filters)
+│   ├── renderMembers(members)
+│   ├── openMemberModal(mode, memberId)
+│   └── CRUD completo de membros
+│
+├── practices.html (~271 linhas)
+│   ├── Sistema de práticas diárias:
+│   │   ├── fixedPractices (3 práticas fixas)
+│   │   ├── initPractices()
+│   │   ├── selectLast7Days()
+│   │   ├── renderDays() - Renderiza grid de dias
+│   │   ├── renderPractice(practice, dateKey)
+│   │   ├── setYesNoValue(dateKey, practiceId, value)
+│   │   ├── incrementPractice(dateKey, practiceId)
+│   │   ├── updateQuantity(dateKey, practiceId, newValue)
+│   │   ├── getDayProgress(dateKey)
+│   │   ├── openCalendar() / closeCalendar()
+│   │   └── updateDaysCount()
+│   └── HTML: Modal do Calendário (inline)
+│
+├── reports.html (~378 linhas)
+│   ├── initReports()
+│   ├── loadReportsData()
+│   ├── renderCharts(data)
+│   └── Estatísticas e gráficos
+│
+└── settings.html (~50 linhas)
+    └── Página de configurações (futuro)
+```
+
+---
+
+### 🔧 src/03-shared/ - Componentes Compartilhados (1 arquivo)
+
+```
+src/03-shared/
+└── app_router.html (~95 linhas)
+    └── Router baseado em hash
+        ├── Router.start()
+        ├── Router.mount(view)
+        ├── Router.resolve() - Proteção de rotas
+        └── Router.go(hash)
+```
+
+---
+
+## 📊 MÉTRICAS FRONTEND - NOVA ESTRUTURA
+
+### Distribuição de Arquivos
+
+```
+Frontend Total:          45 arquivos
+├── index.html:           1 arquivo (51 linhas)
+├── Core:                 6 arquivos (~1.432 linhas)
+├── Utils:                3 arquivos (~300 linhas)
+├── UI:                   4 arquivos (~537 linhas)
+├── Components:           4 arquivos (~1.103 linhas)
+├── Views:                6 arquivos (~3.484 linhas)
+└── Shared:               1 arquivo (95 linhas)
+──────────────────────────────────────────────
+Total Frontend:      ~7.002 linhas (modular)
+
+vs. Antes:           ~7.399 linhas (monolítico)
+```
+
+### Redução de Complexidade
+
+```
+ANTES:
+✗ app_migrated.html - 8.298 linhas monolíticas
+✗ Difícil manutenção
+✗ Inicializações duplicadas
+✗ Código acoplado
+
+DEPOIS:
+✓ 45 arquivos modulares
+✓ Média de 156 linhas por arquivo
+✓ Separação de responsabilidades clara
+✓ Inicialização centralizada (init.html)
+✓ Componentes reutilizáveis
+✓ Código desacoplado
+```
+
+---
+
+## 📦 BACKEND - Estrutura Completa (Mantida)
+
+### 🔴 src/00-core/ (NÚCLEO - 6 arquivos)
 
 ```
 src/00-core/
 ├── 00_config.gs (327 linhas)
-│   └── Configurações centralizadas do sistema
-│       ├── getAppConfig()
-│       ├── getExistingTables()
-│       └── getTableConfig(tableName)
+│   └── Configurações centralizadas
 │
-├── database_manager.gs (3.688 linhas) ⭐ CORAÇÃO DO SISTEMA
+├── database_manager.gs (3.688 linhas) ⭐
 │   ├── CRUD Completo
-│   │   ├── insert(tableName, data)
-│   │   ├── query(tableName, filters, options)
-│   │   ├── update(tableName, id, data)
-│   │   └── delete(tableName, id)
 │   ├── Cache Multi-Camada
-│   ├── Logger Integrado (anti-recursão)
-│   ├── ValidationEngine (FK + business rules)
+│   ├── Logger Integrado
+│   ├── ValidationEngine
 │   └── Transaction Support
 │
-├── data_dictionary.gs (1.863 linhas) ⭐ FONTE DA VERDADE
+├── data_dictionary.gs (1.863 linhas) ⭐
 │   └── Schema de 12 tabelas
-│       ├── usuarios (8 campos)
-│       ├── atividades (15+ campos)
-│       ├── membros (12 campos)
-│       ├── participacao (11 campos) - Sistema de Alvos
-│       ├── sessoes (8 campos)
-│       ├── categorias_atividades (5 campos)
-│       ├── menu (7 campos)
-│       ├── planilhas (5 campos)
-│       ├── system_logs (10 campos)
-│       ├── performance_logs (13 campos)
-│       └── [2 tabelas planejadas]
 │
 ├── performance_monitor.gs (775 linhas)
-│   ├── start(operationName)
-│   ├── end(operationName)
-│   ├── getMetrics()
-│   └── getAdvancedReport()
+│   └── Métricas de performance
 │
 ├── session_manager.gs (509 linhas)
-│   ├── createSession(userId, deviceInfo)
-│   ├── validateSession(sessionId)
-│   ├── destroySession(sessionId)
-│   ├── cleanupExpiredSessions()
-│   └── getSessionStats()
+│   └── Gestão de sessões
 │
 └── utils.gs (199 linhas)
-    ├── getPlanilhas_()
-    ├── readTableByNome_(nome)
-    ├── generateSequentialId_(prefix)
     └── Funções auxiliares gerais
 ```
 
 ---
 
-### 🟢 src/01-business/ (LÓGICA DE NEGÓCIO)
+### 🟢 src/01-business/ (LÓGICA DE NEGÓCIO - 6 arquivos)
 
 ```
 src/01-business/
 ├── activities.gs (533 linhas)
-│   ├── APIs Principais
-│   │   ├── listActivitiesApi(filters)
-│   │   ├── createActivity(activityData, creatorUid)
-│   │   ├── getActivityById(activityId)
-│   │   ├── updateActivity(activityData)
-│   │   └── completeActivity(activityId)
-│   └── CRUD completo de atividades
+│   └── CRUD de atividades
 │
 ├── activities_categories.gs (136 linhas)
-│   ├── listCategoriasAtividadesApi()
-│   ├── createCategory(categoryData)
-│   ├── updateCategory(categoryId, data)
 │   └── Gestão de categorias
 │
 ├── auth.gs (235 linhas)
-│   ├── authenticateUser(login, password)
-│   ├── getCurrentUser()
-│   ├── loginUser(credentials)
-│   ├── logoutUser(sessionId)
-│   └── Sistema de autenticação SHA-256
+│   └── Autenticação SHA-256
 │
 ├── members.gs (280 linhas)
-│   ├── listMembersApi(filters)
-│   ├── searchMembersByCriteria(criteria)
-│   ├── createMember(memberData)
-│   ├── updateMember(memberId, data)
-│   └── Sistema de tags + gestão completa
+│   └── Gestão de membros
 │
 ├── menu.gs (45 linhas)
-│   ├── getMenuItems()
-│   ├── buildMenu(userType)
-│   └── Menu dinâmico por permissões
+│   └── Menu dinâmico
 │
-└── participacoes.gs (1.222 linhas) ⭐ SISTEMA DE ALVOS
-    ├── APIs Principais
-    │   ├── listParticipacoes(activityId)
-    │   ├── saveParticipacaoDirectly(data)
-    │   ├── defineTargets(activityId, memberIds)
-    │   └── updatePresence(participacaoId, status)
-    └── Sistema completo de participação
-        ├── Alvos (tipo='alvo')
-        ├── Extras (tipo='extra')
-        └── Estatísticas de presença
+└── participacoes.gs (1.222 linhas) ⭐
+    └── Sistema de alvos e participações
 ```
 
 ---
 
-### 🔵 src/02-api/ (PONTOS DE ENTRADA)
+### 🔵 src/02-api/ (PONTOS DE ENTRADA - 2 arquivos)
 
 ```
 src/02-api/
-├── main_migrated.gs (11 linhas) ✅ ATIVO
+├── main.gs (11 linhas) ✅ ATIVO
 │   ├── doGet(e) - Ponto de entrada web
 │   └── include(filename) - Sistema de includes
 │
 └── usuarios_api.gs (833 linhas)
-    ├── listUsuariosApi()
-    ├── createActivity(activityData, creatorUid)
-    ├── updateActivityWithTargets(activityData)
-    ├── getCurrentLoggedUser()
     └── APIs de usuários e atividades
 ```
 
-**Total Backend:** 10.141 linhas em 15 arquivos
+**Total Backend:** 10.141 linhas em 15 arquivos (inalterado)
 
 ---
 
-## 🎨 FRONTEND - App Monolítico
-
-### app_migrated.html (7.399 linhas)
-
-```
-app_migrated.html
-├── [LINHAS 1-150] CSS (Design System)
-│   ├── Variáveis CSS (cores, espaçamentos)
-│   ├── Estilos base
-│   ├── Componentes (cards, buttons, forms)
-│   └── Responsive design
-│
-├── [LINHAS 151-2.500] HTML (Interface Completa)
-│   ├── Login Screen
-│   ├── Header + User Menu
-│   ├── Navigation Tabs
-│   ├── Dashboard Page
-│   ├── Activities Page
-│   │   ├── Lista de atividades
-│   │   ├── Modal nova atividade
-│   │   └── Modal de alvos (lista dupla)
-│   ├── Members Page
-│   ├── Modals
-│   │   ├── Activity modal
-│   │   ├── Participants modal
-│   │   ├── Targets modal (Sistema de Alvos)
-│   │   └── Filter modal
-│   └── Empty States
-│
-└── [LINHAS 2.501-7.399] JavaScript (97 funções)
-    ├── Autenticação (7 funções)
-    │   ├── checkAuthAndInit()
-    │   ├── showLogin() / hideLogin()
-    │   ├── logout()
-    │   └── Session management
-    │
-    ├── Navegação (4 funções)
-    │   ├── showTab(tabName)
-    │   ├── initApp()
-    │   └── Router básico
-    │
-    ├── Atividades (20+ funções)
-    │   ├── loadActivities()
-    │   ├── renderActivities(activities)
-    │   ├── openActivityModal(mode, activityId)
-    │   ├── saveActivity()
-    │   ├── completeActivity(activityId)
-    │   └── Filtros e busca
-    │
-    ├── Sistema de Alvos (10+ funções) ⭐
-    │   ├── toggleTargetsSection()
-    │   ├── searchMembers(criteria)
-    │   ├── renderTargetsList(members)
-    │   ├── toggleTargetSelection(memberId)
-    │   ├── saveTargetsDirectly()
-    │   └── Lista dupla (disponíveis + selecionados)
-    │
-    ├── Membros (15+ funções)
-    │   ├── loadMembers()
-    │   ├── renderMembers(members)
-    │   ├── searchMembers()
-    │   └── Gestão completa
-    │
-    ├── Participações (15+ funções)
-    │   ├── openParticipantsModal(activityId)
-    │   ├── loadParticipants(activityId)
-    │   ├── togglePresence(participacaoId)
-    │   ├── saveParticipacao()
-    │   └── Controle de presença
-    │
-    ├── Filtros e Busca (8 funções)
-    │   ├── openFilterModal()
-    │   ├── applyFilters(filters)
-    │   ├── clearFilters()
-    │   └── Filtros avançados
-    │
-    └── UI e Utilitários (15+ funções)
-        ├── showToast(message, type)
-        ├── showLoading() / hideLoading()
-        ├── createModal(content)
-        ├── closeModal()
-        └── Helpers de interface
-```
-
-**Total Frontend:** 7.399 linhas em 1 arquivo
-
----
-
-## 🗄️ DATABASE - 12 Tabelas
+## 🗄️ DATABASE - 12 Tabelas (Inalterado)
 
 ### Tabelas Core (5 principais)
 
 ```
 1. usuarios (9 campos)
-   PK: uid (gerado - padrão U001)
-   ├── login (único, max 50 chars)
-   ├── pin (4+ dígitos, criptografado)
-   ├── nome (requerido, max 100 chars)
-   ├── status (Ativo/Inativo, default: Ativo)
-   ├── criado_em (datetime, auto)
-   ├── atualizado_em (datetime, opcional)
-   ├── ultimo_acesso (datetime, opcional)
-   └── deleted (soft delete: '' ou 'x')
+   PK: uid (U001, U002...)
 
-2. atividades (campos conforme planilha)
-   PK: id (padrão ACT-XXXX)
-   ├── titulo (requerido)
-   ├── descricao (opcional)
-   ├── categorias (array/JSON)
-   ├── data, hora (datetime)
-   ├── local (opcional)
-   ├── atribuido_uid (FK → usuarios.uid)
-   ├── status (default: Pendente)
-   ├── tags (opcional)
-   ├── criado_em, atualizado_em (auto)
-   └── deleted (soft delete: '' ou 'x')
+2. atividades (15+ campos)
+   PK: id (ACT-0001, ACT-0002...)
+   FK: atribuido_uid → usuarios.uid
 
 3. membros (20+ campos)
-   PK: codigo_sequencial (1, 2, 3... gerado)
-   ├── codigo_mestre (opcional)
-   ├── nome (requerido, max 100)
-   ├── status (Ativo/Licença/Afastado/Graduado/Transferido/Desligado)
-   ├── dojo (max 100, opcional)
-   ├── categoria_grupo (opcional)
-   ├── faixa_etaria (opcional)
-   ├── cpf (opcional)
-   ├── rg (opcional)
-   ├── data_nascimento (date, opcional)
-   ├── telefone (opcional)
-   ├── email (opcional)
-   ├── endereco_completo (opcional)
-   ├── tags (opcional)
-   ├── observacoes (text longo, opcional)
-   ├── Datas: desligamento, transferencia_saida/entrada, afastado, licenca
-   └── deleted (soft delete: '' ou 'x')
+   PK: codigo_sequencial (1, 2, 3...)
 
-4. participacoes (12 campos) ⭐ CRÍTICA PARA SISTEMA DE ALVOS
-   PK: id (PART-0001)
-   ├── FK: id_atividade → atividades.id
-   ├── FK: id_membro → membros.codigo_sequencial
-   ├── tipo ('alvo' ou 'extra')
-   ├── confirmou ('sim'/'nao', opcional)
-   ├── confirmado_em (datetime, opcional)
-   ├── participou ('sim'/'nao', opcional)
-   ├── chegou_tarde ('sim'/'nao', opcional)
-   ├── saiu_cedo ('sim'/'nao', opcional)
-   ├── status_participacao (enum: Confirmado/Rejeitado/Presente/Ausente/Justificado)
-   ├── justificativa (text, opcional)
-   ├── observacoes (text, opcional)
-   ├── marcado_em (datetime, opcional)
-   ├── marcado_por (FK → usuarios.uid, opcional)
-   └── deleted (soft delete: '' ou 'x')
+4. participacoes (12 campos) ⭐ SISTEMA DE ALVOS
+   PK: id (PART-0001...)
+   FK: id_atividade → atividades.id
+   FK: id_membro → membros.codigo_sequencial
+   Tipo: 'alvo' ou 'extra'
 
 5. sessoes (10 campos)
-   PK: id (SES-001)
-   ├── session_id (único: sess_timestamp_random)
-   ├── FK: id_usuario → usuarios.uid
-   ├── device_info (JSON, opcional)
-   ├── ip_address (opcional)
-   ├── criado_em (datetime, auto)
-   ├── expira_em (datetime, requerido)
-   ├── ultima_atividade (datetime, opcional)
-   ├── ativo ('sim'/'nao')
-   ├── destruido_em (datetime, opcional)
-   └── deleted (soft delete: '' ou 'x')
+   PK: id (SES-001...)
+   FK: id_usuario → usuarios.uid
 ```
 
-### Tabelas Auxiliares (5 tabelas)
+### Tabelas Auxiliares (7 tabelas)
 
 ```
-6. categorias_atividades (7 campos)
-   PK: id (CAT-001)
-   ├── nome (requerido, max 100)
-   ├── descricao (opcional)
-   ├── cor (hex, opcional)
-   ├── icone (opcional)
-   ├── status (Ativo/Inativo, default: Ativo)
-   ├── criado_em (datetime, auto)
-   └── deleted (soft delete: '' ou 'x')
-
-7. menu (9 campos)
-   PK: id (MENU-001)
-   ├── titulo (requerido, max 50)
-   ├── icone (opcional)
-   ├── ordem (número, default: 999)
-   ├── acao (route/function/external)
-   ├── destino (URL ou função)
-   ├── permissoes (array/JSON, opcional)
-   ├── status (Ativo/Inativo, default: Ativo)
-   ├── criado_em (datetime, auto)
-   └── deleted (soft delete: '' ou 'x')
-
-8. planilhas (6 campos) - Metadata
-   PK: nome (nome da tabela)
-   ├── ssid (spreadsheet ID, requerido)
-   ├── aba (sheet name, requerido)
-   ├── a1_range (range, default: A1:Z)
-   ├── descricao (opcional)
-   └── deleted (soft delete: '' ou 'x')
-
-9. performance_logs (17 campos)
-   PK: id (PERF-timestamp-random)
-   ├── operation_name (requerido)
-   ├── operation_type (query/insert/update/delete)
-   ├── start_time, end_time, duration_ms (métricas)
-   ├── cache_hit ('sim'/'nao')
-   ├── cache_key (opcional)
-   ├── query_params (JSON, opcional)
-   ├── result_count (número)
-   ├── memory_used (bytes)
-   ├── id_usuario (FK → usuarios.uid, opcional)
-   ├── session_id (FK → sessoes.session_id, opcional)
-   ├── error_message (text, opcional)
-   ├── stack_trace (text, opcional)
-   ├── criado_em (datetime, auto)
-   └── deleted (soft delete: '' ou 'x')
-
-10. system_logs (11 campos)
-    PK: id (LOG-timestamp-random)
-    ├── level (DEBUG/INFO/WARN/ERROR)
-    ├── context (módulo/funcionalidade)
-    ├── message (requerido)
-    ├── data (JSON, opcional)
-    ├── id_usuario (FK → usuarios.uid, opcional)
-    ├── session_id (FK → sessoes.session_id, opcional)
-    ├── stack_trace (text, para erros)
-    ├── user_agent (opcional)
-    ├── criado_em (datetime, auto)
-    └── deleted (soft delete: '' ou 'x')
-```
-
-### Tabelas Planejadas (3 tabelas)
-
-```
+6. categorias_atividades
+7. menu
+8. planilhas
+9. performance_logs
+10. system_logs
 11. notificacoes (planejado)
-    ├── Sistema de notificações
-    └── Estrutura a definir
-
 12. preferencias (planejado)
-    ├── Preferências por usuário
-    └── Estrutura a definir
-
-13. historico (10+ campos planejado)
-    PK: id (HIS-001)
-    ├── FK: id_usuario → usuarios.uid
-    ├── acao (CREATE/UPDATE/DELETE/LOGIN/LOGOUT/VIEW)
-    ├── tabela_alvo (nome da tabela)
-    ├── id_alvo (ID do registro)
-    ├── detalhes (JSON com mudanças)
-    ├── user_agent (opcional)
-    ├── criado_em (datetime, auto)
-    └── deleted (soft delete: '' ou 'x')
 ```
 
-### Relacionamentos
+---
+
+## 🔄 FLUXO DE INICIALIZAÇÃO (NOVO!)
+
+### Sequência de Carregamento
 
 ```
-usuarios (1) ──→ (N) sessoes
-usuarios (1) ──→ (N) atividades (como criador)
-atividades (1) ──→ (N) participacao
-membros (1) ──→ (N) participacao ⭐ SISTEMA DE ALVOS
-categorias_atividades (1) ──→ (N) atividades
+1. index.html carregado
+   ↓
+2. Includes processados em ordem:
+   ├── styles.html (CSS)
+   ├── state.html (Estado global)
+   ├── auth.html (Autenticação)
+   ├── navigation.html (Navegação)
+   ├── router.html (Roteamento)
+   ├── api.html (Comunicação)
+   ├── init.html ⭐ INICIALIZAÇÃO
+   ├── ... (utils, ui, components)
+   ├── ... (views)
+   └── layoutClose.html
+   ↓
+3. init.html executa (UMA ÚNICA VEZ):
+   ├── loadTheme() - Carrega tema salvo
+   ├── initNavigation() - Inicializa navegação
+   ├── initUserMenuDropdown() - Inicializa menu
+   └── checkAuthAndInit() - Verifica sessão
+       ↓
+       ├── SE logado → showApp()
+       │   ├── Mostra interface
+       │   ├── loadCurrentUser()
+       │   └── preLoadCachedData()
+       │
+       └── SE não logado → showLogin()
+           └── Mostra tela de login
+   ↓
+4. Lazy Initialization (ao navegar):
+   ├── initActivities() - Ao abrir Atividades
+   │   └── initFiltrosSystem() - Primeira vez
+   ├── initPractices() - Ao abrir Práticas
+   └── initReports() - Ao abrir Relatórios
 ```
 
 ---
@@ -437,7 +526,7 @@ categorias_atividades (1) ──→ (N) atividades
 ### 1. Login do Usuário
 
 ```
-Frontend: handleLogin() → Valida campos
+Frontend: doLogin() (auth.html)
     ↓
 google.script.run.authenticateUser(usuario, password)
     ↓
@@ -447,15 +536,63 @@ database_manager.gs → insert('sessoes', sessionData)
     ↓
 Retorno: { success: true, sessionId, uid, nome }
     ↓
-Frontend: localStorage + showApp() → Remove login, mostra dashboard
+Frontend: localStorage + showApp() → Mostra dashboard
 ```
 
 ---
 
-### 2. Sistema de Alvos (Definir Quem Convidar) ⭐
+### 2. Sistema de Filtros (NOVO FLUXO!)
 
 ```
-Frontend: toggleTargetsSection(mode, activityId)
+Frontend: Navega para Atividades
+    ↓
+initActivities() (activities.html)
+    ├── Inicializa filtros (primeira vez)
+    │   └── initFiltrosSystem() (filters.html)
+    │       ├── Event listeners
+    │       └── aplicarFiltrosPadrao()
+    │           ├── Status: Pendente ✓
+    │           └── Responsável: Usuário logado ✓
+    ↓
+loadActivities()
+    ├── Pega filtros: window.getFiltrosAtivos()
+    └── google.script.run.listActivitiesApi(filtrosState)
+        ↓
+        Backend: activities.gs → Query filtrada
+        ↓
+        Retorno: { ok: true, items: [...] }
+    ↓
+applyActivityFilters() - Filtros locais adicionais
+    ├── Busca por texto (searchText)
+    └── Filtros de período (atrasadas, hoje, etc.)
+    ↓
+renderActivities() - Renderiza cards
+```
+
+**Abrir Modal de Filtros:**
+```
+abrirModalFiltros() (filters.html)
+    ├── Modal style.display = 'block'
+    ├── carregarCategorias() - Usa window.cachedCategorias
+    ├── carregarResponsaveis() - Usa window.cachedResponsaveis
+    └── sincronizarCheckboxesComEstado()
+    ↓
+Usuário marca/desmarca checkboxes
+    ↓
+handleCheckboxChange() - Atualiza filtrosState
+    ↓
+aplicarFiltros()
+    ├── fecharModalFiltros()
+    ├── renderizarChips() - Mostra chips ativos
+    └── filtrarAtividades() → loadActivities()
+```
+
+---
+
+### 3. Sistema de Alvos (Mantido)
+
+```
+Frontend: toggleTargetsSection(mode, activityId) (activities.html)
     ├── Mostra seção inline com filtros e duas listas
     └── Inicializa selectedTargets = new Set()
     ↓
@@ -463,7 +600,7 @@ searchMembers(mode) → Aplica filtros
     ↓
 google.script.run.searchMembersByCriteria(filters)
     ↓
-Backend: members.gs → Query filtrada na tabela membros
+Backend: members.gs → Query filtrada
     ↓
 Frontend: Renderiza listas duplas (disponíveis + selecionados)
     ├── Cache: window.allMembersCache.set(codigo, membro)
@@ -475,187 +612,88 @@ submitActivity() ou updateActivity()
         ↓
         google.script.run.defineTargets(activityId, memberIds, uid)
         ↓
-        Backend: participacoes.gs → Valida + batch insert tipo='alvo'
-        ↓
-        Retorno: { ok: true, created: X }
+        Backend: participacoes.gs → Batch insert tipo='alvo'
     ↓
-Frontend: Toast + limpa caches + recarrega lista
+Toast + limpa caches + recarrega lista
 ```
 
 ---
 
-### 3. Controlar Presença em Atividade ⭐
-
-```
-Frontend: openParticipantsModal(activityId)
-    ├── Cria modal HTML dedicado
-    └── loadActivityForParticipants()
-        ↓
-        google.script.run.listParticipacoes(activityId)
-        ↓
-        Backend: participacoes.gs → Query com JOINs
-            ├── participacao + membros + atividades
-            └── Filtra: id_atividade e deleted != 'x'
-        ↓
-        Retorno: Array com dados completos de cada participação
-    ↓
-Frontend: renderParticipantsList()
-    ├── Agrupa por tipo (alvos vs extras)
-    ├── Cards com checkboxes de presença
-    └── togglePresence() atualiza local
-    ↓
-saveParticipants(activityId)
-    ├── Para cada modificação:
-    │   └── google.script.run.saveParticipacaoDirectly(activityId, memberId, dados, uid)
-    ↓
-Backend: participacoes.gs → update() com status consolidado
-    ↓
-Frontend: Toast + fecha modal + recarrega lista
-```
-
----
-
-### 4. Criar Nova Atividade ⭐
-
-```
-Frontend: openActivityModal()
-    ├── createActivityModal() → Gera HTML
-    ├── loadActivityModalData() → Popula selects (categorias, usuários)
-    └── Focus no primeiro campo
-    ↓
-Usuário: Preenche formulário + (Opcional) Define alvos via Fluxo 2
-    ↓
-submitActivity(event)
-    ├── Valida campos obrigatórios
-    ├── showCreateActivityLoading(true)
-    └── google.script.run.createActivity(formData, uid)
-        ↓
-        Backend: activities.gs → Gera ID + metadata
-            └── DatabaseManager.insert('atividades', data)
-        ↓
-        Retorno: { ok: true, id: 'ACT-XXX' }
-    ↓
-Frontend: Se tem alvos → saveTargetsAfterActivity(id)
-    └── Senão → Toast + fecha modal + recarrega
-```
-
----
-
-## 📍 ONDE ENCONTRAR COISAS
+## 📍 ONDE ENCONTRAR COISAS (ATUALIZADO)
 
 ### Tabela de Referência Rápida
 
 | Preciso de... | Está em... | Arquivo/Função |
 |---------------|-----------|----------------|
+| **FRONTEND - CORE** |
+| Inicialização do sistema | src/05-components/core/init.html | initSystem() ⭐ |
+| Tela de login | src/05-components/core/auth.html | showLogin() |
+| Autenticação | src/05-components/core/auth.html | checkAuthAndInit() |
+| Logout | src/05-components/core/auth.html | logout() |
+| Sessão expirada | src/05-components/core/auth.html | handleSessionExpired() |
+| Navegação entre páginas | src/05-components/core/navigation.html | navigateToPage() |
+| Menu mobile | src/05-components/core/navigation.html | toggleMobileMenu() |
+| Tema dark/light | src/05-components/core/navigation.html | toggleTheme() |
+| Comunicação com backend | src/05-components/core/api.html | apiCall() |
+| Router | src/05-components/core/router.html | Processa app_router.html |
+| **FRONTEND - UI** |
+| Toast messages | src/05-components/ui/toast.html | showToast() |
+| Loading overlay | src/05-components/ui/loading.html | showLoading() |
+| Empty states | src/05-components/ui/emptyState.html | renderEmptyState() |
+| Popular selects | src/05-components/ui/selectHelpers.html | populate*Select() |
+| **FRONTEND - COMPONENTS** |
+| Menu dropdown usuário | src/05-components/userMenuDropdown.html | initUserMenuDropdown() |
+| Sistema de filtros | src/05-components/filters.html | initFiltrosSystem() ⭐ |
+| Aplicar filtros padrão | src/05-components/filters.html | aplicarFiltrosPadrao() |
+| Modal de filtros | src/05-components/filters.html | abrirModalFiltros() |
+| Chips de filtros | src/05-components/filters.html | renderizarChips() |
+| Obter filtros ativos | src/05-components/filters.html | window.getFiltrosAtivos() |
+| Layout principal | src/05-components/layout.html | Estrutura HTML |
+| **FRONTEND - VIEWS** |
+| Dashboard | src/04-views/dashboard.html | -- |
+| Atividades | src/04-views/activities.html | initActivities() ⭐ |
+| Lista atividades | src/04-views/activities.html | loadActivities() |
+| Nova atividade | src/04-views/activities.html | submitActivity() |
+| Editar atividade | src/04-views/activities.html | updateActivity() |
+| Sistema de alvos | src/04-views/activities.html | toggleTargetsSection() |
+| Modal participantes | src/04-views/activities.html | openParticipantsModal() |
+| Membros | src/04-views/members.html | loadMembers() |
+| Práticas | src/04-views/practices.html | initPractices() |
+| Modal calendário | src/04-views/practices.html | openCalendar() |
+| Relatórios | src/04-views/reports.html | initReports() |
 | **BACKEND** |
-| Login usuário | auth.gs | loginUser() |
-| Autenticar (API) | usuarios_api.gs | authenticateUser() ⭐ |
+| Login API | usuarios_api.gs | authenticateUser() |
 | Listar atividades | activities.gs | listActivitiesApi() |
-| Criar atividade | usuarios_api.gs ⚠️ | createActivity() ⭐ |
-| Atualizar atividade | usuarios_api.gs ⚠️ | updateActivity() ⭐ |
-| Completar atividade | usuarios_api.gs ⚠️ | completeActivity() ⭐ |
-| Buscar membros (alvos) | participacoes.gs ⚠️ | searchMembersByCriteria() ⭐ |
-| Listar membros | members.gs | listMembersApi() |
+| Criar atividade | usuarios_api.gs | createActivity() |
+| Listar categorias | activities_categories.gs | listCategoriasAtividadesApi() |
+| Listar usuários | usuarios_api.gs | listUsuariosApi() |
 | Definir alvos | participacoes.gs | defineTargets() |
 | Listar participações | participacoes.gs | listParticipacoes() |
-| Salvar presença | participacoes.gs | saveParticipacaoDirectly() |
-| Adicionar campo BD | data_dictionary.gs | Seção da tabela |
 | CRUD genérico | database_manager.gs | insert/query/update/delete |
 | Criar sessão | session_manager.gs | createSession() |
 | Validar sessão | session_manager.gs | validateSession() |
-| Listar categorias | activities_categories.gs | listCategoriasAtividadesApi() |
-| **FRONTEND** |
-| Tela de login | app_migrated.html | showLogin() |
-| Autenticação | app_migrated.html | checkAuthAndInit() |
-| Navegação | app_migrated.html | showTab() |
-| Lista atividades | app_migrated.html | loadActivities() |
-| Modal nova atividade | app_migrated.html | openActivityModal() |
-| Submit nova atividade | app_migrated.html | submitActivity() |
-| Modal editar atividade | app_migrated.html | openEditActivityModal() |
-| Update atividade (FE) | app_migrated.html | updateActivity() |
-| Sistema de alvos | app_migrated.html | toggleTargetsSection() |
-| Buscar membros (FE) | app_migrated.html | searchMembers() |
-| Selecionar alvo | app_migrated.html | toggleTargetSelection() |
-| Salvar alvos após criar | app_migrated.html | saveTargetsAfterActivity() |
-| Modal participantes | app_migrated.html | openParticipantsModal() |
-| Carregar participantes | app_migrated.html | loadActivityForParticipants() |
-| Toggle presença | app_migrated.html | togglePresence() |
-| Salvar participações | app_migrated.html | saveParticipants() |
-| Lista membros | app_migrated.html | loadMembers() |
-| Estilos CSS | app_migrated.html | Linhas 1-150 |
-| Toast messages | app_migrated.html | showToast() |
-| Loading states | app_migrated.html | show*Loading() |
 
 **Legenda:**
-- ⭐ = Função usada pelo frontend (existe versão duplicada em outro arquivo)
-- ⚠️ = Função existe em múltiplos lugares (indicado qual o frontend usa)
-- (FE) = Função frontend que chama backend com mesmo nome
-
-### 📝 Notas sobre Duplicações
-
-**Funções que existem em múltiplos arquivos:**
-
-1. **createActivity()**
-   - `activities.gs` → Versão antiga/helper (~50 linhas) - NÃO USADA
-   - `usuarios_api.gs` → Versão completa usada pelo frontend (~200 linhas) ⭐
-
-2. **updateActivity()**
-   - `activities.gs` → Helper core (~100 linhas)
-   - `usuarios_api.gs` → API usada pelo frontend ⭐
-
-3. **completeActivity()**
-   - `activities.gs` → Helper core (~50 linhas)
-   - `usuarios_api.gs` → API usada pelo frontend ⭐
-
-4. **authenticateUser()**
-   - `auth.gs` → Helper interno
-   - `usuarios_api.gs` → API usada pelo frontend ⭐
-
-5. **searchMembersByCriteria()**
-   - Localização: `participacoes.gs` (não está em `members.gs`)
-   - Usado para buscar membros no sistema de alvos
-
-6. **listCategoriasAtividadesApi()**
-   - `activities_categories.gs` → Versão principal
-   - `usuarios_api.gs` → Versão duplicada (ambas funcionam)
+- ⭐ = Função crítica do sistema
+- (NOVO) = Adicionado na modularização
 
 ---
 
-## 🎯 MÉTRICAS DO CÓDIGO
+## 🎯 BENEFÍCIOS DA MODULARIZAÇÃO
 
-### Distribuição de Linhas
+### Antes vs Depois
 
-```
-Backend:        10.141 linhas (42%)
-Frontend:        7.399 linhas (31%)
-  ├── CSS:         143 linhas (1%)
-  ├── HTML:      2.225 linhas (9%)
-  └── JavaScript: 5.020 linhas (21%)
-──────────────────────────────────
-Total Ativo:    17.540 linhas
-```
-
-### Arquivos por Camada
-
-```
-Core (00-core):           6 arquivos
-Business (01-business):   6 arquivos
-API (02-api):             2 arquivos
-Frontend:                 1 arquivo
-─────────────────────────────────
-Total:                   15 arquivos
-```
-
-### Complexidade por Arquivo
-
-```
-Mais complexos:
-1. database_manager.gs      3.688 linhas
-2. data_dictionary.gs       1.863 linhas
-3. participacoes.gs         1.222 linhas
-4. usuarios_api.gs            833 linhas
-5. performance_monitor.gs     775 linhas
-```
+| Aspecto | ANTES (Monolítico) | DEPOIS (Modular) |
+|---------|-------------------|------------------|
+| **Arquivos** | 1 arquivo (8.298 linhas) | 45 arquivos (~156 linhas/média) |
+| **Manutenibilidade** | ❌ Difícil localizar código | ✅ Separação clara de responsabilidades |
+| **Duplicações** | ❌ 3+ inicializações duplicadas | ✅ Inicialização centralizada (init.html) |
+| **Carregamento** | ❌ Tudo carregava duplicado | ✅ Carregamento único garantido |
+| **Escalabilidade** | ❌ Adicionar features complexo | ✅ Fácil adicionar componentes |
+| **Colaboração** | ❌ Conflitos de merge frequentes | ✅ Múltiplos devs podem trabalhar juntos |
+| **Testes** | ❌ Difícil isolar componentes | ✅ Componentes testáveis isoladamente |
+| **Reutilização** | ❌ Código acoplado | ✅ Componentes reutilizáveis |
+| **Performance** | ❌ Carregamento pesado | ✅ Lazy initialization de views |
 
 ---
 
@@ -663,32 +701,47 @@ Mais complexos:
 
 **Autenticação:**
 - Backend: `auth.gs` + `session_manager.gs`
-- Frontend: `checkAuthAndInit()`, `showLogin()`
+- Frontend: `src/05-components/core/auth.html`
+
+**Navegação:**
+- Frontend: `src/05-components/core/navigation.html`
+- Router: `src/05-components/core/router.html` → `src/03-shared/app_router.html`
+
+**Inicialização:**
+- Frontend: `src/05-components/core/init.html` ⭐ (CENTRALIZADO)
+
+**Filtros:**
+- Frontend: `src/05-components/filters.html` ⭐ (MODULAR)
+- Integração: `src/04-views/activities.html`
 
 **Atividades:**
-- Backend: `activities.gs`
-- Frontend: `loadActivities()`, `submitActivity()`, `updateActivity()`
+- Backend: `activities.gs` + `usuarios_api.gs`
+- Frontend: `src/04-views/activities.html`
 - Database: Tabela `atividades`
-
-**Membros:**
-- Backend: `members.gs`
-- Frontend: `loadMembers()`, `searchMembers()`
-- Database: Tabela `membros`
 
 **Sistema de Alvos:**
 - Backend: `participacoes.gs` → `defineTargets()`
-- Frontend: `toggleTargetsSection()`, `toggleTargetSelection()`
+- Frontend: `src/04-views/activities.html` → `toggleTargetsSection()`
 - Database: Tabela `participacao` (tipo='alvo')
 
-**Participação/Presença:**
-- Backend: `participacoes.gs` → `listParticipacoes()`, `saveParticipacaoDirectly()`
-- Frontend: `openParticipantsModal()`, `togglePresence()`
-- Database: Tabela `participacao`
+**Membros:**
+- Backend: `members.gs`
+- Frontend: `src/04-views/members.html`
+- Database: Tabela `membros`
+
+**Práticas:**
+- Frontend: `src/04-views/practices.html` (com modal calendário)
+- Database: (futuro - atualmente localStorage)
+
+**Relatórios:**
+- Frontend: `src/04-views/reports.html`
+- Database: Queries agregadas de múltiplas tabelas
 
 ---
 
 ## 📚 DOCUMENTAÇÃO RELACIONADA
 
+- **[PARTICIONAMENTO_COMPLETO.md](PARTICIONAMENTO_COMPLETO.md)** - Detalhes da modularização
 - **[GUIA_DESENVOLVIMENTO.md](GUIA_DESENVOLVIMENTO.md)** - Como fazer tarefas (workflows)
 - **[TAREFAS.md](TAREFAS.md)** - O que fazer agora (roadmap)
 - **[CLAUDE_INSTRUCOES.md](CLAUDE_INSTRUCOES.md)** - Regras do código
@@ -696,4 +749,20 @@ Mais complexos:
 
 ---
 
+## 🔄 HISTÓRICO DE VERSÕES
+
+- **v2.0.0-modular** (18/10/2025) - Modularização completa
+  - 45 arquivos modulares criados
+  - app_migrated.html eliminado
+  - Inicialização centralizada
+  - Sistema de filtros componentizado
+
+- **v2.0.0-alpha.4** (01/10/2025) - Versão monolítica
+  - app_migrated.html (7.399 linhas)
+  - Sistema de alvos implementado
+  - 15 arquivos backend
+
+---
+
 **🗺️ Este mapa é atualizado quando a estrutura do projeto muda significativamente.**
+**Última grande atualização: Modularização completa do frontend - 18/10/2025**

@@ -5,10 +5,10 @@
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} { ok: boolean, items: Array }
  */
-function listCargosApi(sessionId) {
+async function listCargosApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Parametros');
+    const auth = await requireSession(sessionId, 'Parametros');
     if (!auth.ok) return auth;
 
     const cargos = DatabaseManager.query('cargo', { ativo: 'sim' }, true);
@@ -40,10 +40,10 @@ function listCargosApi(sessionId) {
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} { ok: boolean, items: Array }
  */
-function listCategoriasApi(sessionId) {
+async function listCategoriasApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Parametros');
+    const auth = await requireSession(sessionId, 'Parametros');
     if (!auth.ok) return auth;
 
     const categorias = DatabaseManager.query('categoria_membros', { ativo: 'sim' }, true);
@@ -74,10 +74,10 @@ function listCategoriasApi(sessionId) {
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} { ok: boolean, items: Array }
  */
-function listDojosApi(sessionId) {
+async function listDojosApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Parametros');
+    const auth = await requireSession(sessionId, 'Parametros');
     if (!auth.ok) return auth;
 
     const dojos = DatabaseManager.query('dojo', { ativo: 'sim' }, true);
@@ -108,10 +108,10 @@ function listDojosApi(sessionId) {
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} { ok: boolean, items: Array }
  */
-function listOmitamasApi(sessionId) {
+async function listOmitamasApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Parametros');
+    const auth = await requireSession(sessionId, 'Parametros');
     if (!auth.ok) return auth;
 
     const omitamas = DatabaseManager.query('omitama', { ativo: 'sim' }, true);
@@ -142,10 +142,10 @@ function listOmitamasApi(sessionId) {
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} { ok: boolean, items: Array }
  */
-function listSexosApi(sessionId) {
+async function listSexosApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Parametros');
+    const auth = await requireSession(sessionId, 'Parametros');
     if (!auth.ok) return auth;
 
     const sexos = DatabaseManager.query('sexo', { ativo: 'sim' }, true);
@@ -176,10 +176,10 @@ function listSexosApi(sessionId) {
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} { ok: boolean, items: Array }
  */
-function listStatusMembrosApi(sessionId) {
+async function listStatusMembrosApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Parametros');
+    const auth = await requireSession(sessionId, 'Parametros');
     if (!auth.ok) return auth;
 
     const status = DatabaseManager.query('status_membro', { ativo: 'sim' }, true);
@@ -210,10 +210,10 @@ function listStatusMembrosApi(sessionId) {
  * @param {string} tipo - Tipo de grupo a filtrar (ex: 'buntai', null = todos)
  * @returns {Object} { ok: boolean, items: Array }
  */
-function listGruposApi(sessionId, tipo = null) {
+async function listGruposApi(sessionId, tipo = null) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Parametros');
+    const auth = await requireSession(sessionId, 'Parametros');
     if (!auth.ok) return auth;
 
     // Montar filtros
@@ -252,10 +252,10 @@ function listGruposApi(sessionId, tipo = null) {
  * @param {string} sessionId - ID da sessão do usuário
  * @returns {Object} { ok: boolean, filters: { dojos, status, categorias, cargos, omitamas, sexos, buntais } }
  */
-function listAllFiltersApi(sessionId) {
+async function listAllFiltersApi(sessionId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Parametros');
+    const auth = await requireSession(sessionId, 'Parametros');
     if (!auth.ok) return auth;
 
     // Buscar todas as tabelas de parâmetros (todas com cache habilitado)

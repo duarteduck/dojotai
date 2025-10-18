@@ -1,0 +1,271 @@
+<!-- ===== PÁGINA: PRÁTICAS DIÁRIAS ===== -->
+<div id="practices" class="page-content hidden">
+    <!-- Marca d'água SIMULADO -->
+    <div class="watermark-simulado">SIMULADO</div>
+
+    <div class="card">
+        <div class="practices-header">
+            <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Registro Diário de Práticas</h1>
+            <p style="opacity: 0.9;">Acompanhe suas práticas dia a dia</p>
+        </div>
+
+        <div class="practices-controls">
+            <h2 id="days-count" style="font-size: var(--font-size-lg); font-weight: 600;">7 dias selecionados</h2>
+            <button class="btn btn-primary" onclick="openCalendar()">
+                <span>📅</span>
+                <span>Filtrar Dias</span>
+            </button>
+        </div>
+
+        <div style="padding: var(--spacing-lg);">
+            <div class="practices-grid" id="days-grid">
+                <!-- Dias serão inseridos aqui via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+        // ===== SISTEMA DE PRÁTICAS DIÁRIAS =====
+        const fixedPractices = [
+            {
+                id: 1,
+                name: "Okiyome para Pessoas",
+                unit: "pessoas",
+                defaultValue: 1,
+                explanation: "Contar cada 1 pessoa",
+                type: "counter",
+                class: "pessoas"
+            },
+            {
+                id: 2,
+                name: "Outros Okiyome",
+                unit: "okiyome",
+                defaultValue: 1,
+                explanation: "Autoaplicação, no ambiente, qualquer coisa que não seja outra pessoa",
+                type: "counter",
+                class: "outros"
+            },
+            {
+                id: 3,
+                name: "Receber Okiyome",
+                unit: "",
+                defaultValue: 1,
+                explanation: "Quando receber okiyome de outra pessoa",
+                type: "yesno",
+                class: "receber"
+            }
+        ];
+
+        let selectedDays = [];
+        let practices = {};
+
+        function initPractices() {
+            if (selectedDays.length === 0) {
+                selectLast7Days();
+            }
+            renderDays();
+        }
+
+        function getLast7Days() {
+            const days = [];
+            const today = new Date();
+            for (let i = 6; i >= 0; i--) {
+                const day = new Date(today);
+                day.setDate(today.getDate() - i);
+                days.push(day);
+            }
+            return days;
+        }
+
+        function selectLast7Days() {
+            selectedDays = getLast7Days();
+            initializePractices();
+            renderDays();
+            updateDaysCount();
+        }
+
+        function initializePractices() {
+            selectedDays.forEach(day => {
+                const dateKey = day.toISOString().split('T')[0];
+                if (!practices[dateKey]) {
+                    practices[dateKey] = {};
+                    fixedPractices.forEach(practice => {
+                        if (practice.type === 'yesno') {
+                            practices[dateKey][practice.id] = { completed: false, value: null };
+                        } else {
+                            practices[dateKey][practice.id] = { completed: false, quantity: 0 };
+                        }
+                    });
+                }
+            });
+        }
+
+        function getDayProgress(dateKey) {
+            const dayPractices = practices[dateKey];
+            if (!dayPractices) return { completed: 0, total: fixedPractices.length, percentage: 0 };
+
+            let completed = 0;
+            const total = fixedPractices.length;
+
+            fixedPractices.forEach(practice => {
+                const practiceData = dayPractices[practice.id];
+                if (practice.type === 'yesno') {
+                    if (practiceData?.completed && practiceData.value !== null) completed++;
+                } else if (practiceData?.completed && practiceData.quantity > 0) {
+                    completed++;
+                }
+            });
+
+            return { completed, total, percentage: Math.round((completed / total) * 100) };
+        }
+
+        function getProgressClass(percentage) {
+            if (percentage === 100) return 'success';
+            if (percentage > 0) return 'warning';
+            return 'danger';
+        }
+
+        function renderDays() {
+            const grid = document.getElementById('days-grid');
+            if (!grid) return;
+
+            const sortedDays = [...selectedDays].sort((a, b) => b - a);
+
+            grid.innerHTML = sortedDays.map(day => {
+                const dateKey = day.toISOString().split('T')[0];
+                const progress = getDayProgress(dateKey);
+                const isToday = day.toDateString() === new Date().toDateString();
+
+                return `
+                    <div class="day-card ${isToday ? 'today' : ''}">
+                        <div class="day-header ${isToday ? 'today' : ''}">
+                            <div class="day-name">${day.toLocaleDateString('pt-BR', { weekday: 'long' })}</div>
+                            <div class="day-date">${day.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
+                            <div style="margin-top: var(--spacing-sm);">
+                                <div class="badge badge-${getProgressClass(progress.percentage)}">
+                                    ${progress.completed}/${progress.total} registros
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding: var(--spacing-md); display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                            ${fixedPractices.map(practice => renderPractice(practice, dateKey)).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPractice(practice, dateKey) {
+            const practiceData = practices[dateKey]?.[practice.id] ||
+                (practice.type === 'yesno' ? { completed: false, value: null } : { completed: false, quantity: 0 });
+
+            if (practice.type === 'yesno') {
+                return `
+                    <div class="practice-item ${practice.class}">
+                        <div class="practice-header">
+                            <div>
+                                <div class="practice-title ${practice.class}">${practice.name}</div>
+                                <div class="practice-explanation">${practice.explanation}</div>
+                            </div>
+                            <div class="practice-controls">
+                                <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; color: var(--success);">
+                                    <input type="radio" name="${practice.class}-${dateKey}"
+                                           ${practiceData.value === true ? 'checked' : ''}
+                                           onchange="setYesNoValue('${dateKey}', ${practice.id}, true)">
+                                    <span>Sim</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; color: var(--danger); margin-left: var(--spacing-md);">
+                                    <input type="radio" name="${practice.class}-${dateKey}"
+                                           ${practiceData.value === false ? 'checked' : ''}
+                                           onchange="setYesNoValue('${dateKey}', ${practice.id}, false)">
+                                    <span>Não</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="practice-item ${practice.class}">
+                        <div class="practice-header">
+                            <div>
+                                <div class="practice-title ${practice.class}">${practice.name}</div>
+                                <div class="practice-explanation">${practice.explanation}</div>
+                            </div>
+                            <div class="practice-controls">
+                                <input type="number" min="0"
+                                       class="practice-input"
+                                       value="${practiceData.quantity || 0}"
+                                       onchange="updateQuantity('${dateKey}', ${practice.id}, this.value)">
+                                <span style="font-size: var(--font-size-xs); color: var(--text-light); min-width: 50px;">${practice.unit}</span>
+                                <button class="btn-increment" onclick="incrementPractice('${dateKey}', ${practice.id})">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function setYesNoValue(dateKey, practiceId, value) {
+            if (!practices[dateKey]) practices[dateKey] = {};
+            practices[dateKey][practiceId] = {
+                completed: true,
+                value: value
+            };
+            renderDays();
+        }
+
+        function incrementPractice(dateKey, practiceId) {
+            if (!practices[dateKey]) practices[dateKey] = {};
+            const current = practices[dateKey][practiceId]?.quantity || 0;
+            practices[dateKey][practiceId] = {
+                completed: true,
+                quantity: current + 1
+            };
+            renderDays();
+        }
+
+        function updateQuantity(dateKey, practiceId, newValue) {
+            if (!practices[dateKey]) practices[dateKey] = {};
+            const quantity = Math.max(0, parseInt(newValue) || 0);
+            practices[dateKey][practiceId] = {
+                completed: quantity > 0,
+                quantity: quantity
+            };
+            renderDays();
+        }
+
+        function updateDaysCount() {
+            const countEl = document.getElementById('days-count');
+            if (countEl) {
+                countEl.textContent = `${selectedDays.length} dias selecionados`;
+            }
+        }
+
+        // ===== FUNÇÕES DE MODAL =====
+        function openCalendar() {
+            document.getElementById('calendar-modal').classList.remove('hidden');
+        }
+
+        function closeCalendar() {
+            document.getElementById('calendar-modal').classList.add('hidden');
+        }
+
+</script>
+
+<!-- Modal do Calendário -->
+<div id="calendar-modal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Filtrar Dias</h3>
+            <button class="btn-close" onclick="closeCalendar()">✕</button>
+        </div>
+        <div style="text-align: center; color: var(--text-light); padding: var(--spacing-xl);">
+            <div style="font-size: var(--font-size-3xl); margin-bottom: var(--spacing-lg);">📅</div>
+            <div style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-sm);">Calendário Interativo</div>
+            <div>Seleção de dias personalizável será implementada aqui</div>
+        </div>
+    </div>
+</div>

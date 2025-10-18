@@ -1,6 +1,6 @@
 # 🤖 INSTRUÇÕES PARA CLAUDE CODE
 
-**Versão:** 2.0 | **Atualizado:** 30/09/2025
+**Versão:** 2.1-modular | **Atualizado:** 18/10/2025
 
 ---
 
@@ -24,8 +24,9 @@ Estas são as regras que o **Claude Code** (ferramenta CLI) deve seguir ao traba
 
 2. **Criar ou deletar arquivos**
    - Arquivos .gs (backend)
-   - Arquivos .html (frontend)
+   - Arquivos .html (frontend - agora 45 arquivos modulares!)
    - Qualquer arquivo de código
+   - **NOTA:** Sistema agora é modular com 45 componentes
 
 3. **Alterar estrutura de dados**
    - Modificar `data_dictionary.gs`
@@ -89,7 +90,7 @@ Isso é seguro? Posso prosseguir?
 
 2. **Ajustar estilos CSS**
    - Modificar cores, espaçamentos, fontes
-   - Em `app_migrated.html` (seção CSS)
+   - Em `src/05-components/core/styles.html` (Design System)
 
 3. **Melhorar mensagens de erro**
    - Tornar mensagens mais claras
@@ -470,4 +471,13 @@ O objetivo é permitir que você trabalhe com segurança, sabendo exatamente at�
 - [MAPA_CODIGO.md](MAPA_CODIGO.md) - Onde está cada coisa
 - [TAREFAS.md](TAREFAS.md) - O que fazer agora
 
-**🤖 Versão:** 2.0 | **Válido a partir de:** 30/09/2025
+**🤖 Versão:** 2.1-modular | **Válido a partir de:** 18/10/2025
+
+---
+
+## 📌 NOTA: SISTEMA AGORA É MODULAR
+
+**Sistema modularizado em Out/2025:** 45 arquivos especializados (antes 1 monolítico)
+
+**Para encontrar funcionalidades:** Consulte [MAPA_CODIGO.md](MAPA_CODIGO.md)
+**Para entender a modularização:** Consulte [PARTICIONAMENTO_COMPLETO.md](PARTICIONAMENTO_COMPLETO.md)

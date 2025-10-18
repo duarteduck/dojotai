@@ -5,10 +5,10 @@
  * @param {string} sessionId - ID da sessão do usuário
  * @param {string} activityId - ID da atividade
  */
-function listParticipacoes(sessionId, activityId) {
+async function listParticipacoes(sessionId, activityId) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Participacoes');
+    const auth = await requireSession(sessionId, 'Participacoes');
     if (!auth.ok) return auth;
 
     if (!activityId) {
@@ -136,10 +136,10 @@ function listParticipacoes(sessionId, activityId) {
  * - Campo texto: { nome: 'João' } (usa CONTAINS)
  * - Campo numérico array: { buntai: [1, 2] } (usa IN)
  */
-function searchMembersByCriteria(sessionId, filters = {}) {
+async function searchMembersByCriteria(sessionId, filters = {}) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Participacoes');
+    const auth = await requireSession(sessionId, 'Participacoes');
     if (!auth.ok) return auth;
 
     // Separar filtros: exatos (para DatabaseManager) vs complexos (para JS)
@@ -586,7 +586,7 @@ async function saveTargetsDirectly(activityId, memberIds, uid) {
 async function saveParticipacaoDirectly(sessionId, activityId, memberId, dados, uid) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Participacoes');
+    const auth = await requireSession(sessionId, 'Participacoes');
     if (!auth.ok) return auth;
 
     console.log('🔧 [BACKEND] saveParticipacaoDirectly chamada com:');
@@ -643,7 +643,7 @@ async function saveParticipacaoDirectly(sessionId, activityId, memberId, dados, 
 async function createMultipleParticipacoes(sessionId, activityId, membrosData, uid) {
   try {
     // Validar sessão (helper centralizado)
-    const auth = requireSession(sessionId, 'Participacoes');
+    const auth = await requireSession(sessionId, 'Participacoes');
     if (!auth.ok) return auth;
 
     // Validar parâmetros

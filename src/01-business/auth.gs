@@ -4,6 +4,17 @@
  *  Usa também, se existirem: uid, nome, role, ultimo_acesso
  * ========================================================= */
 
+// ============================================================================
+// FUNÇÃO NÃO UTILIZADA - loginUser()
+//
+// Motivo: Frontend usa authenticateUser() em usuarios_api.gs
+// - Confirmado em app_migrated_BACKUP_20251017.html (linha 6097)
+// - Esta função existe mas não é chamada pelo sistema
+// - Mantida comentada para referência futura
+//
+// Data identificação: 18/10/2025
+// ============================================================================
+/*
 async function loginUser(login, pin, deviceInfo = {}) {
   try {
     // Usar SecurityManager sempre
@@ -63,6 +74,7 @@ async function loginUser(login, pin, deviceInfo = {}) {
     return { ok: false, error: 'loginUser: ' + (err && err.message || err) };
   }
 }
+*/
 
 // ============================================================================
 // FUNÇÃO REMOVIDA: validateSession() - auth.gs:72-83
@@ -82,7 +94,7 @@ async function loginUser(login, pin, deviceInfo = {}) {
 /**
  * Logout com destruição de sessão
  * @param {string} sessionId - ID da sessão
- * @returns {Object} Resultado do logout
+ * @returns {Promise<Object>} Resultado do logout
  */
 async function logoutUser(sessionId) {
   try {
@@ -91,12 +103,8 @@ async function logoutUser(sessionId) {
       return { ok: true, message: 'Logout realizado' };
     }
 
-    if (typeof SessionManager === 'undefined') {
-      Logger.warn('Auth', 'SessionManager not available for logout');
-      return { ok: true, message: 'Logout realizado (sem gestão de sessões)' };
-    }
-
-    const result = destroySession(sessionId);
+    // Destruir sessão no banco de dados
+    const result = await destroySession(sessionId);
     Logger.info('Auth', 'Logout completed', { sessionId, success: result.ok });
 
     return result;
