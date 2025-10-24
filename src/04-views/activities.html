@@ -94,11 +94,7 @@
 
     <!-- Grid de Atividades -->
     <div class="cards-grid" id="activities-grid">
-        <!-- Carregando atividades... -->
-        <div class="loading-state">
-            <div class="spinner"></div>
-            <p>Carregando atividades...</p>
-        </div>
+        <!-- Atividades serão renderizadas aqui via JavaScript -->
     </div>
 </div>
 
@@ -186,19 +182,10 @@
                 return;
             }
 
-            // Mostrar estado de carregamento bonito
-            grid.innerHTML = `
-                <div class="loading-container">
-                    <div class="loading-spinner"></div>
-                    <div class="loading-spinner-dots">
-                        <div class="loading-dot"></div>
-                        <div class="loading-dot"></div>
-                        <div class="loading-dot"></div>
-                    </div>
-                    <div class="loading-text">Carregando atividades</div>
-                    <div class="loading-subtext">Buscando dados mais recentes...</div>
-                </div>
-            `;
+            // Mostrar loading overlay
+            if (typeof showActivitiesLoadingOverlay === 'function') {
+                showActivitiesLoadingOverlay(true);
+            }
 
             // Tentar usar API real
             if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -233,12 +220,25 @@
                             // Backend já filtrou, aplicar apenas filtro de texto (se houver)
                             const filteredActivities = applyActivityFilters(activitiesWithCategory);
                             renderActivities(filteredActivities);
+
+                            // Esconder loading overlay
+                            if (typeof showActivitiesLoadingOverlay === 'function') {
+                                showActivitiesLoadingOverlay(false);
+                            }
                         } else {
                             console.error('Erro ao carregar atividades:', result);
+                            if (typeof showActivitiesLoadingOverlay === 'function') {
+                                showActivitiesLoadingOverlay(false);
+                            }
                             loadActivitiesFallback();
                         }
                     } catch (error) {
                         isLoadingActivities = false; // Liberar lock
+
+                        // Esconder loading overlay
+                        if (typeof showActivitiesLoadingOverlay === 'function') {
+                            showActivitiesLoadingOverlay(false);
+                        }
 
                         // Erro de sessão já tratado por apiCall()
                         if (!error.message || !error.message.includes('Sessão')) {
@@ -250,6 +250,12 @@
             } else {
                 // Fallback se API não estiver disponível
                 isLoadingActivities = false;
+
+                // Esconder loading overlay
+                if (typeof showActivitiesLoadingOverlay === 'function') {
+                    showActivitiesLoadingOverlay(false);
+                }
+
                 loadActivitiesFallback();
             }
         }

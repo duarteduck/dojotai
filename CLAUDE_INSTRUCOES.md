@@ -1,6 +1,6 @@
 # 🤖 INSTRUÇÕES PARA CLAUDE CODE
 
-**Versão:** 2.1-modular | **Atualizado:** 18/10/2025
+**Versão:** 2.2-modular | **Atualizado:** 23/10/2025
 
 ---
 
@@ -206,6 +206,109 @@ function processar(dados) {
   return dados.nome.toUpperCase();
 }
 ```
+
+---
+
+## ⚡ APRENDIZADOS CRÍTICOS DO PROJETO
+
+**Lições aprendidas durante o desenvolvimento que TODOS devem conhecer.**
+
+### 1. apiCall() Injeta sessionId Automaticamente ⚠️
+
+**Descoberto em:** 23/10/2025
+**Contexto:** Sistema de Práticas Diárias
+**Impacto:** CRÍTICO - Causa desalinhamento de parâmetros no backend
+
+#### ❌ NUNCA FAÇA:
+```javascript
+// ❌ ERRADO - Passa sessionId manualmente
+const sessionId = localStorage.getItem('sessionId');
+apiCall('minhaFuncao', sessionId, param1, param2);
+```
+
+#### ✅ SEMPRE FAÇA:
+```javascript
+// ✅ CORRETO - apiCall() injeta sessionId automaticamente
+apiCall('minhaFuncao', param1, param2);
+
+// apiCall() internamente transforma em:
+// google.script.run.minhaFuncao(sessionId, param1, param2)
+```
+
+#### 🔍 Por que acontece?
+
+**Código do apiCall()** (`src/05-components/core/api.html` linha 32-33):
+```javascript
+// Injetar sessionId como primeiro parâmetro
+const argsWithSession = [sessionId, ...args];
+```
+
+O `apiCall()` **SEMPRE** adiciona o sessionId como primeiro parâmetro automaticamente. Se você passar manualmente, vai duplicar!
+
+#### 💥 Exemplo Real do Problema:
+
+**Frontend faz:**
+```javascript
+apiCall('savePractice', sessionId, memberId, date, praticaId, quantidade)
+```
+
+**apiCall() transforma em:**
+```javascript
+google.script.run.savePractice(
+  sessionId,   // ← Injetado automaticamente pelo apiCall() ✅
+  sessionId,   // ← Passado manualmente (DUPLICADO!) ❌
+  memberId,    // ← Backend recebe como 'date' ❌
+  date,        // ← Backend recebe como 'praticaId' ❌
+  praticaId,   // ← Backend recebe como 'quantidade' ❌
+  quantidade   // ← Perdido! ❌
+)
+```
+
+**Backend espera:**
+```javascript
+async function savePractice(sessionId, memberId, data, praticaId, quantidade)
+```
+
+**Backend recebe (ERRADO):**
+- `sessionId` = "sess_..." ✅ (correto)
+- `memberId` = "sess_..." ❌ (recebeu sessionId duplicado!)
+- `data` = número ❌ (recebeu memberId)
+- `praticaId` = string data ❌ (recebeu data)
+- `quantidade` = string praticaId ❌ (recebeu praticaId)
+
+**Resultado:** Tudo desalinhado, sistema quebra com erro de permissão ou validação.
+
+#### 📋 Regra de Ouro:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  SEMPRE USE apiCall() SEM sessionId                  │
+│                                                      │
+│  ✅ apiCall('funcao', param1, param2)                │
+│  ❌ apiCall('funcao', sessionId, param1, param2)     │
+│                                                      │
+│  O sistema JÁ GERENCIA sessionId automaticamente    │
+└──────────────────────────────────────────────────────┘
+```
+
+#### ✅ Exemplos Corretos:
+
+```javascript
+// Práticas
+apiCall('getAvailablePractices', memberId)
+apiCall('savePractice', memberId, date, praticaId, quantidade)
+apiCall('loadPracticesByDateRange', memberId, startDate, endDate)
+
+// Atividades
+apiCall('loadActivities', filters)
+apiCall('saveActivity', activityData)
+
+// Membros
+apiCall('getMemberDetails', memberId)
+apiCall('updateMember', memberId, updates)
+```
+
+**Nota:** O `sessionId` é pego automaticamente de `localStorage.getItem('sessionId')` pelo `apiCall()`.
 
 ---
 
@@ -471,7 +574,7 @@ O objetivo é permitir que você trabalhe com segurança, sabendo exatamente at�
 - [MAPA_CODIGO.md](MAPA_CODIGO.md) - Onde está cada coisa
 - [TAREFAS.md](TAREFAS.md) - O que fazer agora
 
-**🤖 Versão:** 2.1-modular | **Válido a partir de:** 18/10/2025
+**🤖 Versão:** 2.2-modular | **Válido a partir de:** 23/10/2025
 
 ---
 

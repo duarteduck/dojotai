@@ -40,11 +40,37 @@
         }
       },
 
+      get selectedMember(){
+        const memberData = localStorage.getItem('selectedMember');
+        return memberData ? JSON.parse(memberData) : null;
+      },
+      set selectedMember(v){
+        if(v) {
+          localStorage.setItem('selectedMember', JSON.stringify(v));
+          console.log('💾 State.selectedMember salvo:', v.membro_nome);
+        } else {
+          localStorage.removeItem('selectedMember');
+        }
+      },
+
+      get selectedMemberId(){
+        return localStorage.getItem('selectedMemberId');
+      },
+      set selectedMemberId(v){
+        if(v) {
+          localStorage.setItem('selectedMemberId', v);
+        } else {
+          localStorage.removeItem('selectedMemberId');
+        }
+      },
+
       clear(){
         localStorage.removeItem('uid');
         localStorage.removeItem('user');
         localStorage.removeItem('session');
-        console.log('🧹 State limpo - uid, user, session removidos');
+        localStorage.removeItem('selectedMember');
+        localStorage.removeItem('selectedMemberId');
+        console.log('🧹 State limpo - uid, user, session, selectedMember removidos');
       },
 
       cache: { atividades: [] },

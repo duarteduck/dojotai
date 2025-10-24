@@ -160,9 +160,69 @@
         }
     }
 
+    /**
+     * Overlay de loading de vínculos (usado no memberSelector.html)
+     */
+    function showMemberLoadingOverlay(show) {
+        let overlay = document.getElementById('member-loading-overlay');
+
+        if (show) {
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'member-loading-overlay';
+                overlay.className = 'loading-overlay';
+                document.body.appendChild(overlay);
+            }
+
+            overlay.innerHTML = `
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Carregando perfis...</div>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
+        } else {
+            if (overlay) {
+                overlay.classList.add('hidden');
+                setTimeout(() => overlay.remove(), 300);
+            }
+        }
+    }
+
+    /**
+     * Overlay de loading de atividades (usado no activities.html)
+     */
+    function showActivitiesLoadingOverlay(show) {
+        let overlay = document.getElementById('activities-loading-overlay');
+
+        if (show) {
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'activities-loading-overlay';
+                overlay.className = 'loading-overlay';
+                document.body.appendChild(overlay);
+            }
+
+            overlay.innerHTML = `
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Carregando atividades...</div>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
+        } else {
+            if (overlay) {
+                overlay.classList.add('hidden');
+                setTimeout(() => overlay.remove(), 300);
+            }
+        }
+    }
+
     // Expor funções globalmente
     window.showLoadingOverlay = showLoadingOverlay;
     window.createLoadingInline = createLoadingInline;
     window.showLoadingInline = showLoadingInline;
+    window.showMemberLoadingOverlay = showMemberLoadingOverlay;
+    window.showActivitiesLoadingOverlay = showActivitiesLoadingOverlay;
     window.showLogoutLoading = showLogoutLoading;
 </script>

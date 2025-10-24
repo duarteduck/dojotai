@@ -270,6 +270,12 @@
             loadCurrentUser();
         }
 
+        // Inicializar seletor de membros (busca vínculos e configura botão)
+        // PRIORIDADE: Carregar ANTES de outras coisas para estar disponível imediatamente
+        if (typeof initMemberSelector === 'function') {
+            initMemberSelector();
+        }
+
         // PRE-CARREGAR categorias e responsáveis no cache APÓS login bem-sucedido
         if (typeof preLoadCachedData === 'function') {
             preLoadCachedData();

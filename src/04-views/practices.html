@@ -1,271 +1,720 @@
-<!-- ===== PÁGINA: PRÁTICAS DIÁRIAS ===== -->
+<!-- ═══════════════════════════════════════════════════════════════════════════════════════════════ -->
+<!-- 📄 HTML - PÁGINA DE PRÁTICAS -->
+<!-- ═══════════════════════════════════════════════════════════════════════════════════════════════ -->
+
 <div id="practices" class="page-content hidden">
-    <!-- Marca d'água SIMULADO -->
-    <div class="watermark-simulado">SIMULADO</div>
-
-    <div class="card">
-        <div class="practices-header">
-            <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Registro Diário de Práticas</h1>
-            <p style="opacity: 0.9;">Acompanhe suas práticas dia a dia</p>
-        </div>
-
-        <div class="practices-controls">
-            <h2 id="days-count" style="font-size: var(--font-size-lg); font-weight: 600;">7 dias selecionados</h2>
-            <button class="btn btn-primary" onclick="openCalendar()">
+    <!-- Sistema de Filtros -->
+    <div class="filters-container">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
+            <!-- Botão Filtrar Dias (DESABILITADO) -->
+            <button class="btn btn-outline" disabled style="opacity: 0.5; cursor: not-allowed;">
                 <span>📅</span>
                 <span>Filtrar Dias</span>
             </button>
-        </div>
 
-        <div style="padding: var(--spacing-lg);">
-            <div class="practices-grid" id="days-grid">
-                <!-- Dias serão inseridos aqui via JavaScript -->
-            </div>
+            <!-- Container dos chips de dias -->
+            <div id="days-chips-container" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
         </div>
     </div>
+
+    <!-- Grid de Dias -->
+    <div class="practices-grid" id="days-grid">
+        <!-- Dias serão inseridos aqui via JavaScript -->
+    </div>
 </div>
+
 <script>
-        // ===== SISTEMA DE PRÁTICAS DIÁRIAS =====
-        const fixedPractices = [
-            {
-                id: 1,
-                name: "Okiyome para Pessoas",
-                unit: "pessoas",
-                defaultValue: 1,
-                explanation: "Contar cada 1 pessoa",
-                type: "counter",
-                class: "pessoas"
-            },
-            {
-                id: 2,
-                name: "Outros Okiyome",
-                unit: "okiyome",
-                defaultValue: 1,
-                explanation: "Autoaplicação, no ambiente, qualquer coisa que não seja outra pessoa",
-                type: "counter",
-                class: "outros"
-            },
-            {
-                id: 3,
-                name: "Receber Okiyome",
-                unit: "",
-                defaultValue: 1,
-                explanation: "Quando receber okiyome de outra pessoa",
-                type: "yesno",
-                class: "receber"
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// 🥋 SISTEMA DE PRÁTICAS DIÁRIAS - INTEGRADO COM BACKEND
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// ESTADO GLOBAL
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+let availablePractices = [];
+let selectedDays = [];
+let practices = {};
+let observations = {};
+let saveTimeouts = {};
+let savingStates = {};  // ✅ NOVO: Track de salvamentos em andamento
+//let currentMemberId = null;
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// FUNÇÕES DE UI (FALLBACK SE NÃO EXISTIREM)
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+if (typeof showLoading === 'undefined') {
+    window.showLoading = function(message) {
+        console.log('🔄 Loading:', message);
+    };
+}
+
+if (typeof hideLoading === 'undefined') {
+    window.hideLoading = function() {
+        console.log('✅ Loading concluído');
+    };
+}
+
+if (typeof showToast === 'undefined') {
+    window.showToast = function(message, type) {
+        console.log(`📢 Toast [${type}]:`, message);
+        alert(message);
+    };
+}
+
+if (typeof apiCall === 'undefined') {
+    window.apiCall = async function(functionName, ...args) {
+        console.error('❌ apiCall não está definida! Verifique src/05-components/core/api.html');
+        return { ok: false, error: 'apiCall não definida' };
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// INICIALIZAÇÃO
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+async function initPractices() {
+    try {
+        
+//        currentMemberId = State.selectedMemberId;
+        
+//        console.log('✅ currentMemberId convertido:', currentMemberId, typeof currentMemberId);
+        
+        // Validação robusta do memberId
+        if (!State.selectedMemberId || State.selectedMemberId.trim() === '') {
+            console.log('❌ ERRO: State.selectedMemberId está vazio!');
+            showToast('Nenhum membro selecionado. Use o menu de perfil para selecionar um membro.', 'warning');
+            return;
+        }
+
+        // 🚨 VALIDAÇÃO CRÍTICA: memberId deve ser um número, não pode ser sessionId!
+        const memberId = parseInt(State.selectedMemberId, 10);
+        if (isNaN(memberId) || memberId <= 0) {
+            console.log('❌ ERRO: State.selectedMemberId não é um número válido!');
+            console.log('  Valor atual:', State.selectedMemberId);
+            console.log('  Tipo:', typeof State.selectedMemberId);
+            console.log('  Parece ser sessionId?', State.selectedMemberId.includes('sess_'));
+            showToast('Erro: ID do membro inválido. Tente sair e entrar novamente.', 'error');
+            return;
+        }
+
+        console.log('✅ Membro selecionado OK:', State.selectedMemberId, '(número:', memberId, ')');
+        
+        showLoadingOverlay(true, 'Carregando práticas...');
+        await loadAvailablePractices();
+        
+        if (availablePractices.length === 0) {
+            showLoadingOverlay(false);
+            showToast('Nenhuma prática cadastrada. Entre em contato com o administrador.', 'warning');
+            return;
+        }
+
+        if (selectedDays.length === 0) {
+            selectLast7Days();
+        }
+
+        await loadPracticesFromServer();
+        
+        showLoadingOverlay(false);
+    } catch (error) {
+        console.error('Erro ao inicializar práticas:', error);
+        showLoadingOverlay(false);
+        showToast('Erro ao carregar práticas: ' + error.message, 'error');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// BACKEND - CARREGAR DADOS
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+async function loadAvailablePractices() {
+    const result = await apiCall('getAvailablePractices', State.selectedMemberId);
+
+    if (result.ok) {
+        availablePractices = result.items || [];
+    } else {
+        console.error('Erro ao carregar práticas:', result.error);
+        throw new Error(result.error || 'Erro ao carregar práticas disponíveis');
+    }
+}
+
+async function loadPracticesFromServer() {
+    if (!State.selectedMemberId) return;
+    if (selectedDays.length === 0) return;
+
+    const sortedDays = [...selectedDays].sort((a, b) => a - b);
+    const startDate = sortedDays[0].toISOString().split('T')[0];
+    const endDate = sortedDays[sortedDays.length - 1].toISOString().split('T')[0];
+
+    const result = await apiCall('loadPracticesByDateRange', State.selectedMemberId, startDate, endDate);
+    
+    if (result.ok) {
+        practices = {};
+        
+        (result.items || []).forEach(registro => {
+            const dateKey = registro.data;
+            if (!practices[dateKey]) practices[dateKey] = {};
+            practices[dateKey][registro.pratica_id] = {
+                quantidade: registro.quantidade,  // ✅ Mantém null/undefined do servidor
+                id: registro.id
+            };
+        });
+        
+        console.log('✅ Práticas carregadas do servidor:', Object.keys(practices).length, 'dias');
+        
+        await loadObservationsFromServer();
+        renderDays();
+    } else {
+        console.error('❌ Erro ao carregar práticas:', result.error);
+        showToast('Erro ao carregar práticas: ' + result.error, 'error');
+    }
+}
+
+async function loadObservationsFromServer() {
+    if (!State.selectedMemberId) return;
+    if (selectedDays.length === 0) return;
+
+    const sortedDays = [...selectedDays].sort((a, b) => a - b);
+    const startDate = sortedDays[0].toISOString().split('T')[0];
+    const endDate = sortedDays[sortedDays.length - 1].toISOString().split('T')[0];
+
+    console.log('📝 Carregando observações (batch):', startDate, 'até', endDate);
+
+    // ✅ OTIMIZAÇÃO: 1 query para N dias (antes: N queries)
+    const result = await apiCall('loadObservationsByDateRange', State.selectedMemberId, startDate, endDate);
+
+    if (result.ok) {
+        // Resetar observações
+        observations = {};
+
+        // Preencher com dados do servidor
+        (result.items || []).forEach(obs => {
+            observations[obs.data] = obs.observacao;
+        });
+
+        console.log('✅ Observações carregadas (batch):', result.items.length, 'encontradas');
+    } else {
+        console.error('❌ Erro ao carregar observações:', result.error);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// BACKEND - SALVAR DADOS (AUTO-SAVE COM DEBOUNCE)
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+function scheduleSavePractice(dateKey, praticaId) {
+    const key = `${dateKey}_${praticaId}`;
+    if (saveTimeouts[key]) {
+        clearTimeout(saveTimeouts[key]);
+    }
+    
+    saveTimeouts[key] = setTimeout(() => {
+        savePracticeToServer(dateKey, praticaId);
+    }, 2000);
+}
+
+async function savePracticeToServer(dateKey, praticaId) {
+    if (!State.selectedMemberId) return;
+
+    const key = `${dateKey}_${praticaId}`;
+
+    // ✅ Bloquear se já está salvando
+    if (savingStates[key]) {
+        return;
+    }
+
+    const quantidade = practices[dateKey]?.[praticaId]?.quantidade;
+
+    // ✅ NÃO GRAVAR se quantidade é null (não anotou)
+    if (quantidade === null || quantidade === undefined) {
+        console.log('⚠️ Quantidade vazia, não salvando');
+        return;
+    }
+
+    // Marcar como "salvando" e atualizar UI
+    savingStates[key] = true;
+    renderDays();  // Re-renderiza para mostrar loading
+
+    try {
+        const result = await apiCall('savePractice', State.selectedMemberId, dateKey, praticaId, quantidade);
+
+        if (result.ok) {
+            if (result.id) {
+                practices[dateKey][praticaId].id = result.id;
             }
-        ];
+        } else {
+            console.error('Erro ao salvar prática:', result.error);
+            showToast('Erro ao salvar: ' + result.error, 'error');
+        }
+    } finally {
+        // Sempre liberar o estado de salvamento
+        savingStates[key] = false;
+        renderDays();  // Re-renderiza para remover loading
+    }
+}
 
-        let selectedDays = [];
-        let practices = {};
 
-        function initPractices() {
-            if (selectedDays.length === 0) {
-                selectLast7Days();
+function scheduleSaveObservation(dateKey) {
+    const key = `obs_${dateKey}`;
+    if (saveTimeouts[key]) {
+        clearTimeout(saveTimeouts[key]);
+    }
+    
+    saveTimeouts[key] = setTimeout(() => {
+        saveObservationToServer(dateKey);
+    }, 2000);
+}
+
+async function saveObservationToServer(dateKey) {
+    if (!State.selectedMemberId) return;
+
+    const observacao = observations[dateKey];
+
+    if (!observacao || observacao.trim() === '') {
+        console.log('⚠️ Observação vazia, não salvando');
+        return;
+    }
+
+    console.log('💾 Salvando observação:', dateKey, observacao.substring(0, 30) + '...');
+
+    const result = await apiCall('saveObservation', State.selectedMemberId, dateKey, observacao);
+    
+    if (result.ok) {
+        console.log('✅ Observação salva:', result.id, result.isNew ? 'NOVA' : 'ATUALIZADA');
+    } else {
+        console.error('❌ Erro ao salvar observação:', result.error);
+        showToast('Erro ao salvar observação: ' + result.error, 'error');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// DIAS E RENDERIZAÇÃO
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+function getLast7Days() {
+    const days = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+        const day = new Date(today);
+        day.setDate(today.getDate() - i);
+        days.push(day);
+    }
+    return days;
+}
+
+function selectLast7Days() {
+    selectedDays = getLast7Days();
+    updateDaysCount();
+}
+
+function getDayProgress(dateKey) {
+    const dayPractices = practices[dateKey] || {};
+    let completed = 0;
+    let hasZeros = false;
+    const total = availablePractices.length;
+
+    availablePractices.forEach(pratica => {
+        const quantidade = dayPractices[pratica.id]?.quantidade;
+
+        // Verificar se está preenchido (não é null/undefined)
+        if (quantidade !== null && quantidade !== undefined) {
+            completed++;
+
+            // Se preencheu com valor zero, marcar
+            if (quantidade === 0) {
+                hasZeros = true;
             }
-            renderDays();
         }
+    });
 
-        function getLast7Days() {
-            const days = [];
-            const today = new Date();
-            for (let i = 6; i >= 0; i--) {
-                const day = new Date(today);
-                day.setDate(today.getDate() - i);
-                days.push(day);
-            }
-            return days;
-        }
+    return {
+        completed,
+        total,
+        percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+        hasZeros
+    };
+}
 
-        function selectLast7Days() {
-            selectedDays = getLast7Days();
-            initializePractices();
-            renderDays();
-            updateDaysCount();
-        }
+function getProgressClass(progress) {
+    const { percentage, hasZeros } = progress;
 
-        function initializePractices() {
-            selectedDays.forEach(day => {
-                const dateKey = day.toISOString().split('T')[0];
-                if (!practices[dateKey]) {
-                    practices[dateKey] = {};
-                    fixedPractices.forEach(practice => {
-                        if (practice.type === 'yesno') {
-                            practices[dateKey][practice.id] = { completed: false, value: null };
-                        } else {
-                            practices[dateKey][practice.id] = { completed: false, quantity: 0 };
-                        }
-                    });
-                }
-            });
-        }
+    if (percentage === 0) return 'danger';           // 🔴 Vermelho - 0%
+    if (percentage < 100) return 'warning';          // 🟡 Amarelo - >0% e <100%
+    if (hasZeros) return 'success-light';            // 🟢 Verde claro - 100% com zeros
+    return 'success';                                 // 🟩 Verde escuro - 100% sem zeros
+}
 
-        function getDayProgress(dateKey) {
-            const dayPractices = practices[dateKey];
-            if (!dayPractices) return { completed: 0, total: fixedPractices.length, percentage: 0 };
+function renderDays() {
+    const grid = document.getElementById('days-grid');
+    if (!grid) return;
 
-            let completed = 0;
-            const total = fixedPractices.length;
+    const sortedDays = [...selectedDays].sort((a, b) => b - a);
 
-            fixedPractices.forEach(practice => {
-                const practiceData = dayPractices[practice.id];
-                if (practice.type === 'yesno') {
-                    if (practiceData?.completed && practiceData.value !== null) completed++;
-                } else if (practiceData?.completed && practiceData.quantity > 0) {
-                    completed++;
-                }
-            });
+    grid.innerHTML = sortedDays.map(day => {
+        const dateKey = day.toISOString().split('T')[0];
+        const progress = getDayProgress(dateKey);
+        const isToday = day.toDateString() === new Date().toDateString();
+        const observacao = observations[dateKey] || '';
 
-            return { completed, total, percentage: Math.round((completed / total) * 100) };
-        }
-
-        function getProgressClass(percentage) {
-            if (percentage === 100) return 'success';
-            if (percentage > 0) return 'warning';
-            return 'danger';
-        }
-
-        function renderDays() {
-            const grid = document.getElementById('days-grid');
-            if (!grid) return;
-
-            const sortedDays = [...selectedDays].sort((a, b) => b - a);
-
-            grid.innerHTML = sortedDays.map(day => {
-                const dateKey = day.toISOString().split('T')[0];
-                const progress = getDayProgress(dateKey);
-                const isToday = day.toDateString() === new Date().toDateString();
-
-                return `
-                    <div class="day-card ${isToday ? 'today' : ''}">
-                        <div class="day-header ${isToday ? 'today' : ''}">
-                            <div class="day-name">${day.toLocaleDateString('pt-BR', { weekday: 'long' })}</div>
-                            <div class="day-date">${day.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
-                            <div style="margin-top: var(--spacing-sm);">
-                                <div class="badge badge-${getProgressClass(progress.percentage)}">
-                                    ${progress.completed}/${progress.total} registros
-                                </div>
-                            </div>
-                        </div>
-                        <div style="padding: var(--spacing-md); display: flex; flex-direction: column; gap: var(--spacing-sm);">
-                            ${fixedPractices.map(practice => renderPractice(practice, dateKey)).join('')}
+        return `
+            <div class="day-card ${isToday ? 'today' : ''}">
+                <div class="day-header ${isToday ? 'today' : ''}">
+                    <div class="day-name">${day.toLocaleDateString('pt-BR', { weekday: 'long' })}</div>
+                    <div class="day-date">${day.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                    <div style="margin-top: var(--spacing-sm);">
+                        <div class="badge badge-${getProgressClass(progress)}">
+                            ${progress.completed}/${progress.total} registros
                         </div>
                     </div>
-                `;
-            }).join('');
+                </div>
+                <div style="padding: var(--spacing-md); display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                    ${availablePractices.map(pratica => renderPractice(pratica, dateKey)).join('')}
+                    ${renderObservationField(dateKey, observacao)}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Renderizar chips dos dias
+    renderDaysChips();
+}
+
+function renderDaysChips() {
+    const container = document.getElementById('days-chips-container');
+    if (!container) return;
+
+    if (selectedDays.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const sortedDays = [...selectedDays].sort((a, b) => b - a);
+    const existingChips = container.querySelectorAll('.day-chip');
+
+    // Se o número de chips mudou, recriar tudo
+    if (existingChips.length !== sortedDays.length) {
+        container.innerHTML = sortedDays.map(day => {
+            const dateKey = day.toISOString().split('T')[0];
+            const progress = getDayProgress(dateKey);
+            const chipClass = getProgressClass(progress);
+            const dateFormatted = day.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+            return `
+                <div class="day-chip day-chip-${chipClass}" data-date="${dateKey}">
+                    <span>${dateFormatted}</span>
+                    <button class="remove-chip" onclick="removeDay('${dateKey}')" title="Remover dia">×</button>
+                </div>
+            `;
+        }).join('');
+        return;
+    }
+
+    // Se o número é o mesmo, apenas atualizar as cores (sem piscar)
+    sortedDays.forEach((day, index) => {
+        const dateKey = day.toISOString().split('T')[0];
+        const progress = getDayProgress(dateKey);
+        const chipClass = getProgressClass(progress);
+        const chip = existingChips[index];
+
+        if (chip) {
+            // Remover todas as classes de cor antigas
+            chip.classList.remove('day-chip-success', 'day-chip-success-light', 'day-chip-warning', 'day-chip-danger');
+            // Adicionar a classe de cor correta
+            chip.classList.add(`day-chip-${chipClass}`);
         }
+    });
+}
 
-        function renderPractice(practice, dateKey) {
-            const practiceData = practices[dateKey]?.[practice.id] ||
-                (practice.type === 'yesno' ? { completed: false, value: null } : { completed: false, quantity: 0 });
+function removeDay(dateKey) {
+    // Encontrar e remover o dia de selectedDays
+    const dayToRemove = selectedDays.find(day => {
+        return day.toISOString().split('T')[0] === dateKey;
+    });
 
-            if (practice.type === 'yesno') {
-                return `
-                    <div class="practice-item ${practice.class}">
-                        <div class="practice-header">
-                            <div>
-                                <div class="practice-title ${practice.class}">${practice.name}</div>
-                                <div class="practice-explanation">${practice.explanation}</div>
-                            </div>
-                            <div class="practice-controls">
-                                <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; color: var(--success);">
-                                    <input type="radio" name="${practice.class}-${dateKey}"
-                                           ${practiceData.value === true ? 'checked' : ''}
-                                           onchange="setYesNoValue('${dateKey}', ${practice.id}, true)">
-                                    <span>Sim</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; color: var(--danger); margin-left: var(--spacing-md);">
-                                    <input type="radio" name="${practice.class}-${dateKey}"
-                                           ${practiceData.value === false ? 'checked' : ''}
-                                           onchange="setYesNoValue('${dateKey}', ${practice.id}, false)">
-                                    <span>Não</span>
-                                </label>
-                            </div>
+    if (dayToRemove) {
+        const index = selectedDays.indexOf(dayToRemove);
+        selectedDays.splice(index, 1);
+
+        // Re-renderizar tudo
+        renderDays();
+    }
+}
+
+function renderPractice(pratica, dateKey) {
+    const practiceData = practices[dateKey]?.[pratica.id];
+    const quantidade = practiceData?.quantidade;  // null/undefined se não existe
+
+    if (pratica.tipo === 'sim_nao') {
+        return `
+            <div class="practice-item">
+                <div class="practice-header">
+                    <div>
+                        <div class="practice-title" style="color: ${pratica.cor || 'var(--primary)'};">
+                            ${pratica.icone || '📌'} ${pratica.nome}
                         </div>
+                        ${pratica.descricao ? `<div class="practice-explanation">${pratica.descricao}</div>` : ''}
                     </div>
-                `;
-            } else {
-                return `
-                    <div class="practice-item ${practice.class}">
-                        <div class="practice-header">
-                            <div>
-                                <div class="practice-title ${practice.class}">${practice.name}</div>
-                                <div class="practice-explanation">${practice.explanation}</div>
-                            </div>
-                            <div class="practice-controls">
-                                <input type="number" min="0"
-                                       class="practice-input"
-                                       value="${practiceData.quantity || 0}"
-                                       onchange="updateQuantity('${dateKey}', ${practice.id}, this.value)">
-                                <span style="font-size: var(--font-size-xs); color: var(--text-light); min-width: 50px;">${practice.unit}</span>
-                                <button class="btn-increment" onclick="incrementPractice('${dateKey}', ${practice.id})">
-                                    +
-                                </button>
-                            </div>
+                    <div class="practice-controls">
+                        <label style="color: var(--success);">
+                            <input type="radio" name="pratica-${pratica.id}-${dateKey}"
+                                   ${quantidade === 1 ? 'checked' : ''}
+                                   onchange="setYesNo('${dateKey}', '${pratica.id}', 1)">
+                            <span>Sim</span>
+                        </label>
+                        <label style="color: var(--danger);">
+                            <input type="radio" name="pratica-${pratica.id}-${dateKey}"
+                                   ${quantidade === 0 ? 'checked' : ''}
+                                   onchange="setYesNo('${dateKey}', '${pratica.id}', 0)">
+                            <span>Não</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        const key = `${dateKey}_${pratica.id}`;
+        const isSaving = savingStates[key] || false;
+        const displayValue = quantidade !== null && quantidade !== undefined ? quantidade : '';
+
+        return `
+            <div class="practice-item">
+                <div class="practice-header">
+                    <div>
+                        <div class="practice-title" style="color: ${pratica.cor || 'var(--primary)'};">
+                            ${pratica.icone || '📌'} ${pratica.nome}
                         </div>
+                        ${pratica.descricao ? `<div class="practice-explanation">${pratica.descricao}</div>` : ''}
                     </div>
-                `;
-            }
-        }
+                    <div class="practice-controls">
+                        <input type="number" min="0"
+                               class="practice-input"
+                               value="${displayValue}"
+                               ${isSaving ? 'disabled' : ''}
+                               onchange="updateQuantity('${dateKey}', '${pratica.id}', this.value)">
+                        <button class="btn-increment ${isSaving ? 'btn-saving' : ''}"
+                                onclick="incrementPractice('${dateKey}', '${pratica.id}')"
+                                ${isSaving ? 'disabled' : ''}>
+                            ${isSaving ? '<span class="spinner"></span>' : '+'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
 
-        function setYesNoValue(dateKey, practiceId, value) {
-            if (!practices[dateKey]) practices[dateKey] = {};
-            practices[dateKey][practiceId] = {
-                completed: true,
-                value: value
-            };
-            renderDays();
-        }
+function renderObservationField(dateKey, observacao) {
+    return `
+        <div class="observation-box">
+            <div style="padding: var(--spacing-sm);">
+                <div class="practice-title" style="margin-bottom: var(--spacing-xs);">
+                    📝 Observações do dia
+                </div>
+                <textarea
+                    class="practice-textarea"
+                    placeholder="Adicione observações sobre o dia..."
+                    maxlength="500"
+                    oninput="updateObservation('${dateKey}', this.value)"
+                >${observacao}</textarea>
+                <div style="font-size: var(--font-size-xs); color: var(--text-light); margin-top: var(--spacing-xs);">
+                    ${observacao.length}/500 caracteres
+                </div>
+            </div>
+        </div>
+    `;
+}
 
-        function incrementPractice(dateKey, practiceId) {
-            if (!practices[dateKey]) practices[dateKey] = {};
-            const current = practices[dateKey][practiceId]?.quantity || 0;
-            practices[dateKey][practiceId] = {
-                completed: true,
-                quantity: current + 1
-            };
-            renderDays();
-        }
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// INTERAÇÕES DO USUÁRIO
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
 
-        function updateQuantity(dateKey, practiceId, newValue) {
-            if (!practices[dateKey]) practices[dateKey] = {};
-            const quantity = Math.max(0, parseInt(newValue) || 0);
-            practices[dateKey][practiceId] = {
-                completed: quantity > 0,
-                quantity: quantity
-            };
-            renderDays();
-        }
+function setYesNo(dateKey, praticaId, value) {
+    if (!practices[dateKey]) practices[dateKey] = {};
+    practices[dateKey][praticaId] = {
+        quantidade: value,
+        id: practices[dateKey][praticaId]?.id
+    };
+    renderDays();
+    scheduleSavePractice(dateKey, praticaId);
+}
 
-        function updateDaysCount() {
-            const countEl = document.getElementById('days-count');
-            if (countEl) {
-                countEl.textContent = `${selectedDays.length} dias selecionados`;
-            }
-        }
+function incrementPractice(dateKey, praticaId) {
+    const key = `${dateKey}_${praticaId}`;
 
-        // ===== FUNÇÕES DE MODAL =====
-        function openCalendar() {
-            document.getElementById('calendar-modal').classList.remove('hidden');
-        }
+    // ✅ Bloquear clique se estiver salvando
+    if (savingStates[key]) {
+        console.log('⏳ Aguardando salvamento anterior...');
+        return;
+    }
 
-        function closeCalendar() {
-            document.getElementById('calendar-modal').classList.add('hidden');
+    if (!practices[dateKey]) practices[dateKey] = {};
+    const current = practices[dateKey][praticaId]?.quantidade;
+
+    // Se null/undefined, primeiro clique vai pra 0
+    const newValue = (current === null || current === undefined) ? 0 : current + 1;
+
+    practices[dateKey][praticaId] = {
+        quantidade: newValue,
+        id: practices[dateKey][praticaId]?.id
+    };
+    renderDays();
+    scheduleSavePractice(dateKey, praticaId);
+}
+
+function updateQuantity(dateKey, praticaId, newValue) {
+    if (!practices[dateKey]) practices[dateKey] = {};
+
+    // Se vazio, define como null (não anota)
+    let quantidade = null;
+    if (newValue !== '' && newValue !== null && newValue !== undefined) {
+        quantidade = Math.max(0, parseInt(newValue) || 0);
+    }
+
+    practices[dateKey][praticaId] = {
+        quantidade: quantidade,
+        id: practices[dateKey][praticaId]?.id
+    };
+    renderDays();
+    scheduleSavePractice(dateKey, praticaId);
+}
+
+function updateObservation(dateKey, value) {
+    observations[dateKey] = value;
+    // ✅ NÃO chamar renderDays() aqui - faz perder o foco do textarea
+    // Apenas atualizar o contador de caracteres
+    const textarea = event?.target;
+    if (textarea) {
+        const counter = textarea.parentElement.querySelector('div[style*="font-size"]');
+        if (counter) {
+            counter.textContent = `${value.length}/500 caracteres`;
         }
+    }
+    scheduleSaveObservation(dateKey);
+}
+
+function updateDaysCount() {
+    const countEl = document.getElementById('days-count');
+    if (countEl) {
+        countEl.textContent = `${selectedDays.length} dias selecionados`;
+    }
+}
 
 </script>
 
-<!-- Modal do Calendário -->
-<div id="calendar-modal" class="modal-overlay hidden">
-    <div class="modal">
-        <div class="modal-header">
-            <h3 class="modal-title">Filtrar Dias</h3>
-            <button class="btn-close" onclick="closeCalendar()">✕</button>
-        </div>
-        <div style="text-align: center; color: var(--text-light); padding: var(--spacing-xl);">
-            <div style="font-size: var(--font-size-3xl); margin-bottom: var(--spacing-lg);">📅</div>
-            <div style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-sm);">Calendário Interativo</div>
-            <div>Seleção de dias personalizável será implementada aqui</div>
-        </div>
-    </div>
-</div>
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   ESTILOS PARA LOADING DO BOTÃO
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* Spinner de loading */
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Botão em estado de salvamento */
+.btn-increment.btn-saving {
+    opacity: 0.7;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Input desabilitado durante salvamento */
+.practice-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Textarea de observações - Maior e mais confortável */
+.practice-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: var(--spacing-sm);
+    border: 2px solid #cbd5e1;
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.practice-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 79, 70, 229), 0.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   CHIPS DOS DIAS FILTRADOS
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.day-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: white;
+    animation: fadeIn 0.2s ease-in;
+}
+
+.day-chip-success {
+    background: var(--pratica-pessoas-dark);
+}
+
+.day-chip-success-light {
+    background: #86efac;
+}
+
+.day-chip-warning {
+    background: var(--cerimonia-dark);
+}
+
+.day-chip-danger {
+    background: var(--danger);
+}
+
+.day-chip .remove-chip {
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    transition: background 0.2s;
+}
+
+.day-chip .remove-chip:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+</style>

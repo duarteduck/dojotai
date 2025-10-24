@@ -1,0 +1,467 @@
+<!-- ============================================================================ -->
+<!-- SELETOR DE MEMBRO - Sistema de troca de perfil vinculado -->
+<!-- Permite usuário alternar entre múltiplos membros vinculados -->
+<!-- ============================================================================ -->
+
+<script>
+    // ============================================================================
+    // ESTADO DO SELETOR DE MEMBROS
+    // ============================================================================
+
+    let myLinkedMembers = []; // Lista de membros vinculados ao usuário logado
+    let selectedMember = null; // Membro atualmente selecionado
+    let memberSelectorInitialized = false;
+
+    /**
+     * Inicializa o seletor de membros após login bem-sucedido
+     * Chamado por auth.html após autenticação
+     */
+    async function initMemberSelector() {
+        try {
+            if (memberSelectorInitialized) {
+                console.log('🥋 MemberSelector já inicializado');
+                return;
+            }
+
+            console.log('🥋 Inicializando seletor de membros...');
+
+            // Mostrar loading overlay
+            if (typeof showMemberLoadingOverlay === 'function') {
+                showMemberLoadingOverlay(true);
+            }
+
+            const sessionId = localStorage.getItem('sessionId');
+            if (!sessionId) {
+                console.warn('⚠️ Sem sessionId - não é possível carregar vínculos');
+                if (typeof showMemberLoadingOverlay === 'function') {
+                    showMemberLoadingOverlay(false);
+                }
+                return;
+            }
+
+            // Buscar vínculos do usuário logado
+            const result = await apiCall('getMyLinkedMembers', sessionId);
+
+            if (!result.ok) {
+                console.error('❌ Erro ao buscar vínculos:', result.error);
+                showToast('Erro ao carregar perfis vinculados', 'error');
+                if (typeof showMemberLoadingOverlay === 'function') {
+                    showMemberLoadingOverlay(false);
+                }
+                return;
+            }
+
+            myLinkedMembers = result.items || [];
+            console.log(`✅ ${myLinkedMembers.length} vínculo(s) encontrado(s)`);
+
+            // Selecionar membro automaticamente
+            selectInitialMember();
+
+            // Configurar visibilidade do botão
+            setupMemberSelectorButton();
+
+            // Configurar eventos do modal
+            setupMemberSelectorModal();
+
+            memberSelectorInitialized = true;
+            console.log('✅ MemberSelector inicializado');
+
+            // Esconder loading overlay
+            if (typeof showMemberLoadingOverlay === 'function') {
+                showMemberLoadingOverlay(false);
+            }
+
+        } catch (error) {
+            console.error('❌ Erro ao inicializar seletor de membros:', error);
+
+            // Esconder loading overlay em caso de erro
+            if (typeof showMemberLoadingOverlay === 'function') {
+                showMemberLoadingOverlay(false);
+            }
+        }
+    }
+
+    /**
+     * Seleciona membro inicial após login
+     * Prioridade: principal='sim' > primeiro da lista
+     */
+    function selectInitialMember() {
+        if (myLinkedMembers.length === 0) {
+            console.warn('⚠️ Usuário sem vínculos - nenhum membro selecionado');
+            selectedMember = null;
+            State.selectedMember = null;
+            State.selectedMemberId = null;
+            return;
+        }
+
+        // Tentar encontrar o principal
+        let principal = myLinkedMembers.find(m => m.principal === 'sim');
+
+        // Se não tem principal, pega o primeiro
+        if (!principal) {
+            principal = myLinkedMembers[0];
+        }
+
+        selectedMember = principal;
+        State.selectedMember = principal;
+        State.selectedMemberId = principal.membro_id;
+
+        console.log('✅ Membro selecionado:', principal.membro_nome);
+    }
+
+    /**
+     * Configura visibilidade e eventos do botão de troca de perfil
+     */
+    function setupMemberSelectorButton() {
+        const button = document.getElementById('member-selector-btn');
+
+        if (!button) {
+            console.warn('⚠️ Botão member-selector-btn não encontrado no DOM');
+            return;
+        }
+
+        // Mostrar botão apenas se há múltiplos vínculos
+        if (myLinkedMembers.length > 1) {
+            button.style.display = 'block';
+            button.addEventListener('click', openMemberSelectorModal);
+            console.log('✅ Botão de troca de perfil ativado');
+        } else {
+            button.style.display = 'none';
+            console.log('ℹ️ Botão de troca de perfil oculto (apenas 1 vínculo)');
+        }
+    }
+
+    /**
+     * Configura eventos do modal de seleção
+     */
+    function setupMemberSelectorModal() {
+        const modal = document.getElementById('member-selector-modal');
+        const backdrop = modal?.querySelector('.modal-backdrop');
+        const closeBtn = modal?.querySelector('.btn-fechar-modal');
+
+        if (backdrop) {
+            backdrop.addEventListener('click', closeMemberSelectorModal);
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeMemberSelectorModal);
+        }
+
+        // Fechar com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('member-selector-modal');
+                if (modal && modal.style.display === 'block') {
+                    closeMemberSelectorModal();
+                }
+            }
+        });
+    }
+
+    /**
+     * Abre dropdown de seleção de membro
+     */
+    function openMemberSelectorModal() {
+        // Validar sessão antes de abrir
+        const sessionValid = checkSessionBeforeModal();
+        if (!sessionValid) return;
+
+        const dropdown = document.getElementById('member-selector-dropdown');
+        const button = document.getElementById('member-selector-btn');
+
+        if (!dropdown) {
+            console.error('❌ Dropdown member-selector-dropdown não encontrado');
+            return;
+        }
+
+        if (!button) {
+            console.error('❌ Botão member-selector-btn não encontrado');
+            return;
+        }
+
+        // Renderizar lista de membros
+        renderMembersList();
+
+        // Posicionar dropdown em relação ao botão
+        const buttonRect = button.getBoundingClientRect();
+        dropdown.style.top = `${buttonRect.bottom + 8}px`; // 8px de gap
+        dropdown.style.right = `${window.innerWidth - buttonRect.right}px`;
+
+        // Toggle dropdown
+        dropdown.classList.toggle('show');
+
+        // Fechar ao clicar fora
+        if (dropdown.classList.contains('show')) {
+            setTimeout(() => {
+                document.addEventListener('click', closeOnClickOutside);
+            }, 0);
+        }
+    }
+
+    /**
+     * Fecha dropdown de seleção
+     */
+    function closeMemberSelectorModal() {
+        const dropdown = document.getElementById('member-selector-dropdown');
+        if (dropdown) {
+            dropdown.classList.remove('show');
+            document.removeEventListener('click', closeOnClickOutside);
+        }
+    }
+
+    /**
+     * Fecha dropdown ao clicar fora
+     */
+    function closeOnClickOutside(event) {
+        const dropdown = document.getElementById('member-selector-dropdown');
+        const button = document.getElementById('member-selector-btn');
+
+        if (dropdown && !dropdown.contains(event.target) && !button.contains(event.target)) {
+            closeMemberSelectorModal();
+        }
+    }
+
+    /**
+     * Renderiza lista de membros no dropdown
+     */
+    function renderMembersList() {
+        const container = document.getElementById('members-list-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        console.log('🔍 Renderizando membros. Selecionado:', selectedMember);
+
+        myLinkedMembers.forEach(vinculo => {
+            const isSelected = selectedMember &&
+                              selectedMember.id &&
+                              vinculo.id &&
+                              String(selectedMember.id) === String(vinculo.id);
+
+            console.log(`  Membro: ${vinculo.membro_nome}, ID: ${vinculo.id}, Selecionado: ${isSelected}`);
+
+            const memberItem = document.createElement('button');
+            memberItem.className = 'member-selector-item' + (isSelected ? ' active' : '');
+            memberItem.onclick = () => selectMember(vinculo);
+
+            memberItem.innerHTML = `
+                <span class="icon">🥋</span>
+                <div class="member-selector-info">
+                    <div class="member-selector-name">${vinculo.membro_nome}</div>
+                    <div class="member-selector-meta">${vinculo.categoria_membro || 'Membro'} • ${vinculo.tipo_vinculo || ''}</div>
+                </div>
+                ${isSelected ? '<span class="check">✓</span>' : ''}
+            `;
+
+            container.appendChild(memberItem);
+        });
+    }
+
+    /**
+     * Seleciona um membro e fecha o modal
+     */
+    async function selectMember(vinculo) {
+        try {
+            console.log('🥋 Selecionando membro:', vinculo.membro_nome);
+
+            // Atualizar estado local (apenas na sessão atual)
+            selectedMember = vinculo;
+            State.selectedMember = vinculo;
+            State.selectedMemberId = vinculo.membro_id;
+
+            console.log('✅ Membro selecionado na sessão atual:', vinculo.membro_nome);
+
+            // Fechar dropdown
+            closeMemberSelectorModal();
+
+            // Feedback visual
+            showToast(`Perfil alterado para ${vinculo.membro_nome}`, 'success');
+
+            // Recarregar página atual para refletir mudança
+            // (Práticas, por exemplo, precisam do membro correto)
+            const currentPage = document.querySelector('.nav-tab.active')?.dataset.page;
+            if (currentPage === 'practices') {
+                // Recarregar práticas se estiver na página
+                if (typeof initPractices === 'function') {
+                    initPractices();
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Erro ao selecionar membro:', error);
+            showToast('Erro ao trocar perfil', 'error');
+        }
+    }
+
+    /**
+     * Retorna o membro atualmente selecionado
+     * @returns {Object|null} Objeto do membro selecionado ou null
+     */
+    function getSelectedMember() {
+        return selectedMember;
+    }
+
+    /**
+     * Retorna o ID do membro atualmente selecionado
+     * @returns {number|null} ID do membro ou null
+     */
+    function getSelectedMemberId() {
+        return selectedMember ? selectedMember.membro_id : null;
+    }
+
+    // Expor funções globalmente
+    window.initMemberSelector = initMemberSelector;
+    window.getSelectedMember = getSelectedMember;
+    window.getSelectedMemberId = getSelectedMemberId;
+</script>
+
+<!-- ============================================================================ -->
+<!-- ESTILOS DO SELETOR DE MEMBROS -->
+<!-- ============================================================================ -->
+
+<style>
+    /* Botão de troca de perfil - usa classe theme-toggle do Design System */
+    #member-selector-btn {
+        display: none; /* Mostrado apenas se múltiplos vínculos */
+        position: relative;
+    }
+
+    /* Dropdown de seleção de membros (estilo igual ao userMenuDropdown) */
+    #member-selector-dropdown {
+        position: fixed;
+        min-width: 280px;
+        background: #ffffff;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+        overflow: hidden;
+    }
+
+    #member-selector-dropdown.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    /* Header do Dropdown */
+    .member-selector-header {
+        padding: var(--spacing-lg);
+        background: var(--gradient-primary);
+        color: #ffffff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .member-selector-header h4 {
+        margin: 0;
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+    }
+
+    /* Lista de Membros */
+    .member-selector-items {
+        padding: var(--spacing-sm) 0;
+        max-height: 400px;
+        overflow-y: auto;
+        background: #ffffff;
+    }
+
+    .member-selector-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) var(--spacing-lg);
+        color: var(--text);
+        text-decoration: none;
+        transition: var(--transition);
+        cursor: pointer;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        font-size: var(--font-size-base);
+    }
+
+    .member-selector-item:hover {
+        background: #f1f5f9;
+    }
+
+    .member-selector-item.active {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .member-selector-item .icon {
+        font-size: 1.25rem;
+        width: 24px;
+        text-align: center;
+    }
+
+    .member-selector-item .member-selector-info {
+        flex: 1;
+    }
+
+    .member-selector-item .member-selector-name {
+        font-weight: 600;
+        font-size: var(--font-size-base);
+        margin-bottom: 2px;
+    }
+
+    .member-selector-item .member-selector-meta {
+        font-size: var(--font-size-xs);
+        color: #64748b;
+    }
+
+    .member-selector-item .check {
+        font-size: 1.25rem;
+        color: #3b82f6;
+        font-weight: bold;
+    }
+
+    /* Dark mode support */
+    [data-theme="dark"] #member-selector-dropdown {
+        background: var(--dark);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    [data-theme="dark"] .member-selector-items {
+        background: var(--dark);
+    }
+
+    [data-theme="dark"] .member-selector-item:hover {
+        background: var(--surface);
+    }
+
+    [data-theme="dark"] .member-selector-item.active {
+        background: var(--primary);
+        color: #ffffff;
+    }
+</style>
+
+<!-- ============================================================================ -->
+<!-- DROPDOWN DE SELEÇÃO DE MEMBROS -->
+<!-- Renderizado globalmente, posicionado via CSS em relação ao botão -->
+<!-- ============================================================================ -->
+
+<script>
+    // Criar e adicionar dropdown ao body quando DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+        // Criar dropdown
+        const dropdown = document.createElement('div');
+        dropdown.id = 'member-selector-dropdown';
+        dropdown.innerHTML = `
+            <div class="member-selector-header">
+                <h4>Selecionar Perfil</h4>
+            </div>
+            <div class="member-selector-items" id="members-list-container">
+                <!-- Membros serão renderizados aqui via JS -->
+            </div>
+        `;
+
+        // Adicionar ao body
+        document.body.appendChild(dropdown);
+    });
+</script>

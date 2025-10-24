@@ -398,7 +398,7 @@ src/00-core/
 
 ---
 
-### 🟢 src/01-business/ (LÓGICA DE NEGÓCIO - 6 arquivos)
+### 🟢 src/01-business/ (LÓGICA DE NEGÓCIO - 8 arquivos)
 
 ```
 src/01-business/
@@ -417,13 +417,24 @@ src/01-business/
 ├── menu.gs (45 linhas)
 │   └── Menu dinâmico
 │
-└── participacoes.gs (1.222 linhas) ⭐
-    └── Sistema de alvos e participações
+├── participacoes.gs (1.222 linhas) ⭐
+│   └── Sistema de alvos e participações
+│
+├── practices.gs ⭐ NOVO - Sistema de Práticas Diárias
+│   ├── _loadAvailablePractices(memberId)
+│   ├── _loadPracticesByMemberAndDateRange(memberId, startDate, endDate)
+│   ├── _savePracticeCore(memberId, data, praticaId, quantidade)
+│   ├── _saveObservationCore(memberId, data, observacao)
+│   ├── _loadObservationByMemberAndDate(memberId, date)
+│   └── _loadObservationsByDateRange(memberId, startDate, endDate)
+│
+└── vinculos.gs ⭐ NOVO - Sistema de Vínculos
+    └── Gestão de vínculos usuário-membro
 ```
 
 ---
 
-### 🔵 src/02-api/ (PONTOS DE ENTRADA - 2 arquivos)
+### 🔵 src/02-api/ (PONTOS DE ENTRADA - 4 arquivos)
 
 ```
 src/02-api/
@@ -431,15 +442,26 @@ src/02-api/
 │   ├── doGet(e) - Ponto de entrada web
 │   └── include(filename) - Sistema de includes
 │
-└── usuarios_api.gs (833 linhas)
-    └── APIs de usuários e atividades
+├── usuarios_api.gs (833 linhas)
+│   └── APIs de usuários e atividades
+│
+├── practices_api.gs ⭐ NOVO - APIs de Práticas Diárias
+│   ├── getAvailablePractices(sessionId, memberId)
+│   ├── loadPracticesByDateRange(sessionId, memberId, startDate, endDate)
+│   ├── savePractice(sessionId, memberId, data, praticaId, quantidade)
+│   ├── saveObservation(sessionId, memberId, data, observacao)
+│   ├── loadObservation(sessionId, memberId, date)
+│   └── loadObservationsByDateRange(sessionId, memberId, startDate, endDate)
+│
+└── vinculos_api.gs ⭐ NOVO - APIs de Vínculos
+    └── APIs de gestão de vínculos usuário-membro
 ```
 
 **Total Backend:** 10.141 linhas em 15 arquivos (inalterado)
 
 ---
 
-## 🗄️ DATABASE - 12 Tabelas (Inalterado)
+## 🗄️ DATABASE - 15 Tabelas
 
 ### Tabelas Core (5 principais)
 
@@ -465,7 +487,7 @@ src/02-api/
    FK: id_usuario → usuarios.uid
 ```
 
-### Tabelas Auxiliares (7 tabelas)
+### Tabelas Auxiliares (10 tabelas)
 
 ```
 6. categorias_atividades
@@ -473,8 +495,20 @@ src/02-api/
 8. planilhas
 9. performance_logs
 10. system_logs
-11. notificacoes (planejado)
-12. preferencias (planejado)
+11. PRATICAS_CADASTRO ⭐ NOVO
+    PK: id (PRAC-0001...)
+    Cadastro de práticas disponíveis (editável via planilha)
+12. PRATICAS_DIARIAS ⭐ NOVO
+    PK: id (PRAD-0001...)
+    FK: membro_id → membros.codigo_sequencial
+    FK: pratica_id → PRATICAS_CADASTRO.id
+    UNIQUE: (membro_id, data, pratica_id)
+13. OBSERVACOES_DIARIAS ⭐ NOVO
+    PK: id (OBS-0001...)
+    FK: membro_id → membros.codigo_sequencial
+    UNIQUE: (membro_id, data)
+14. notificacoes (planejado)
+15. preferencias (planejado)
 ```
 
 ---
@@ -659,9 +693,14 @@ Toast + limpa caches + recarrega lista
 | Modal participantes | src/04-views/activities.html | openParticipantsModal() |
 | Membros | src/04-views/members.html | loadMembers() |
 | Práticas | src/04-views/practices.html | initPractices() |
-| Modal calendário | src/04-views/practices.html | openCalendar() |
+| Carregar práticas disponíveis | src/04-views/practices.html | loadAvailablePractices() |
+| Renderizar cards de dias | src/04-views/practices.html | renderDays() |
+| Auto-save práticas | src/04-views/practices.html | savePracticeToServer() |
+| Auto-save observações | src/04-views/practices.html | saveObservationToServer() |
+| Sistema de progresso (4 cores) | src/04-views/practices.html | getDayProgress() |
+| Modal calendário | src/04-views/practices.html | openCalendar() (PENDENTE) |
 | Relatórios | src/04-views/reports.html | initReports() |
-| **BACKEND** |
+| **BACKEND - CORE** |
 | Login API | usuarios_api.gs | authenticateUser() |
 | Listar atividades | activities.gs | listActivitiesApi() |
 | Criar atividade | usuarios_api.gs | createActivity() |
@@ -669,6 +708,16 @@ Toast + limpa caches + recarrega lista
 | Listar usuários | usuarios_api.gs | listUsuariosApi() |
 | Definir alvos | participacoes.gs | defineTargets() |
 | Listar participações | participacoes.gs | listParticipacoes() |
+| **BACKEND - PRÁTICAS** ⭐ |
+| API: Práticas disponíveis | practices_api.gs | getAvailablePractices() |
+| API: Carregar práticas | practices_api.gs | loadPracticesByDateRange() |
+| API: Salvar prática | practices_api.gs | savePractice() |
+| API: Salvar observação | practices_api.gs | saveObservation() |
+| Core: Carregar práticas | practices.gs | _loadAvailablePractices() |
+| Core: UPSERT prática | practices.gs | _savePracticeCore() |
+| Core: UPSERT observação | practices.gs | _saveObservationCore() |
+| Core: Batch observações | practices.gs | _loadObservationsByDateRange() |
+| **BACKEND - GERAL** |
 | CRUD genérico | database_manager.gs | insert/query/update/delete |
 | Criar sessão | session_manager.gs | createSession() |
 | Validar sessão | session_manager.gs | validateSession() |
@@ -729,9 +778,19 @@ Toast + limpa caches + recarrega lista
 - Frontend: `src/04-views/members.html`
 - Database: Tabela `membros`
 
-**Práticas:**
-- Frontend: `src/04-views/practices.html` (com modal calendário)
-- Database: (futuro - atualmente localStorage)
+**Práticas:** ⭐ SISTEMA COMPLETO IMPLEMENTADO
+- Backend Core: `practices.gs` (6 funções de negócio)
+- Backend API: `practices_api.gs` (6 endpoints públicos)
+- Frontend: `src/04-views/practices.html` (703 linhas - interface completa)
+- Database: 3 tabelas (`PRATICAS_CADASTRO`, `PRATICAS_DIARIAS`, `OBSERVACOES_DIARIAS`)
+- Funcionalidades:
+  - ✅ Cadastro dinâmico de práticas (editável via planilha)
+  - ✅ Auto-save com debounce (500ms)
+  - ✅ Sistema de progresso com 4 cores
+  - ✅ Observações do dia (500 chars)
+  - ✅ Múltiplos tipos de input (contador/checkbox)
+  - ✅ Integração com sistema de vínculos
+  - 🔴 PENDENTE: Sistema de calendário/filtros (removido, precisa refazer)
 
 **Relatórios:**
 - Frontend: `src/04-views/reports.html`
@@ -751,6 +810,14 @@ Toast + limpa caches + recarrega lista
 
 ## 🔄 HISTÓRICO DE VERSÕES
 
+- **v2.1.0** (24/10/2025) - Sistema de Práticas Diárias
+  - ✅ 3 novas tabelas (PRATICAS_CADASTRO, PRATICAS_DIARIAS, OBSERVACOES_DIARIAS)
+  - ✅ 2 novos arquivos backend (practices.gs, practices_api.gs)
+  - ✅ 2 novos arquivos backend (vinculos.gs, vinculos_api.gs)
+  - ✅ Sistema completo de práticas funcionando
+  - ✅ Auto-save, progresso 4 cores, observações do dia
+  - 🔴 Calendário/filtros pendente
+
 - **v2.0.0-modular** (18/10/2025) - Modularização completa
   - 45 arquivos modulares criados
   - app_migrated.html eliminado
@@ -765,4 +832,4 @@ Toast + limpa caches + recarrega lista
 ---
 
 **🗺️ Este mapa é atualizado quando a estrutura do projeto muda significativamente.**
-**Última grande atualização: Modularização completa do frontend - 18/10/2025**
+**Última grande atualização: Sistema de Práticas Diárias - 24/10/2025**

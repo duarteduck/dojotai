@@ -2078,6 +2078,469 @@ const DATA_DICTIONARY = {
         description: 'Grupo ativo no sistema'
       }
     }
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                              22. TABELA: USUARIO_MEMBRO                                       │
+  // │ 🔗 Relacionamento N:N entre usuários e membros                                               │
+  // │ 📂 Arquivo: Configurações | Planilha: UsuarioMembro | Referência: usuario_membro            │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  usuario_membro: {
+    tableName: 'usuario_membro',
+    description: 'Relacionamento N:N entre usuários e membros (permite usuário gerenciar múltiplos membros)',
+    primaryKey: 'id',
+    file: 'Configurações',
+    sheet: 'UsuarioMembro',
+
+    // 🔍 CAMPOS DA TABELA USUARIO_MEMBRO
+    fields: {
+
+      // ID único do vínculo
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^UM-\\d+$',
+        description: 'ID único do vínculo (UM-0001, UM-0002...)',
+        generated: true,
+        example: 'UM-0001'
+      },
+
+      // UID do usuário (FK)
+      user_id: {
+        type: 'TEXT',
+        required: true,
+        foreignKey: 'usuarios.uid',
+        description: 'UID do usuário que terá acesso ao membro',
+        example: 'U001'
+      },
+
+      // Código do membro (FK)
+      membro_id: {
+        type: 'NUMBER',
+        required: true,
+        foreignKey: 'membros.codigo_sequencial',
+        description: 'Código sequencial do membro',
+        example: 5
+      },
+
+      // Tipo de relacionamento
+      tipo_vinculo: {
+        type: 'TEXT',
+        required: true,
+        enum: ['proprio', 'filho', 'filha', 'dependente', 'pai', 'mae', 'responsavel', 'tutor'],
+        description: 'Tipo de relacionamento entre usuário e membro',
+        default: 'proprio',
+        example: 'filho'
+      },
+
+      // Vínculo ativo
+      ativo: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', 'não', ''],
+        default: 'sim',
+        description: 'Vínculo ativo (sim) ou inativo (não/vazio)'
+      },
+
+      // Membro principal do usuário
+      principal: {
+        type: 'TEXT',
+        required: false,
+        enum: ['sim', ''],
+        default: '',
+        description: 'Indica se este é o membro principal/padrão do usuário (sim/vazio)'
+      },
+
+      // Data/hora de criação
+      criado_em: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        generated: true,
+        description: 'Data e hora de criação do vínculo'
+      },
+
+      // Quem criou o vínculo
+      criado_por: {
+        type: 'TEXT',
+        required: false,
+        foreignKey: 'usuarios.uid',
+        description: 'UID do usuário (admin) que criou o vínculo',
+        example: 'U001'
+      },
+
+      // Data/hora de desativação
+      desativado_em: {
+        type: 'DATETIME',
+        required: false,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        description: 'Data e hora que o vínculo foi desativado'
+      },
+
+      // Quem desativou
+      desativado_por: {
+        type: 'TEXT',
+        required: false,
+        foreignKey: 'usuarios.uid',
+        description: 'UID do usuário que desativou o vínculo',
+        example: 'U001'
+      },
+
+      // Observações
+      observacoes: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 500,
+        description: 'Observações sobre o vínculo (motivo, detalhes, etc)',
+        example: 'Filho adotivo'
+      },
+
+      // Soft delete
+      deleted: {
+        type: 'TEXT',
+        required: false,
+        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
+        default: ''
+      }
+    },
+
+    // 🔗 Índices e constraints
+    indexes: [
+      {
+        fields: ['user_id', 'membro_id'],
+        unique: true,
+        description: 'Impede vínculo duplicado (mesmo usuário + mesmo membro)'
+      },
+      {
+        fields: ['user_id', 'ativo'],
+        unique: false,
+        description: 'Buscar vínculos ativos de um usuário (performance)'
+      },
+      {
+        fields: ['membro_id', 'ativo'],
+        unique: false,
+        description: 'Buscar usuários com acesso a um membro (performance)'
+      }
+    ],
+
+    // 📋 Regras de negócio
+    businessRules: [
+      'Um usuário pode ter múltiplos vínculos (ex: pais gerenciando filhos)',
+      'Um membro pode estar vinculado a múltiplos usuários (ex: mãe + pai)',
+      'Vínculos duplicados (mesmo user_id + mesmo membro_id) são bloqueados',
+      'Apenas admin pode criar, desativar ou reativar vínculos',
+      'Vínculos NÃO podem ser editados, apenas criados/desativados/reativados',
+      'Um usuário pode ter no máximo 1 vínculo marcado como principal',
+      'Tipo "proprio" indica que o usuário É aquele membro',
+      'Vínculos inativos são mantidos para histórico (não deletar fisicamente)',
+      'Ao desativar, preencher desativado_em e desativado_por'
+    ]
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                              23. TABELA: PRATICAS_CADASTRO                                    │
+  // │ 📋 Cadastro configurável de práticas diárias disponíveis                                     │
+  // │ 📂 Arquivo: Práticas | Planilha: Cadastro | Referência: praticas_cadastro                   │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  praticas_cadastro: {
+    tableName: 'praticas_cadastro',
+    description: 'Cadastro configurável de práticas diárias disponíveis para membros do dojo',
+    primaryKey: 'id',
+    file: 'Práticas',
+    sheet: 'Cadastro',
+
+    // 🔍 CAMPOS DA TABELA PRATICAS_CADASTRO
+    fields: {
+
+      // ID único da prática (gerado automaticamente)
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: 'PRAC-{counter}',
+        description: 'ID único da prática (gerado automaticamente)',
+        generated: true,
+        example: 'PRAC-0001'
+      },
+
+      // Nome da prática
+      nome: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 50,
+        description: 'Nome da prática exibido na interface',
+        example: 'Okiyome para Pessoas'
+      },
+
+      // Ícone da prática
+      icone: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 20,
+        description: 'Emoji representando a prática (emoji ou classe CSS)',
+        example: '🙏'
+      },
+
+      // Cor da prática (hex)
+      cor: {
+        type: 'TEXT',
+        required: false,
+        pattern: '^#[0-9A-Fa-f]{6}$',
+        description: 'Cor da prática em hexadecimal para destaque visual',
+        example: '#4CAF50'
+      },
+
+      // Descrição da prática
+      descricao: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 500,
+        description: 'Descrição detalhada da prática (opcional)',
+        example: 'Contar cada pessoa que recebeu okiyome'
+      },
+
+      // Tipo de prática
+      tipo: {
+        type: 'TEXT',
+        required: true,
+        enum: ['contador', 'sim_nao'],
+        default: 'contador',
+        description: 'Tipo de prática (contador = quantidade numérica, sim_nao = checkbox 0 ou 1)',
+        example: 'contador'
+      },
+
+      // Status da prática
+      status: {
+        type: 'TEXT',
+        required: true,
+        enum: ['Ativo', 'Inativo'],
+        default: 'Ativo',
+        description: 'Status da prática (Ativo = aparece na interface, Inativo = oculta)'
+      },
+
+      // Ordem de exibição
+      ordem: {
+        type: 'NUMBER',
+        required: true,
+        description: 'Ordem de exibição na interface (1, 2, 3...)',
+        example: 1
+      },
+
+      // Soft delete
+      deleted: {
+        type: 'TEXT',
+        required: false,
+        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
+        default: ''
+      }
+    },
+
+    // 📋 Regras de negócio
+    businessRules: [
+      'Apenas admin pode criar, editar ou desativar práticas',
+      'Práticas NÃO podem ser deletadas fisicamente (usar soft delete)',
+      'Desativar prática (status = Inativo) remove da interface, mas mantém dados históricos em praticas_diarias',
+      'Campo ordem controla sequência de exibição (permite reordenar sem alterar código)',
+      'Nome e ícone são editáveis via planilha sem necessidade de alterar código',
+      'ID é gerado automaticamente pelo DatabaseManager (pattern PRAC-{counter})'
+    ]
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                             24. TABELA: PRATICAS_DIARIAS                                      │
+  // │ 📊 Registros diários de práticas realizadas (modelo chave-valor)                             │
+  // │ 📂 Arquivo: Práticas | Planilha: Registro | Referência: praticas_diarias                    │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  praticas_diarias: {
+    tableName: 'praticas_diarias',
+    description: 'Registros diários de práticas realizadas pelos membros (1 linha por prática por dia)',
+    primaryKey: 'id',
+    file: 'Práticas',
+    sheet: 'Registro',
+
+    // 🔍 CAMPOS DA TABELA PRATICAS_DIARIAS
+    fields: {
+
+      // ID único do registro (chave composta)
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^\\d+\\|\\d{4}-\\d{2}-\\d{2}\\|PRAC-\\d{4}$',
+        description: 'ID único composto por membro_id|data|pratica_id (elimina race condition)',
+        generated: true,
+        example: '19|2025-10-23|PRAC-0001'
+      },
+
+      // FK membro
+      membro_id: {
+        type: 'NUMBER',
+        required: true,
+        foreignKey: 'membros.codigo_sequencial',
+        description: 'Código sequencial do membro que realizou a prática',
+        example: 5
+      },
+
+      // FK prática
+      pratica_id: {
+        type: 'TEXT',
+        required: true,
+        foreignKey: 'praticas_cadastro.id',
+        description: 'ID da prática realizada (FK para praticas_cadastro)',
+        example: 'PRAC-0001'
+      },
+
+      // Data
+      data: {
+        type: 'DATE',
+        required: true,
+        format: 'yyyy-MM-dd',
+        timezone: 'America/Sao_Paulo',
+        description: 'Data em que a prática foi realizada',
+        example: '2025-01-15'
+      },
+
+      // Quantidade (campo universal)
+      quantidade: {
+        type: 'NUMBER',
+        required: true,
+//        default: 0,
+        description: 'Quantidade realizada (contador) ou 0/1 (sim_nao)',
+        example: 3
+      },
+
+      // Timestamp de criação
+      criado_em: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        generated: true,
+        description: 'Data e hora de criação do registro'
+      },
+
+      // Timestamp de atualização
+      atualizado_em: {
+        type: 'DATETIME',
+        required: false,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        description: 'Data e hora da última atualização'
+      },
+
+      // Soft delete
+      deleted: {
+        type: 'TEXT',
+        required: false,
+        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
+        default: ''
+      }
+    },
+
+    // 📋 Regras de negócio
+    businessRules: [
+      '1 linha por prática por dia por membro (validar no backend com UPSERT)',
+      'Campo quantidade armazena: número para contador OU 0/1 para sim_nao',
+      'Frontend interpreta baseado em praticas_cadastro.tipo',
+      'Validação obrigatória: requireMemberAccess(sessionId, memberId) em TODAS as APIs',
+      'Não deletar fisicamente (usar soft delete)',
+      'Auto-save recomendado (debounce 2s no frontend)',
+      'UPSERT: se registro existe (membro+data+pratica), atualizar quantidade',
+      'FK pratica_id aponta para praticas_cadastro.id (TEXT PRAC-{counter})',
+      'FK membro_id aponta para membros.codigo_sequencial (NUMBER)'
+    ]
+  },
+
+  // ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  // │                          25. TABELA: PRATICAS_OBSERVACOES                                     │
+  // │ 📝 Observações gerais sobre o dia de práticas (1 por membro por dia)                         │
+  // │ 📂 Arquivo: Práticas | Planilha: Observacoes | Referência: praticas_observacoes             │
+  // └────────────────────────────────────────────────────────────────────────────────────────────────┘
+  praticas_observacoes: {
+    tableName: 'praticas_observacoes',
+    description: 'Observações gerais sobre o dia de práticas (1 linha por membro por dia)',
+    primaryKey: 'id',
+    file: 'Práticas',
+    sheet: 'Observacoes',
+
+    // 🔍 CAMPOS DA TABELA PRATICAS_OBSERVACOES
+    fields: {
+
+      // ID único (chave composta)
+      id: {
+        type: 'TEXT',
+        required: true,
+        pattern: '^\\d+\\|\\d{4}-\\d{2}-\\d{2}$',
+        description: 'ID único composto por membro_id|data (elimina race condition)',
+        generated: true,
+        example: '19|2025-10-23'
+      },
+
+      // FK membro
+      membro_id: {
+        type: 'NUMBER',
+        required: true,
+        foreignKey: 'membros.codigo_sequencial',
+        description: 'Código sequencial do membro',
+        example: 5
+      },
+
+      // Data
+      data: {
+        type: 'DATE',
+        required: true,
+        format: 'yyyy-MM-dd',
+        timezone: 'America/Sao_Paulo',
+        description: 'Data da observação',
+        example: '2025-01-15'
+      },
+
+      // Observação
+      observacao: {
+        type: 'TEXT',
+        required: true,
+        maxLength: 500,
+        description: 'Observação geral sobre o dia de práticas',
+        example: 'Dia muito produtivo, me senti energizado'
+      },
+
+      // Timestamp de criação
+      criado_em: {
+        type: 'DATETIME',
+        required: true,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        generated: true,
+        description: 'Data e hora de criação'
+      },
+
+      // Timestamp de atualização
+      atualizado_em: {
+        type: 'DATETIME',
+        required: false,
+        format: 'yyyy-MM-dd HH:mm:ss',
+        timezone: 'America/Sao_Paulo',
+        description: 'Data e hora da última atualização'
+      },
+
+      // Soft delete
+      deleted: {
+        type: 'TEXT',
+        required: false,
+        description: 'Marca se o registro foi deletado (vazio = ativo, x = deletado)',
+        default: ''
+      }
+    },
+
+    // 📋 Regras de negócio
+    businessRules: [
+      '1 observação por membro por dia (validar no backend com UPSERT)',
+      'Campo observacao é obrigatório (não criar linha se vazio)',
+      'maxLength 500 chars (texto mais longo que observações por prática)',
+      'Validação obrigatória: requireMemberAccess(sessionId, memberId)',
+      'UPSERT: se observação do dia já existe, atualizar ao invés de inserir',
+      'Observação é opcional - só criar registro se usuário digitar algo'
+    ]
   }
 };
 

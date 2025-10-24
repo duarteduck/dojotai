@@ -321,6 +321,93 @@ async function requireSession(sessionId, context = 'API') {
 }
 
 /**
+ * Helper: Valida sessão E acesso do usuário ao membro especificado
+ *
+ * @description Centraliza a validação completa de sessão + permissão de acesso ao membro.
+ * Utilizado em todas as APIs que manipulam dados sensíveis ao membro ativo.
+ *
+ * Segurança: O memberId vem do frontend (State), que pode ser manipulado.
+ * Esta função garante que o usuário autenticado possui vínculo ativo com o membro.
+ *
+ * @param {string} sessionId - ID da sessão a validar
+ * @param {string} memberId - ID do membro (membros.codigo_sequencial)
+ * @param {string} [context='API'] - Nome do módulo/contexto (para logs detalhados)
+ * @returns {Promise<Object>} Resultado da validação
+ * @returns {boolean} returns.ok - Se a validação foi bem-sucedida
+ * @returns {Object} [returns.session] - Dados da sessão se válida
+ * @returns {string} [returns.userId] - ID do usuário autenticado
+ * @returns {string} [returns.memberId] - ID do membro validado
+ * @returns {Object} [returns.vinculo] - Dados do vínculo usuario_membro
+ * @returns {string} [returns.error] - Mensagem de erro se inválida
+ * @returns {boolean} [returns.sessionExpired] - True se sessão expirou/inválida
+ *
+ * @example
+ * // Uso em qualquer API que acessa dados do membro:
+ * async function loadPracticesByDateRange(sessionId, memberId, startDate, endDate) {
+ *   const auth = await requireMemberAccess(sessionId, memberId, 'PracticesAPI');
+ *   if (!auth.ok) return auth;  // Retorna erro padronizado
+ *
+ *   // Aqui já validou: usuário logado + vínculo ativo com o membro
+ *   const userId = auth.userId;
+ *   const isPrincipal = auth.vinculo.principal === 'sim';
+ *   // ...continua a lógica da API
+ * }
+ *
+ * @since 4.1.0
+ */
+async function requireMemberAccess(sessionId, memberId, context = 'API') {
+  // Validação 1: Validar sessão primeiro (usuário autenticado?)
+  const auth = await requireSession(sessionId, context);
+  if (!auth.ok) return auth;
+
+  const userId = auth.session.user_id;
+
+  // Validação 2: memberId foi fornecido?
+  if (!memberId) {
+    Logger.warn(context, 'Tentativa sem memberId', { userId });
+    return {
+      ok: false,
+      error: 'Membro não especificado'
+    };
+  }
+
+  // Validação 3: Usuário tem vínculo ativo com o membro?
+  const vinculoResult = DatabaseManager.query('usuario_membro', {
+    user_id: userId,
+    membro_id: memberId,
+    ativo: 'sim',
+    deleted: ''
+  });
+
+  const vinculos = Array.isArray(vinculoResult)
+    ? vinculoResult
+    : (vinculoResult?.data || []);
+
+  if (!vinculos || vinculos.length === 0) {
+    Logger.warn(context, 'Acesso negado: usuário não tem vínculo com o membro', { userId, memberId });
+    return {
+      ok: false,
+      error: 'Você não tem permissão para acessar dados deste membro'
+    };
+  }
+
+  // Sucesso: retorna sessão válida + dados do vínculo
+  Logger.debug(context, 'Acesso ao membro validado', {
+    userId,
+    memberId,
+    isPrincipal: vinculos[0].principal === 'sim'
+  });
+
+  return {
+    ok: true,
+    session: auth.session,
+    userId: userId,
+    memberId: memberId,
+    vinculo: vinculos[0]  // Dados do vínculo (principal, etc)
+  };
+}
+
+/**
  * Validação rápida de sessão (apenas verifica se está ativa e não expirou)
  * Usada antes de abrir modais para avisar o usuário precocemente
  * @param {string} sessionId - ID da sessão

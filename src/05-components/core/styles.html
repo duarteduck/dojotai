@@ -437,6 +437,12 @@
             border: 1px solid var(--pratica-pessoas-dark);
         }
 
+        .badge-success-light {
+            background: rgba(134, 239, 172, 0.3);
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+
         .badge-warning {
             background: var(--cerimonia-light);
             color: var(--cerimonia-dark);
@@ -587,35 +593,22 @@
         }
 
         /* ===== PRÁTICAS DIÁRIAS ESPECÍFICAS ===== */
-        .practices-header {
-            background: var(--gradient-primary);
-            color: var(--white);
-            padding: var(--spacing-lg);
-            margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) var(--spacing-lg);
-        }
-
-        .practices-controls {
-            background: var(--light);
-            padding: var(--spacing-md) var(--spacing-lg);
-            border-bottom: 1px solid var(--gray-light);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: var(--spacing-md);
-        }
 
         .day-card {
             background: var(--white);
-            border: 1px solid var(--gray-light);
+            border: 2px solid #cbd5e1;
             border-radius: var(--radius-lg);
             overflow: hidden;
             transition: var(--transition);
         }
 
+        .day-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
         .day-card.today {
-            border: 2px solid var(--primary);
-            box-shadow: 0 0 0 2px var(--primary-light);
+            /* Contorno removido - mantém apenas cabeçalho azul */
         }
 
         .day-header {
@@ -642,10 +635,10 @@
         }
 
         .practice-item {
-            padding: var(--spacing-md);
+            padding: var(--spacing-sm);
             border-radius: var(--radius);
             border: 1px solid;
-            margin-bottom: var(--spacing-sm);
+            margin-bottom: var(--spacing-xs);
         }
 
         .practice-item.pessoas {
@@ -661,6 +654,14 @@
         .practice-item.receber {
             background: var(--pratica-receber-light);
             border-color: var(--pratica-receber);
+        }
+
+        .observation-box {
+            margin-bottom: var(--spacing-xs);
+            background-color: var(--background-light);
+            border: 1px solid #000000;
+            border-radius: var(--radius);
+            padding: var(--spacing-sm);
         }
 
         .practice-header {

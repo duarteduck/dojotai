@@ -1,5 +1,5 @@
         <!-- Reports Page -->
-        <div id="reports" class="page-content hidden">
+        <div id="reports" class="page-content hidden" style="position: relative;">
             <!-- Header do Relatório -->
             <div class="card">
                 <div style="background: var(--gradient-primary); color: var(--white); padding: var(--spacing-xl); margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) var(--spacing-lg);">
@@ -377,3 +377,25 @@
 
 
 </script>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   MARCA D'ÁGUA - SIMULADO
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+#reports::before {
+    content: 'SIMULADO';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 120px;
+    font-weight: 900;
+    color: rgba(220, 38, 38, 0.08);
+    pointer-events: none;
+    z-index: 9999;
+    white-space: nowrap;
+    letter-spacing: 0.1em;
+    user-select: none;
+}
+</style>

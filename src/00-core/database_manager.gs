@@ -327,8 +327,8 @@ class SecurityUtils {
       case 'id':
         return String(input)
           .trim()
-          .replace(/[^a-zA-Z0-9_-]/g, '') // Apenas alfanuméricos, _ e -
-          .substring(0, 50);
+          .replace(/[^a-zA-Z0-9_\-|]/g, '') // Apenas alfanuméricos, _, -, e | (pipe para chaves compostas)
+          .substring(0, 100); // Aumentado para 100 (chaves compostas são maiores)
 
       default:
         return String(input).trim().substring(0, 1000);
@@ -1723,6 +1723,7 @@ const DatabaseManager = {
       const { values, headerIndex } = readTableByNome_(tableName);
 
       if (!values || values.length <= 1) {
+        Logger.debug('DatabaseManager', '_getRawData: Nenhum dado encontrado', { tableName });
         return [];
       }
 
@@ -1735,12 +1736,49 @@ const DatabaseManager = {
         .map(row => {
           const obj = {};
           headers.forEach((header, index) => {
-            obj[header] = row[index] || '';
+            let value = row[index];
+
+            // 🔧 CORREÇÃO: Converter Date objects para string
+            if (value instanceof Date) {
+              // Detectar se é DATE ou DATETIME verificando se tem hora diferente de 00:00:00
+              const hours = value.getHours();
+              const minutes = value.getMinutes();
+              const seconds = value.getSeconds();
+              const hasTime = hours !== 0 || minutes !== 0 || seconds !== 0;
+
+              // DATETIME: incluir hora (yyyy-MM-dd HH:mm:ss)
+              // DATE: só data (yyyy-MM-dd)
+              if (hasTime) {
+                value = Utilities.formatDate(value, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss');
+              } else {
+                value = Utilities.formatDate(value, 'America/Sao_Paulo', 'yyyy-MM-dd');
+              }
+            } else if (value === null || value === undefined) {
+              value = '';
+            }
+
+            obj[header] = value;
           });
           return obj;
         });
 
       const filteredData = mappedData.filter(obj => obj.deleted !== 'x');
+
+      // 🐛 DEBUG: Log dados brutos lidos (somente para praticas_diarias)
+      if (tableName === 'praticas_diarias') {
+        Logger.info('═══════════════════════════════════════════════════════════════');
+        Logger.info('🔍 _getRawData: Dados lidos da planilha praticas_diarias');
+        Logger.info('  Total de linhas na planilha:', dataRows.length);
+        Logger.info('  Total após remover deleted=x:', filteredData.length);
+        if (filteredData.length > 0) {
+          Logger.info('  Primeiros 3 registros:');
+          filteredData.slice(0, 3).forEach((record, idx) => {
+            Logger.info(`    [${idx}] id=${record.id}, membro_id=${record.membro_id} (tipo: ${typeof record.membro_id}), data=${record.data}, pratica_id=${record.pratica_id}`);
+          });
+        }
+        Logger.info('═══════════════════════════════════════════════════════════════');
+      }
+
       return filteredData;
 
     } catch (error) {
@@ -1761,6 +1799,19 @@ const DatabaseManager = {
       return data;
     }
 
+    // Campos que exigem match exato (IDs e datas)
+    const exactMatchFields = [
+      'id', 'uid', 'user_id', 'session_id',
+      'membro_id', 'pratica_id', 'atividade_id', 'categoria_id',
+      'codigo_sequencial', 'codigo_mestre',
+      'data', 'created_at', 'updated_at'
+    ];
+
+    // IDs numéricos que precisam de coerção de tipo (podem vir como string ou number)
+    const numericIdFields = [
+      'membro_id', 'codigo_sequencial', 'atividade_id', 'categoria_id'
+    ];
+
     // Pré-processar filtros para otimização
     const filterKeys = Object.keys(filters);
     const processedFilters = filterKeys.map(field => {
@@ -1771,19 +1822,38 @@ const DatabaseManager = {
         return null;
       }
 
-      // Pré-converter strings para lowercase
+      const isExactMatch = exactMatchFields.includes(field);
+      const isNumericId = numericIdFields.includes(field);
+
+      // IDs numéricos: sempre converter para string normalizada
+      if (isNumericId) {
+        return {
+          field,
+          value: String(filterValue).toLowerCase(),
+          isString: true,
+          exactMatch: true,
+          isNumericId: true
+        };
+      }
+
+      // Strings normais
       if (typeof filterValue === 'string') {
         return {
           field,
           value: filterValue.toLowerCase(),
-          isString: true
+          isString: true,
+          exactMatch: isExactMatch,
+          isNumericId: false
         };
       }
 
+      // Números e outros tipos
       return {
         field,
         value: filterValue,
-        isString: false
+        isString: false,
+        exactMatch: false,
+        isNumericId: false
       };
     }).filter(f => f !== null);
 
@@ -1792,26 +1862,99 @@ const DatabaseManager = {
       return data;
     }
 
+    // 🐛 DEBUG: Log filtros processados (somente para praticas_diarias)
+    const isPraticasDiarias = data.length > 0 && filters.pratica_id;
+    if (isPraticasDiarias) {
+      Logger.info('═══════════════════════════════════════════════════════════════');
+      Logger.info('🔍 _applyFilters: Iniciando filtragem');
+      Logger.info('  Total de registros antes do filtro:', data.length);
+      Logger.info('  Filtros a aplicar:', processedFilters.length);
+      processedFilters.forEach(f => {
+        Logger.info(`    ${f.field}: "${f.value}" (isString: ${f.isString}, exactMatch: ${f.exactMatch}, isNumericId: ${f.isNumericId})`);
+      });
+    }
+
     // Aplicar filtros otimizados
-    return data.filter(record => {
+    const results = data.filter(record => {
       for (let i = 0; i < processedFilters.length; i++) {
         const filter = processedFilters[i];
         const recordValue = record[filter.field];
 
         if (filter.isString) {
-          // Filtro por string (case insensitive)
-          if (!recordValue?.toString().toLowerCase().includes(filter.value)) {
-            return false;
+          // Tratar valores null/undefined do registro
+          const recordValueStr = (recordValue === null || recordValue === undefined)
+            ? ''
+            : String(recordValue).toLowerCase();
+
+          if (filter.exactMatch) {
+            // Match exato para IDs e datas (case-insensitive)
+            const match = recordValueStr === filter.value;
+
+            // 🐛 DEBUG: Log comparação (somente para praticas_diarias)
+            if (isPraticasDiarias && !match) {
+              Logger.debug('DatabaseManager', `❌ Não match no campo ${filter.field}`, {
+                recordValue: recordValueStr,
+                filterValue: filter.value,
+                recordId: record.id
+              });
+            }
+
+            if (!match) {
+              return false;
+            }
+          } else {
+            // Busca parcial para textos livres (case-insensitive)
+            if (!recordValueStr.includes(filter.value)) {
+              return false;
+            }
           }
         } else {
-          // Filtro exato
-          if (recordValue !== filter.value) {
-            return false;
+          // Filtro exato para números e outros tipos
+          // Para IDs numéricos, fazer coerção de tipo
+          if (filter.isNumericId) {
+            // Converter ambos para string e comparar
+            const recordStr = String(recordValue || '').toLowerCase();
+            const filterStr = String(filter.value || '').toLowerCase();
+            const match = recordStr === filterStr;
+
+            // 🐛 DEBUG: Log comparação (somente para praticas_diarias)
+            if (isPraticasDiarias && !match) {
+              Logger.debug('DatabaseManager', `❌ Não match no numericId ${filter.field}`, {
+                recordValue: recordStr,
+                filterValue: filterStr,
+                recordId: record.id
+              });
+            }
+
+            if (!match) {
+              return false;
+            }
+          } else {
+            // Comparação direta para outros tipos
+            if (recordValue !== filter.value) {
+              return false;
+            }
           }
         }
       }
       return true;
     });
+
+    // 🐛 DEBUG: Log resultado (somente para praticas_diarias)
+    if (isPraticasDiarias) {
+      Logger.info('  ✅ Registros após filtro:', results.length);
+      if (results.length > 0) {
+        Logger.info('  Registros encontrados:');
+        results.forEach(r => {
+          Logger.info(`    - id=${r.id}, membro_id=${r.membro_id}, data=${r.data}, pratica_id=${r.pratica_id}`);
+        });
+      } else {
+        Logger.warn('DatabaseManager', '⚠️ NENHUM registro encontrado após filtros!');
+      }
+      Logger.info('═══════════════════════════════════════════════════════════════');
+    }
+
+    return results;
   },
 
   /**
