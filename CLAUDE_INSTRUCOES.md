@@ -209,106 +209,21 @@ function processar(dados) {
 
 ---
 
-## ⚡ APRENDIZADOS CRÍTICOS DO PROJETO
+## ⚡ APRENDIZADOS CRÍTICOS
 
-**Lições aprendidas durante o desenvolvimento que TODOS devem conhecer.**
+**Lições importantes do projeto documentadas separadamente.**
 
-### 1. apiCall() Injeta sessionId Automaticamente ⚠️
+📖 **Documento completo:** [APRENDIZADOS_CRITICOS.md](docs_instrucoes/APRENDIZADOS_CRITICOS.md)
 
-**Descoberto em:** 23/10/2025
-**Contexto:** Sistema de Práticas Diárias
-**Impacto:** CRÍTICO - Causa desalinhamento de parâmetros no backend
+**Conteúdo:**
+1. **apiCall() Injeta sessionId Automaticamente** - NUNCA passe sessionId manualmente
+2. **Sistema de Permissões** - Como funcionam permissões Admin/Responsável
+3. **Status Case-Sensitivity** - SEMPRE use `.toLowerCase()` em comparações de status
 
-#### ❌ NUNCA FAÇA:
-```javascript
-// ❌ ERRADO - Passa sessionId manualmente
-const sessionId = localStorage.getItem('sessionId');
-apiCall('minhaFuncao', sessionId, param1, param2);
-```
-
-#### ✅ SEMPRE FAÇA:
-```javascript
-// ✅ CORRETO - apiCall() injeta sessionId automaticamente
-apiCall('minhaFuncao', param1, param2);
-
-// apiCall() internamente transforma em:
-// google.script.run.minhaFuncao(sessionId, param1, param2)
-```
-
-#### 🔍 Por que acontece?
-
-**Código do apiCall()** (`src/05-components/core/api.html` linha 32-33):
-```javascript
-// Injetar sessionId como primeiro parâmetro
-const argsWithSession = [sessionId, ...args];
-```
-
-O `apiCall()` **SEMPRE** adiciona o sessionId como primeiro parâmetro automaticamente. Se você passar manualmente, vai duplicar!
-
-#### 💥 Exemplo Real do Problema:
-
-**Frontend faz:**
-```javascript
-apiCall('savePractice', sessionId, memberId, date, praticaId, quantidade)
-```
-
-**apiCall() transforma em:**
-```javascript
-google.script.run.savePractice(
-  sessionId,   // ← Injetado automaticamente pelo apiCall() ✅
-  sessionId,   // ← Passado manualmente (DUPLICADO!) ❌
-  memberId,    // ← Backend recebe como 'date' ❌
-  date,        // ← Backend recebe como 'praticaId' ❌
-  praticaId,   // ← Backend recebe como 'quantidade' ❌
-  quantidade   // ← Perdido! ❌
-)
-```
-
-**Backend espera:**
-```javascript
-async function savePractice(sessionId, memberId, data, praticaId, quantidade)
-```
-
-**Backend recebe (ERRADO):**
-- `sessionId` = "sess_..." ✅ (correto)
-- `memberId` = "sess_..." ❌ (recebeu sessionId duplicado!)
-- `data` = número ❌ (recebeu memberId)
-- `praticaId` = string data ❌ (recebeu data)
-- `quantidade` = string praticaId ❌ (recebeu praticaId)
-
-**Resultado:** Tudo desalinhado, sistema quebra com erro de permissão ou validação.
-
-#### 📋 Regra de Ouro:
-
-```
-┌──────────────────────────────────────────────────────┐
-│  SEMPRE USE apiCall() SEM sessionId                  │
-│                                                      │
-│  ✅ apiCall('funcao', param1, param2)                │
-│  ❌ apiCall('funcao', sessionId, param1, param2)     │
-│                                                      │
-│  O sistema JÁ GERENCIA sessionId automaticamente    │
-└──────────────────────────────────────────────────────┘
-```
-
-#### ✅ Exemplos Corretos:
-
-```javascript
-// Práticas
-apiCall('getAvailablePractices', memberId)
-apiCall('savePractice', memberId, date, praticaId, quantidade)
-apiCall('loadPracticesByDateRange', memberId, startDate, endDate)
-
-// Atividades
-apiCall('loadActivities', filters)
-apiCall('saveActivity', activityData)
-
-// Membros
-apiCall('getMemberDetails', memberId)
-apiCall('updateMember', memberId, updates)
-```
-
-**Nota:** O `sessionId` é pego automaticamente de `localStorage.getItem('sessionId')` pelo `apiCall()`.
+**Quando ler:**
+- Trabalhando com **chamadas API** → Leia Aprendizado #1
+- Trabalhando com **permissões/admin** → Leia Aprendizado #2
+- Trabalhando com **status de atividades** → Leia Aprendizado #3
 
 ---
 

@@ -65,7 +65,9 @@
         });
     }
 
-    // Aplicar filtros padrão (Status: Pendente + Responsável: Usuário logado)
+    // Aplicar filtros padrão (Status: Pendente)
+    // NOTA: Filtro de responsável NÃO é aplicado automaticamente
+    // O backend já filtra por usuário/membro automaticamente
     function aplicarFiltrosPadrao() {
         // 1. Status: Pendente (sempre aplicar primeiro)
         filtrosState.status = ['pendente'];
@@ -74,37 +76,13 @@
             checkboxPendente.checked = true;
         }
 
-        // Buscar usuário do localStorage
-        const userUid = localStorage.getItem('uid');
-        const userName = localStorage.getItem('userName');
-        const currentUser = userUid ? { uid: userUid, nome: userName } : null;
+        // 2. Limpar filtro de responsável (não mais aplicado por padrão)
+        filtrosState.responsavel = [];
 
-        if (!currentUser || !currentUser.uid) {
-            console.warn('⚠️ Usuário logado não encontrado no localStorage');
-            atualizarContadorFiltros();
-            renderizarChips();
-            aplicarFiltros();
-            return;
-        }
-
-        // 2. Responsável: Carregar dados e aplicar filtro COM CALLBACK
-        carregarResponsaveis(function() {
-            // ✅ Callback executado quando dados estão disponíveis (cache ou backend)
-            filtrosState.responsavel = [currentUser.uid];
-
-            // Marcar checkbox do responsável
-            setTimeout(() => {
-                const checkboxUser = document.querySelector(`input[data-filter="responsavel"][data-value="${currentUser.uid}"]`);
-                if (checkboxUser) {
-                    checkboxUser.checked = true;
-                }
-
-                // Atualizar UI e aplicar filtros
-                atualizarContadorFiltros();
-                renderizarChips(); // ✅ Agora renderiza COM dados disponíveis
-                aplicarFiltros();
-            }, 100);
-        });
+        // Atualizar UI e aplicar filtros
+        atualizarContadorFiltros();
+        renderizarChips();
+        aplicarFiltros();
     }
 
     // Sincronizar checkboxes com filtrosState
@@ -127,7 +105,18 @@
 
             // Popular opções do modal (usa cache se disponível, instantâneo!)
             carregarCategorias();
-            carregarResponsaveis();
+
+            // Verificar se usuário é admin para mostrar filtro Responsável
+            const isAdmin = typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin();
+            const responsavelGroup = document.getElementById('responsavel-filter-group');
+            if (responsavelGroup) {
+                responsavelGroup.style.display = isAdmin ? 'block' : 'none';
+            }
+
+            // Carregar responsáveis apenas se for admin
+            if (isAdmin) {
+                carregarResponsaveis();
+            }
 
             // Sincronizar checkboxes de status com estado
             sincronizarCheckboxesComEstado();
@@ -500,8 +489,8 @@
                 </div>
             </div>
 
-            <!-- Seção: Responsável -->
-            <div class="filter-group">
+            <!-- Seção: Responsável (apenas para admins) -->
+            <div class="filter-group" id="responsavel-filter-group" style="display: none;">
                 <h4>Responsável</h4>
                 <div class="filter-options" id="responsavel-filter-options">
                     <!-- Carregadas dinamicamente -->

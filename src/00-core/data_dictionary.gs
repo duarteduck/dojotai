@@ -427,7 +427,7 @@ const DATA_DICTIONARY = {
       status: {
         type: 'TEXT',
         required: true,
-        enum: ['Pendente', 'Concluida'],
+        enum: ['Pendente', 'Concluida', 'Cancelada'],
         default: 'Pendente',
         description: 'Status da atividade'
       },
@@ -500,6 +500,15 @@ const DATA_DICTIONARY = {
           pattern: '^[a-zA-Z0-9_,\\s]*$',
           maxLength: 200
         }
+      },
+
+      // Relato de conclusão ou motivo de cancelamento
+      relato: {
+        type: 'TEXT',
+        required: false,
+        maxLength: 1000,
+        description: 'Relato de conclusão (se Concluida) ou motivo de cancelamento (se Cancelada)',
+        example: 'Treino realizado com sucesso. 15 participantes, foco em kata Heian Shodan.'
       }
     }
   },

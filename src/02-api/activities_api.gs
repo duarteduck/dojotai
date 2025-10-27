@@ -366,9 +366,13 @@ async function getActivityById(sessionId, activityId, retryCount = 0) {
  * @param {string} activityId - ID da atividade
  * @returns {Object} Resultado da operação
  */
-async function completeActivity(sessionId, activityId) {
+async function completeActivity(sessionId, activityId, relato = '') {
   try {
-    Logger.info('ActivitiesAPI', 'Marcando atividade como concluída', { activityId, sessionId: sessionId ? '✓' : '✗' });
+    Logger.info('ActivitiesAPI', 'Marcando atividade como concluída', {
+      activityId,
+      sessionId: sessionId ? '✓' : '✗',
+      hasRelato: relato && relato.trim().length > 0
+    });
 
     // Validar sessão (helper centralizado)
     const auth = await requireSession(sessionId, 'ActivitiesAPI');
@@ -376,6 +380,18 @@ async function completeActivity(sessionId, activityId) {
 
     if (!activityId) {
       throw new Error('ID da atividade é obrigatório');
+    }
+
+    // Validar relato (opcional, mas se fornecido deve respeitar limite)
+    let relatoFinal = '';
+    if (relato && typeof relato === 'string') {
+      relatoFinal = relato.trim();
+      if (relatoFinal.length > 1000) {
+        return {
+          ok: false,
+          error: 'Relato não pode ter mais de 1000 caracteres'
+        };
+      }
     }
 
     const userId = auth.session.user_id;
@@ -391,6 +407,7 @@ async function completeActivity(sessionId, activityId) {
     // Campo atualizado_em preenchido automaticamente pelo DatabaseManager
     const updateData = {
       status: 'Concluida',
+      relato: relatoFinal,
       atualizado_uid: usuario.uid
     };
 
@@ -434,6 +451,148 @@ async function completeActivity(sessionId, activityId) {
 
   } catch (error) {
     Logger.error('ActivitiesAPI', 'Erro ao marcar atividade como concluída', {
+      activityId,
+      error: error.message,
+      stack: error.stack
+    });
+    return {
+      ok: false,
+      error: error.message || 'Erro interno do servidor'
+    };
+  }
+}
+
+/**
+ * Cancela uma atividade com motivo obrigatório
+ * Permissão: Apenas admin OU responsável pela atividade
+ * @param {string} sessionId - ID da sessão (injetado automaticamente pelo apiCall)
+ * @param {string} activityId - ID da atividade
+ * @param {string} relato - Motivo do cancelamento (obrigatório, mínimo 10 caracteres)
+ * @returns {Object} Resultado da operação
+ */
+async function cancelActivityApi(sessionId, activityId, relato) {
+  try {
+    Logger.info('ActivitiesAPI', 'Cancelando atividade', {
+      activityId,
+      sessionId: sessionId ? '✓' : '✗'
+    });
+
+    // 1. Validar sessão
+    const auth = await requireSession(sessionId, 'ActivitiesAPI');
+    if (!auth.ok) return auth;
+
+    if (!activityId) {
+      throw new Error('ID da atividade é obrigatório');
+    }
+
+    // 2. Validar relato (OBRIGATÓRIO para cancelamento)
+    if (!relato || typeof relato !== 'string' || relato.trim().length < 10) {
+      return {
+        ok: false,
+        error: 'Motivo do cancelamento é obrigatório (mínimo 10 caracteres)'
+      };
+    }
+
+    const relatoFinal = relato.trim();
+    if (relatoFinal.length > 1000) {
+      return {
+        ok: false,
+        error: 'Motivo não pode ter mais de 1000 caracteres'
+      };
+    }
+
+    const userId = auth.session.user_id;
+
+    // 3. Buscar atividade
+    const existingActivity = DatabaseManager.findById('atividades', activityId);
+    if (!existingActivity) {
+      Logger.warn('ActivitiesAPI', 'Atividade não encontrada ao tentar cancelar', { activityId });
+      return {
+        ok: false,
+        error: `Atividade ${activityId} não encontrada`
+      };
+    }
+
+    // 4. Validar status atual (não pode cancelar concluída ou já cancelada)
+    const statusLower = (existingActivity.status || '').toLowerCase();
+
+    if (statusLower === 'cancelada') {
+      return {
+        ok: false,
+        error: 'Atividade já está cancelada'
+      };
+    }
+
+    if (statusLower === 'concluida') {
+      return {
+        ok: false,
+        error: 'Não é possível cancelar atividades concluídas'
+      };
+    }
+
+    // 5. Verificar permissão (admin OU responsável)
+    const ADMIN_UIDS = ['U001', 'U002', 'U003', 'U004'];
+    const isAdmin = ADMIN_UIDS.includes(userId);
+    const isResponsavel = (existingActivity.atribuido_uid === userId);
+
+    if (!isAdmin && !isResponsavel) {
+      Logger.warn('ActivitiesAPI', 'Permissão negada ao cancelar', {
+        userId,
+        activityId,
+        atribuido_uid: existingActivity.atribuido_uid
+      });
+      return {
+        ok: false,
+        error: 'Você não tem permissão para cancelar esta atividade'
+      };
+    }
+
+    // 6. Buscar dados do usuário
+    const usuario = DatabaseManager.findById('usuarios', userId);
+    if (!usuario) {
+      Logger.error('ActivitiesAPI', 'Usuário não encontrado ao cancelar atividade', { userId, activityId });
+      throw new Error('Usuário não encontrado na base de dados');
+    }
+
+    // 7. Cancelar atividade
+    const updateData = {
+      status: 'Cancelada',
+      relato: relatoFinal,
+      atualizado_uid: usuario.uid
+    };
+
+    const result = await DatabaseManager.update('atividades', activityId, updateData);
+
+    if (result && result.success) {
+      Logger.info('ActivitiesAPI', 'Atividade cancelada', {
+        activityId,
+        userId: usuario.uid,
+        motivoPreview: relatoFinal.substring(0, 50) + '...'
+      });
+
+      // Forçar limpeza de cache
+      try {
+        if (typeof CacheManager !== 'undefined') {
+          CacheManager.invalidate('atividades');
+        }
+      } catch (cacheError) {
+        Logger.warn('ActivitiesAPI', 'Erro ao invalidar cache', { error: cacheError.message });
+      }
+
+      return {
+        ok: true,
+        message: 'Atividade cancelada com sucesso'
+      };
+    } else {
+      Logger.error('ActivitiesAPI', 'Falha ao cancelar atividade', { activityId, result });
+      return {
+        ok: false,
+        error: result?.error || 'Erro ao cancelar atividade'
+      };
+    }
+
+  } catch (error) {
+    Logger.error('ActivitiesAPI', 'Erro ao cancelar atividade', {
       activityId,
       error: error.message,
       stack: error.stack

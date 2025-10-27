@@ -47,6 +47,14 @@
             };
         }
 
+        // Se foi cancelada - vermelho
+        if (status && status.toLowerCase() === 'cancelada') {
+            return {
+                text: 'Cancelada',
+                class: 'badge-cancelada'
+            };
+        }
+
         // Se status é pendente, verificar datas
         if (status && status.toLowerCase() === 'pendente') {
             if (daysDiff < 0) {

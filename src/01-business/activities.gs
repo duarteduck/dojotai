@@ -1,13 +1,26 @@
 // activities.gs – API de atividades (atualizada para categoria_atividade_id)
 
-async function listActivitiesApi(sessionId, filtros) {
-  console.log('🚀 listActivitiesApi chamada - sessionId:', sessionId ? '✓' : '✗', 'filtros:', JSON.stringify(filtros));
+async function listActivitiesApi(sessionId, filtros, memberId) {
+  console.log('🚀 listActivitiesApi chamada - sessionId:', sessionId ? '✓' : '✗', 'filtros:', JSON.stringify(filtros), 'memberId:', memberId || '(não informado)');
   try {
     // Validar sessão (helper centralizado)
     const auth = await requireSession(sessionId, 'Activities');
     if (!auth.ok) return auth;
 
-    const result = _listActivitiesCore(filtros);
+    const userId = auth.session.user_id;
+    console.log('👤 Usuário autenticado:', userId);
+
+    // Validar acesso ao membro se fornecido
+    if (memberId) {
+      const memberAuth = await requireMemberAccess(sessionId, memberId, 'Activities');
+      if (!memberAuth.ok) {
+        console.error('❌ Usuário não tem acesso ao membro:', memberId);
+        return memberAuth;
+      }
+      console.log('✅ Acesso ao membro validado:', memberId);
+    }
+
+    const result = _listActivitiesCore(filtros, null, userId, memberId);
     console.log('📊 _listActivitiesCore resultado:', result?.ok ? 'OK' : 'ERRO', '- Items:', result?.items?.length || 0);
 
     // Garante objeto "serializável" para o HTMLService
@@ -51,15 +64,17 @@ async function listActivitiesApi(sessionId, filtros) {
 /**
  * Core da listagem (usado pela API pública)
  * NOVO: Suporta 2 modos de operação
- * - Modo LIST: _listActivitiesCore(filtros) → { ok, items: [...] }
- * - Modo SINGLE: _listActivitiesCore(filtros, 'ACT-001') → { ok, passaNoFiltro, activity }
+ * - Modo LIST: _listActivitiesCore(filtros, null, userId, memberId) → { ok, items: [...] }
+ * - Modo SINGLE: _listActivitiesCore(filtros, 'ACT-001', userId, memberId) → { ok, passaNoFiltro, activity }
  *
  * @param {Object} filtros - Filtros a aplicar
  * @param {string} singleActivityId - (Opcional) Se fornecido, processa apenas esta atividade
+ * @param {string} userId - UID do usuário logado (para filtrar por responsável)
+ * @param {string|number} memberId - (Opcional) ID do membro selecionado (para filtrar por participação)
  */
-function _listActivitiesCore(filtros, singleActivityId) {
+function _listActivitiesCore(filtros, singleActivityId, userId, memberId) {
   const modo = singleActivityId ? 'SINGLE' : 'LIST';
-  console.log(`🔄 _listActivitiesCore INICIADA - Modo: ${modo}, Filtros:`, JSON.stringify(filtros));
+  console.log(`🔄 _listActivitiesCore INICIADA - Modo: ${modo}, userId: ${userId || '(não informado)'}, memberId: ${memberId || '(não informado)'}, Filtros:`, JSON.stringify(filtros));
   if (singleActivityId) {
     console.log('🎯 Modo SINGLE - Atividade:', singleActivityId);
   }
@@ -304,6 +319,33 @@ function _listActivitiesCore(filtros, singleActivityId) {
   // ============================================================================
   console.log('📋 [MODO LIST] Processando todas as atividades...');
 
+  // ============================================================================
+  // NOVO: Query BATCH de participações (se memberId fornecido)
+  // ============================================================================
+  let atividadesComParticipacao = new Set();
+
+  if (memberId) {
+    console.log('🔍 Buscando participações do membro:', memberId);
+    try {
+      const participacoes = DatabaseManager.query('participacoes', {
+        id_membro: memberId.toString(),
+        deleted: { $ne: 'x' }
+      });
+
+      if (participacoes && participacoes.ok && participacoes.items) {
+        participacoes.items.forEach(p => {
+          atividadesComParticipacao.add(p.id_atividade);
+        });
+        console.log('✅ Participações encontradas:', atividadesComParticipacao.size, 'atividades');
+      } else {
+        console.log('ℹ️ Nenhuma participação encontrada para o membro');
+      }
+    } catch (err) {
+      console.error('❌ Erro ao buscar participações:', err);
+      // Continuar sem participações
+    }
+  }
+
   const items = [];
   for (let i=1;i<v.length;i++) {
     const r = v[i];
@@ -331,10 +373,34 @@ function _listActivitiesCore(filtros, singleActivityId) {
       item.tags = r[idxTags] || '';
     }
 
+    // ============================================================================
+    // NOVO: Filtro de usuário/membro
+    // Se userId fornecido, filtrar por responsável OU participação
+    // ============================================================================
+    if (userId) {
+      const atribuidoUid = (item.atribuido_uid || '').toString().trim();
+      const isResponsavel = (atribuidoUid === userId);
+      const isParticipante = atividadesComParticipacao.has(item.id);
+
+      // Se memberId fornecido: mostrar se é responsável OU participa
+      // Se memberId NÃO fornecido: mostrar apenas se é responsável
+      if (memberId) {
+        // Com membro selecionado: responsável OU participa
+        if (!isResponsavel && !isParticipante) {
+          continue; // Pular esta atividade
+        }
+      } else {
+        // Sem membro selecionado: apenas responsável
+        if (!isResponsavel) {
+          continue; // Pular esta atividade
+        }
+      }
+    }
+
     items.push(item);
   }
 
-  console.log('📋 Total de atividades brutas:', items.length);
+  console.log('📋 Total de atividades após filtro de usuário/membro:', items.length);
 
   // ============================================================================
   // OTIMIZAÇÃO: Aplicar filtros ANTES do processamento pesado (stats, categorias)

@@ -38,14 +38,53 @@
         // Verificar se é o responsável pela atividade
         const isResponsavel = activity.atribuido_uid === currentUserUid;
 
-        // Permissões específicas
-        const podeVerParticipantes = isAdmin || isResponsavel;
+        // ===== MATRIZ DE PERMISSÕES DE BOTÕES =====
+        // Determinar categoria de tempo da atividade
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const dataAtividade = new Date(activity.data);
+        dataAtividade.setHours(0, 0, 0, 0);
 
-        // Botão editar só aparece se:
-        // 1. Status não é Concluída
-        // 2. Data da atividade ainda não passou (hoje ou futuro)
-        // 3. Usuário é admin (U001-U004)
-        const podeEditar = statusInfo.text !== 'Concluída' && !atividadeJaPassou && isAdmin;
+        const isAtrasada = dataAtividade < hoje;
+        const isHoje = dataAtividade.getTime() === hoje.getTime();
+        const isPendente = dataAtividade > hoje;
+
+        // Comparação case-insensitive (banco pode retornar 'concluida' ou 'Concluida')
+        const statusLower = (activity.status || '').toLowerCase();
+        const isConcluida = statusLower === 'concluida';
+        const isCancelada = statusLower === 'cancelada';
+
+        // Permissão base: admin OU responsável
+        const canManage = isAdmin || isResponsavel;
+
+        // DEBUG: Log da classificação
+        console.log(`🔍 Card ${activity.id}:`, {
+            data: activity.data,
+            status: activity.status,
+            isAtrasada,
+            isHoje,
+            isPendente,
+            isConcluida,
+            isCancelada,
+            canManage,
+            currentUser: currentUserUid,
+            responsavel: activity.atribuido_uid
+        });
+
+        // Matriz de botões conforme tabela:
+        // STATUS      | Participantes | Editar | Cancelar | Concluir | Resumo
+        // ATRASADA    | A/R           | -      | -        | A/R      | -
+        // HOJE        | A/R           | A/R    | A/R      | A/R      | -
+        // PENDENTE    | A/R           | A/R    | A/R      | A/R      | -
+        // CONCLUÍDA   | -             | -      | -        | -        | A/R
+        // CANCELADA   | -             | -      | -        | -        | -
+
+        // IMPORTANTE: Todos os botões (exceto Resumo) só aparecem se NÃO for Concluída E NÃO for Cancelada
+        const showParticipantes = canManage && (isAtrasada || isHoje || isPendente) && !isConcluida && !isCancelada;
+        const showEditar = canManage && (isHoje || isPendente) && !isConcluida && !isCancelada;
+        const showCancelar = canManage && (isHoje || isPendente) && !isConcluida && !isCancelada;
+        const showConcluir = canManage && (isAtrasada || isHoje || isPendente) && !isConcluida && !isCancelada;
+        const showResumo = canManage && isConcluida; // Só aparece em Concluída (desabilitado por enquanto)
 
         return `
             <div class="card activity-card ${categoryClass}" data-activity-id="${activity.id}" style="display: flex; flex-direction: column; min-height: 280px;">
@@ -114,17 +153,65 @@
                             <div style="font-size: var(--font-size-xs); color: var(--text); line-height: 1.4;">${activity.tags}</div>
                         </div>` : ''}
 
-                        <!-- Botões de ação -->
-                        <div class="activity-actions" style="display: flex; gap: var(--spacing-xs); justify-content: center;">
-                            ${podeVerParticipantes
-                                ? (statusInfo.text !== 'Concluída'
-                                    ? `<button class="btn btn-primary" onclick="openParticipants('${activity.id}', \`${(activity.titulo || '').replace(/`/g, '')}\`, \`${(activity.descricao || '').replace(/`/g, '')}\`)" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">👥 Participantes</button>`
-                                    : `<button class="btn btn-outline" disabled style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center; opacity: 0.5; cursor: not-allowed;">📊 Resumo</button>`)
+                        <!-- Botões de ação (Matriz de Permissões) -->
+                        <div class="activity-actions" style="display: flex; gap: var(--spacing-xs); justify-content: center; flex-wrap: wrap;">
+                            ${showParticipantes
+                                ? `<button class="btn btn-primary" onclick="openParticipants('${activity.id}', \`${(activity.titulo || '').replace(/`/g, '')}\`, \`${(activity.descricao || '').replace(/`/g, '')}\`)" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">👥 Participantes</button>`
                                 : ''
                             }
-                            ${podeEditar ? `<button class="btn btn-outline" onclick="editActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✏️ Editar</button>` : ''}
-                            ${statusInfo.text !== 'Concluída' && isAdmin ? `<button class="btn btn-complete" onclick="completeActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✅ Concluir</button>` : ''}
+                            ${showEditar
+                                ? `<button class="btn btn-outline" onclick="editActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✏️ Editar</button>`
+                                : ''
+                            }
+                            ${showCancelar
+                                ? `<button class="btn btn-danger" onclick="cancelActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">🚫 Cancelar</button>`
+                                : ''
+                            }
+                            ${showConcluir
+                                ? `<button class="btn btn-success" onclick="completeActivity('${activity.id}')" style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center;">✅ Concluir</button>`
+                                : ''
+                            }
+                            ${showResumo
+                                ? `<button class="btn btn-outline" disabled style="flex: 1; font-size: var(--font-size-sm); padding: var(--spacing-sm); min-height: 36px; display: flex; align-items: center; justify-content: center; opacity: 0.5; cursor: not-allowed;">📊 Resumo</button>`
+                                : ''
+                            }
                         </div>
+
+                        <!-- Relato (se existir) -->
+                        ${activity.relato && activity.relato.trim().length > 0
+                            ? `<div style="
+                                margin-top: var(--spacing-md);
+                                padding: var(--spacing-md);
+                                background: ${isCancelada ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)'};
+                                border-left: 4px solid ${isCancelada ? 'var(--danger)' : 'var(--success)'};
+                                border-radius: var(--radius-md);
+                            ">
+                                <div style="
+                                    font-weight: 600;
+                                    color: ${isCancelada ? 'var(--danger)' : 'var(--success)'};
+                                    margin-bottom: var(--spacing-xs);
+                                    display: flex;
+                                    align-items: center;
+                                    gap: var(--spacing-xs);
+                                    font-size: var(--font-size-sm);
+                                ">
+                                    <span>${isCancelada ? '❌' : '💬'}</span>
+                                    <span>${isCancelada ? 'Motivo do Cancelamento' : 'Relato'}</span>
+                                </div>
+                                <div style="
+                                    color: var(--text);
+                                    font-size: var(--font-size-sm);
+                                    line-height: 1.6;
+                                    white-space: pre-wrap;
+                                    word-wrap: break-word;
+                                    max-height: 200px;
+                                    overflow-y: auto;
+                                ">
+                                    ${activity.relato}
+                                </div>
+                            </div>`
+                            : ''
+                        }
                     </div>
                 </div>
             </div>
@@ -146,18 +233,25 @@
 
     /**
      * Atualiza um card específico validando contra filtros ativos
+     *
+     * IMPORTANTE: Usa validateActivityAgainstFilters() do backend para garantir
+     * validação consistente com a listagem (single source of truth)
+     *
      * @param {string} activityId - ID da atividade
      * @param {Function} onComplete - Callback após completar
      */
     async function updateSingleActivityCard(activityId, onComplete) {
         try {
-            // Validação de entrada
+            console.log('🔄 Chamando updateSingleActivityCard para:', activityId);
+
+            // ============================================================================
+            // 1. VALIDAÇÕES DE ENTRADA
+            // ============================================================================
             if (!activityId) {
                 console.warn('⚠️ updateSingleActivityCard: activityId inválido');
                 return;
             }
 
-            // Obter sessionId do localStorage
             const sessionId = localStorage.getItem('sessionId');
             if (!sessionId) {
                 console.error('❌ SessionId não encontrado');
@@ -165,72 +259,118 @@
                 return;
             }
 
-            // Buscar atividade atualizada da API
-            const result = await apiCall('getActivityById', activityId);
-
-            if (!result || !result.ok || !result.activity) {
-                console.warn('⚠️ Atividade não encontrada ou resposta inválida:', result);
-                // Remover card se não existe mais
-                const cardElement = document.querySelector(`[data-activity-id="${activityId}"]`);
-                if (cardElement) {
-                    cardElement.remove();
-                }
+            // ============================================================================
+            // 2. LOCALIZAR CARD NO DOM
+            // ============================================================================
+            const card = document.querySelector(`[data-activity-id="${activityId}"]`);
+            if (!card) {
+                console.log('ℹ️ Card não encontrado no DOM para:', activityId);
                 return;
             }
 
-            const updatedActivity = result.activity;
+            // ============================================================================
+            // 3. ADICIONAR ANIMAÇÃO DE LOADING (pulse)
+            // ============================================================================
+            card.classList.add('card-updating');
 
-            // Verificar se atividade passa pelos filtros ativos
-            const passesFilters = activityPassesFilters(updatedActivity);
+            // ============================================================================
+            // 4. COLETAR FILTROS ATIVOS
+            // ============================================================================
+            const filtros = {
+                status: filtrosState.status || [],
+                categorias: filtrosState.categorias || [],
+                periodo: filtrosState.periodo || [],
+                responsavel: filtrosState.responsavel || []
+            };
 
-            // Buscar card existente
-            const cardElement = document.querySelector(`[data-activity-id="${activityId}"]`);
+            console.log('📡 Validando atividade contra filtros:', filtros);
 
-            if (passesFilters) {
-                // Atividade passa pelos filtros - atualizar ou adicionar card
-                const newCardHTML = renderActivityCard(updatedActivity);
+            // ============================================================================
+            // 5. VALIDAR NO BACKEND (single source of truth)
+            // ============================================================================
+            const result = await apiCall('validateActivityAgainstFilters', activityId, filtros);
 
-                if (cardElement) {
-                    // Substituir card existente
-                    cardElement.outerHTML = newCardHTML;
-                } else {
-                    // Adicionar novo card no grid
-                    const grid = document.getElementById('activities-grid');
-                    if (grid) {
-                        grid.insertAdjacentHTML('beforeend', newCardHTML);
-                    }
-                }
-            } else {
-                // Atividade NÃO passa pelos filtros - remover se existir
-                if (cardElement) {
-                    cardElement.remove();
-                }
+            // ============================================================================
+            // 6. TRATAR ERROS
+            // ============================================================================
+            if (!result || !result.ok) {
+                console.error('❌ Erro ao validar atividade:', result?.error);
+                showToast('Erro ao atualizar atividade', 'error');
+                card.classList.remove('card-updating');
+                return;
             }
 
-            // Executar callback se fornecido
-            if (typeof onComplete === 'function') {
-                onComplete();
+            console.log('✅ Validação concluída. Passa no filtro?', result.passaNoFiltro);
+
+            // ============================================================================
+            // 7. NÃO PASSA NO FILTRO → REMOVER COM ANIMAÇÃO
+            // ============================================================================
+            if (!result.passaNoFiltro) {
+                card.classList.remove('card-updating');
+                removeActivityCardWithAnimation(activityId);
+                console.log('🗑️ Card removido (não passa nos filtros)');
+                return;
+            }
+
+            // ============================================================================
+            // 8. PASSA NO FILTRO → ATUALIZAR
+            // ============================================================================
+
+            // 8.1. Transformar campos de categoria (backend → frontend)
+            const activityWithCategory = {
+                ...result.activity,
+                categoria: result.activity.categoria_atividade_nome || 'Geral',
+                categoria_icone: result.activity.categoria_atividade_icone || '📋',
+                categoria_cor: result.activity.categoria_atividade_cor || '#6b7280',
+                categorias: result.activity.categorias || []
+            };
+
+            // 8.2. Renderizar novo HTML
+            const newHtml = renderActivityCard(activityWithCategory);
+
+            // 8.3. Criar elemento temporário
+            const temp = document.createElement('div');
+            temp.innerHTML = newHtml;
+            const newCard = temp.firstElementChild;
+
+            // 8.4. Substituir no DOM mantendo posição
+            card.parentNode.replaceChild(newCard, card);
+
+            console.log('✅ Card atualizado com sucesso');
+
+            // ============================================================================
+            // 9. CALLBACK OPCIONAL
+            // ============================================================================
+            if (onComplete && typeof onComplete === 'function') {
+                onComplete(result.activity);
             }
 
         } catch (error) {
-            console.error('❌ Erro ao atualizar card:', error);
+            console.error('❌ Erro em updateSingleActivityCard:', error);
+            showToast('Erro ao atualizar atividade', 'error');
+
+            // Remover animação em caso de erro
+            const card = document.querySelector(`[data-activity-id="${activityId}"]`);
+            if (card) {
+                card.classList.remove('card-updating');
+            }
         }
     }
 
-    /**
-     * Verifica se atividade passa pelos filtros ativos
-     * @param {Object} activity - Objeto da atividade
-     * @returns {boolean} - true se passa, false caso contrário
-     */
-    function activityPassesFilters(activity) {
-        // TODO: Implementar lógica de verificação de filtros
-        // Por enquanto retorna true (aceita todas)
-        return true;
-    }
+    // ============================================================================
+    // FUNÇÃO REMOVIDA: activityPassesFilters()
+    //
+    // Motivo: Substituída por validateActivityAgainstFilters() no backend
+    // - Validação agora é feita no backend (single source of truth)
+    // - Elimina duplicação de lógica de filtros
+    // - Garante consistência entre listagem e update seletivo
+    //
+    // Removido em: Restauração do Update Seletivo de Cards
+    // Data: 26/10/2025
+    // ============================================================================
 
     // Expor funções globalmente
     window.renderActivityCard = renderActivityCard;
     window.renderActivities = renderActivities;
     window.updateSingleActivityCard = updateSingleActivityCard;
-    window.activityPassesFilters = activityPassesFilters;
 </script>

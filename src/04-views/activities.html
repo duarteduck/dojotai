@@ -98,6 +98,208 @@
     </div>
 </div>
 
+<!-- ============================================================
+     MODAL: CANCELAR ATIVIDADE
+     ============================================================ -->
+<div id="modal-cancelar-atividade" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    box-sizing: border-box;
+" onclick="fecharModalCancelar()">
+    <div style="
+        background: white;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        animation: modalFadeIn 0.2s ease;
+    " onclick="event.stopPropagation()">
+        <!-- Header -->
+        <div style="padding: 24px; border-bottom: 1px solid var(--border-color); background: var(--danger); color: white; border-radius: 12px 12px 0 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-size: var(--font-size-xl); font-weight: 600; margin: 0;">🚫 Cancelar Atividade</h2>
+                <button onclick="fecharModalCancelar()" style="
+                    background: rgba(255,255,255,0.2);
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                    padding: 8px;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">&times;</button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 24px;">
+            <p style="margin-bottom: var(--spacing-lg); color: var(--text);">
+                Tem certeza que deseja cancelar esta atividade?
+            </p>
+            <p style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-lg); font-style: italic;">
+                Esta ação não pode ser desfeita. A atividade será marcada como cancelada.
+            </p>
+
+            <label for="motivo-cancelamento" style="display: block; margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--danger);">
+                Motivo do Cancelamento *
+            </label>
+            <textarea
+                id="motivo-cancelamento"
+                placeholder="Descreva o motivo do cancelamento (mínimo 10 caracteres)"
+                maxlength="1000"
+                rows="4"
+                style="
+                    width: 100%;
+                    padding: var(--spacing-sm);
+                    border: 2px solid var(--danger);
+                    border-radius: var(--radius-md);
+                    font-family: inherit;
+                    resize: vertical;
+                    line-height: 1.5;
+                    box-sizing: border-box;
+                "
+            ></textarea>
+            <div style="display: flex; justify-content: space-between; margin-top: var(--spacing-xs);">
+                <span style="color: var(--danger); font-size: var(--font-size-sm); font-weight: 600;">
+                    * Campo obrigatório (mínimo 10 caracteres)
+                </span>
+                <span style="color: var(--text-light); font-size: var(--font-size-sm);">
+                    <span id="motivo-char-count">0</span>/1000
+                </span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; justify-content: flex-end;">
+            <button onclick="fecharModalCancelar()" class="btn btn-outline">
+                Voltar
+            </button>
+            <button onclick="confirmarCancelamento()" class="btn btn-danger">
+                Confirmar Cancelamento
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL: CONCLUIR ATIVIDADE
+     ============================================================ -->
+<div id="modal-concluir-atividade" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    box-sizing: border-box;
+" onclick="fecharModalConcluir()">
+    <div style="
+        background: white;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        animation: modalFadeIn 0.2s ease;
+    " onclick="event.stopPropagation()">
+        <!-- Header -->
+        <div style="padding: 24px; border-bottom: 1px solid var(--border-color); background: var(--success); color: white; border-radius: 12px 12px 0 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-size: var(--font-size-xl); font-weight: 600; margin: 0;">✅ Concluir Atividade</h2>
+                <button onclick="fecharModalConcluir()" style="
+                    background: rgba(255,255,255,0.2);
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                    padding: 8px;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">&times;</button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 24px;">
+            <p style="margin-bottom: var(--spacing-lg); color: var(--text);">
+                Deseja adicionar um relato sobre esta atividade?
+            </p>
+            <p style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-lg); font-style: italic;">
+                Este campo é opcional, mas ajuda a documentar como foi a atividade.
+            </p>
+
+            <label for="relato-conclusao" style="display: block; margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--text);">
+                Relato / Comunicado (opcional)
+            </label>
+            <textarea
+                id="relato-conclusao"
+                placeholder="Ex: Treino realizado com sucesso. 15 participantes, foco em kata Heian Shodan. Destaque para João que evoluiu muito no kumite."
+                maxlength="1000"
+                rows="5"
+                style="
+                    width: 100%;
+                    padding: var(--spacing-sm);
+                    border: 1px solid #d1d5db !important;
+                    border-radius: var(--radius-md);
+                    font-family: inherit;
+                    resize: vertical;
+                    line-height: 1.5;
+                    box-sizing: border-box;
+                    outline: none;
+                "
+            ></textarea>
+            <div style="display: flex; justify-content: space-between; margin-top: var(--spacing-xs);">
+                <span style="color: var(--text-light); font-size: var(--font-size-sm);">
+                    Este relato será visível no card da atividade
+                </span>
+                <span style="color: var(--text-light); font-size: var(--font-size-sm);">
+                    <span id="relato-char-count">0</span>/1000
+                </span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; justify-content: flex-end;">
+            <button onclick="fecharModalConcluir()" class="btn btn-outline">
+                Cancelar
+            </button>
+            <button onclick="pularRelato()" class="btn btn-secondary">
+                Pular (concluir sem relato)
+            </button>
+            <button onclick="confirmarConclusaoComRelato()" class="btn btn-success">
+                Concluir com Relato
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 
         // ===== SISTEMA DE ATIVIDADES =====
@@ -360,41 +562,229 @@
             openEditActivityModal(activityId);
         }
 
-        async function completeActivity(activityId) {
-            // Mostrar loading no botão
-            const button = document.querySelector(`button[onclick="completeActivity('${activityId}')"]`);
-            const originalContent = button.innerHTML;
+        // ============================================================================
+        // CANCELAR ATIVIDADE: Abre modal para pedir motivo
+        // ============================================================================
+
+        let activityIdToCancelGlobal = null;
+
+        function cancelActivity(activityId) {
+            activityIdToCancelGlobal = activityId;
+            const modal = document.getElementById('modal-cancelar-atividade');
+            modal.style.display = 'flex';
+            document.getElementById('motivo-cancelamento').value = '';
+            document.getElementById('motivo-char-count').textContent = '0';
+            setTimeout(() => document.getElementById('motivo-cancelamento').focus(), 100);
+        }
+
+        function fecharModalCancelar() {
+            const modal = document.getElementById('modal-cancelar-atividade');
+            modal.style.display = 'none';
+            activityIdToCancelGlobal = null;
+
+            // Resetar estado dos botões
+            const botoes = modal.querySelectorAll('button');
+            botoes.forEach(btn => {
+                if (btn.hasAttribute('onclick') && btn.getAttribute('onclick').includes('confirmarCancelamento')) {
+                    btn.disabled = false;
+                    btn.textContent = 'Confirmar Cancelamento';
+                }
+            });
+
+            // Limpar campo e contador
+            document.getElementById('motivo-cancelamento').value = '';
+            document.getElementById('motivo-char-count').textContent = '0';
+        }
+
+        async function confirmarCancelamento() {
+            const motivo = document.getElementById('motivo-cancelamento').value.trim();
+
+            // Validação frontend
+            if (motivo.length < 10) {
+                showToast('Motivo deve ter no mínimo 10 caracteres', 'warning');
+                document.getElementById('motivo-cancelamento').focus();
+                return;
+            }
+
+            // Salvar ID localmente ANTES de fechar modal (que limpa a global)
+            const activityId = activityIdToCancelGlobal;
+
+            const button = event.target;
+            const originalText = button.textContent;
             button.disabled = true;
             button.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
 
             try {
-                // Usar apiCall() que detecta sessão expirada automaticamente
-                const response = await apiCall('completeActivity', activityId);
+                const response = await apiCall('cancelActivityApi', activityId, motivo);
 
-                // Restaurar botão
-                button.disabled = false;
-                button.innerHTML = originalContent;
+                if (response.ok) {
+                    showToast('Atividade cancelada com sucesso', 'success');
+                    fecharModalCancelar();
 
-                if (response && response.ok) {
-                    showToast('Atividade marcada como concluída com sucesso!', 'success');
-                    updateSingleActivityCard(activityId);
+                    // Atualizar card usando variável local
+                    if (typeof updateSingleActivityCard === 'function') {
+                        updateSingleActivityCard(activityId);
+                    } else {
+                        loadActivities();
+                    }
                 } else {
-                    console.error('❌ Erro ao marcar atividade como concluída:', response);
-                    showToast('Erro ao marcar atividade como concluída: ' + (response.error || 'Erro desconhecido'), 'error');
+                    showToast('Erro: ' + (response.error || 'Erro desconhecido'), 'error');
+                    button.disabled = false;
+                    button.innerHTML = originalText;
                 }
-
             } catch (error) {
-                // Restaurar botão em caso de erro
+                console.error('❌ Erro ao cancelar atividade:', error);
+                showToast('Erro ao cancelar atividade', 'error');
                 button.disabled = false;
-                button.innerHTML = originalContent;
-
-                // Erro de sessão expirada já foi tratado por apiCall()
-                if (!error.message.includes('Sessão')) {
-                    console.error('❌ Erro ao marcar atividade como concluída:', error);
-                    showToast('Erro ao marcar atividade como concluída: ' + error.message, 'error');
-                }
+                button.innerHTML = originalText;
             }
         }
+
+        // ============================================================================
+        // CONCLUIR ATIVIDADE: Abre modal para relato opcional
+        // ============================================================================
+
+        let activityIdToCompleteGlobal = null;
+
+        function completeActivity(activityId) {
+            // Armazenar ID e abrir modal
+            activityIdToCompleteGlobal = activityId;
+            const modal = document.getElementById('modal-concluir-atividade');
+            modal.style.display = 'flex';
+            document.getElementById('relato-conclusao').value = '';
+            document.getElementById('relato-char-count').textContent = '0';
+            setTimeout(() => document.getElementById('relato-conclusao').focus(), 100);
+        }
+
+        function fecharModalConcluir() {
+            const modal = document.getElementById('modal-concluir-atividade');
+            modal.style.display = 'none';
+            activityIdToCompleteGlobal = null;
+
+            // Resetar estado dos botões
+            const botoes = modal.querySelectorAll('button');
+            botoes.forEach(btn => {
+                if (btn.hasAttribute('onclick')) {
+                    const onclick = btn.getAttribute('onclick');
+                    if (onclick.includes('confirmarConclusaoComRelato')) {
+                        btn.disabled = false;
+                        btn.textContent = 'Concluir com Relato';
+                    } else if (onclick.includes('pularRelato')) {
+                        btn.disabled = false;
+                        btn.textContent = 'Pular (concluir sem relato)';
+                    }
+                }
+            });
+
+            // Limpar campo e contador
+            document.getElementById('relato-conclusao').value = '';
+            document.getElementById('relato-char-count').textContent = '0';
+        }
+
+        async function confirmarConclusaoComRelato() {
+            const relato = document.getElementById('relato-conclusao').value.trim();
+
+            // Se usuário não preencheu nada, confirmar
+            if (relato.length === 0) {
+                const confirmar = confirm('Você não preencheu o relato. Deseja concluir mesmo assim?');
+                if (!confirmar) {
+                    document.getElementById('relato-conclusao').focus();
+                    return;
+                }
+            }
+
+            await finalizarConclusao(relato);
+        }
+
+        async function pularRelato() {
+            await finalizarConclusao('');
+        }
+
+        async function finalizarConclusao(relato) {
+            // Salvar ID localmente ANTES de fechar modal (que limpa a global)
+            const activityId = activityIdToCompleteGlobal;
+
+            const button = event.target;
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
+
+            try {
+                // Chamar API com relato (pode ser vazio)
+                const response = await apiCall('completeActivity', activityId, relato);
+
+                if (response && response.ok) {
+                    const mensagem = relato.length > 0
+                        ? 'Atividade concluída com relato!'
+                        : 'Atividade concluída!';
+                    showToast(mensagem, 'success');
+
+                    fecharModalConcluir();
+
+                    // Atualizar card usando variável local
+                    if (typeof updateSingleActivityCard === 'function') {
+                        updateSingleActivityCard(activityId);
+                    } else {
+                        loadActivities();
+                    }
+                } else {
+                    showToast('Erro: ' + (response.error || 'Erro desconhecido'), 'error');
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error('❌ Erro ao concluir atividade:', error);
+                showToast('Erro ao concluir atividade', 'error');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+
+        // ============================================================================
+        // CONTADOR DE CARACTERES (Event Listeners)
+        // ============================================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Contador para modal de cancelamento
+            const motivoTextarea = document.getElementById('motivo-cancelamento');
+            if (motivoTextarea) {
+                motivoTextarea.addEventListener('input', (e) => {
+                    const count = e.target.value.length;
+                    document.getElementById('motivo-char-count').textContent = count;
+
+                    // Feedback visual: borda vermelha se < 10 chars
+                    if (count > 0 && count < 10) {
+                        e.target.style.borderColor = 'var(--danger)';
+                    } else if (count >= 10) {
+                        e.target.style.borderColor = 'var(--success)';
+                    } else {
+                        e.target.style.borderColor = 'var(--danger)';
+                    }
+                });
+            }
+
+            // Contador para modal de conclusão
+            const relatoTextarea = document.getElementById('relato-conclusao');
+            if (relatoTextarea) {
+                relatoTextarea.addEventListener('input', (e) => {
+                    const count = e.target.value.length;
+                    document.getElementById('relato-char-count').textContent = count;
+
+                    // Feedback visual se próximo do limite
+                    const counter = document.getElementById('relato-char-count');
+                    if (count > 900) {
+                        counter.style.color = 'var(--danger)';
+                        counter.style.fontWeight = '700';
+                    } else if (count > 750) {
+                        counter.style.color = 'var(--warning)';
+                        counter.style.fontWeight = '600';
+                    } else {
+                        counter.style.color = 'var(--text-light)';
+                        counter.style.fontWeight = '400';
+                    }
+                });
+            }
+        });
 
         // ===== SISTEMA DE MODAIS DE ATIVIDADES =====
 
