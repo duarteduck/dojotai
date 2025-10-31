@@ -149,13 +149,6 @@
 
         <!-- Body -->
         <div style="padding: 24px;">
-            <p style="margin-bottom: var(--spacing-lg); color: var(--text);">
-                Tem certeza que deseja cancelar esta atividade?
-            </p>
-            <p style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-lg); font-style: italic;">
-                Esta ação não pode ser desfeita. A atividade será marcada como cancelada.
-            </p>
-
             <label for="motivo-cancelamento" style="display: block; margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--danger);">
                 Motivo do Cancelamento *
             </label>
@@ -248,19 +241,12 @@
 
         <!-- Body -->
         <div style="padding: 24px;">
-            <p style="margin-bottom: var(--spacing-lg); color: var(--text);">
-                Deseja adicionar um relato sobre esta atividade?
-            </p>
-            <p style="color: var(--text-light); font-size: var(--font-size-sm); margin-bottom: var(--spacing-lg); font-style: italic;">
-                Este campo é opcional, mas ajuda a documentar como foi a atividade.
-            </p>
-
             <label for="relato-conclusao" style="display: block; margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--text);">
                 Relato / Comunicado (opcional)
             </label>
             <textarea
                 id="relato-conclusao"
-                placeholder="Ex: Treino realizado com sucesso. 15 participantes, foco em kata Heian Shodan. Destaque para João que evoluiu muito no kumite."
+                placeholder="Descreva como foi a atividade, pontos altos, pontos para aprimorar, participações e aprendizados importantes, etc."
                 maxlength="1000"
                 rows="5"
                 style="
@@ -275,10 +261,7 @@
                     outline: none;
                 "
             ></textarea>
-            <div style="display: flex; justify-content: space-between; margin-top: var(--spacing-xs);">
-                <span style="color: var(--text-light); font-size: var(--font-size-sm);">
-                    Este relato será visível no card da atividade
-                </span>
+            <div style="display: flex; justify-content: flex-end; margin-top: var(--spacing-xs);">
                 <span style="color: var(--text-light); font-size: var(--font-size-sm);">
                     <span id="relato-char-count">0</span>/1000
                 </span>
@@ -290,11 +273,8 @@
             <button onclick="fecharModalConcluir()" class="btn btn-outline">
                 Cancelar
             </button>
-            <button onclick="pularRelato()" class="btn btn-secondary">
-                Pular (concluir sem relato)
-            </button>
-            <button onclick="confirmarConclusaoComRelato()" class="btn btn-success">
-                Concluir com Relato
+            <button onclick="confirmarConclusao()" class="btn btn-success">
+                Concluir
             </button>
         </div>
     </div>
@@ -391,6 +371,23 @@
 
             // Tentar usar API real
             if (typeof google !== 'undefined' && google.script && google.script.run) {
+                // Verificar se usuário é admin
+                const isAdmin = typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin();
+                console.log('👤 Usuário é admin?', isAdmin);
+
+                // Para não-admins: validar que há membro selecionado
+                if (!isAdmin && !State.selectedMemberId) {
+                    console.warn('⚠️ Nenhum membro selecionado');
+                    if (typeof showToast === 'function') {
+                        showToast('Selecione um membro para ver as atividades', 'warning');
+                    }
+                    if (typeof showActivitiesLoadingOverlay === 'function') {
+                        showActivitiesLoadingOverlay(false);
+                    }
+                    isLoadingActivities = false;
+                    return;
+                }
+
                 // Preparar filtros para enviar ao backend
                 const filtrosBackend = {
                     status: filtrosState.status || [],
@@ -399,10 +396,26 @@
                     responsavel: filtrosState.responsavel || []
                 };
 
+                // Preparar memberId
+                let memberId = null;
+                if (State.selectedMemberId) {
+                    memberId = parseInt(State.selectedMemberId, 10);
+                    console.log('🥋 Membro selecionado:', memberId);
+                }
+
+                // Para admins: usar memberId apenas se não há filtro de responsável
+                // Se admin aplicou filtro de responsável, não filtrar por membro
+                if (isAdmin && filtrosBackend.responsavel && filtrosBackend.responsavel.length > 0) {
+                    console.log('👨‍💼 Admin com filtro de responsável ativo - ignorando memberId');
+                    memberId = null;
+                }
+
+                console.log('📤 Enviando para API - Filtros:', filtrosBackend, 'MemberId:', memberId);
+
                 // Conectar com API real usando apiCall()
                 (async () => {
                     try {
-                        const result = await apiCall('listActivitiesApi', filtrosBackend);
+                        const result = await apiCall('listActivitiesApi', filtrosBackend, memberId);
 
                         isLoadingActivities = false; // Liberar lock
 
@@ -614,6 +627,16 @@
             button.disabled = true;
             button.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
 
+            // Desabilitar todos os botões e textarea do modal
+            const modal = document.getElementById('modal-cancelar-atividade');
+            if (modal) {
+                const allButtons = modal.querySelectorAll('button');
+                const textarea = modal.querySelector('#motivo-cancelamento');
+
+                allButtons.forEach(btn => btn.disabled = true);
+                if (textarea) textarea.disabled = true;
+            }
+
             try {
                 const response = await apiCall('cancelActivityApi', activityId, motivo);
 
@@ -661,17 +684,14 @@
             modal.style.display = 'none';
             activityIdToCompleteGlobal = null;
 
-            // Resetar estado dos botões
+            // Resetar estado do botão
             const botoes = modal.querySelectorAll('button');
             botoes.forEach(btn => {
                 if (btn.hasAttribute('onclick')) {
                     const onclick = btn.getAttribute('onclick');
-                    if (onclick.includes('confirmarConclusaoComRelato')) {
+                    if (onclick.includes('confirmarConclusao')) {
                         btn.disabled = false;
-                        btn.textContent = 'Concluir com Relato';
-                    } else if (onclick.includes('pularRelato')) {
-                        btn.disabled = false;
-                        btn.textContent = 'Pular (concluir sem relato)';
+                        btn.textContent = 'Concluir';
                     }
                 }
             });
@@ -681,23 +701,10 @@
             document.getElementById('relato-char-count').textContent = '0';
         }
 
-        async function confirmarConclusaoComRelato() {
+        async function confirmarConclusao() {
             const relato = document.getElementById('relato-conclusao').value.trim();
-
-            // Se usuário não preencheu nada, confirmar
-            if (relato.length === 0) {
-                const confirmar = confirm('Você não preencheu o relato. Deseja concluir mesmo assim?');
-                if (!confirmar) {
-                    document.getElementById('relato-conclusao').focus();
-                    return;
-                }
-            }
-
+            // Se não digitou nada, passa string vazia
             await finalizarConclusao(relato);
-        }
-
-        async function pularRelato() {
-            await finalizarConclusao('');
         }
 
         async function finalizarConclusao(relato) {
@@ -708,6 +715,16 @@
             const originalText = button.textContent;
             button.disabled = true;
             button.innerHTML = '<div class="loading-select-spinner" style="margin: 0 auto;"></div>';
+
+            // Desabilitar todos os botões e textarea do modal
+            const modal = document.getElementById('modal-concluir-atividade');
+            if (modal) {
+                const allButtons = modal.querySelectorAll('button');
+                const textarea = modal.querySelector('#relato-conclusao');
+
+                allButtons.forEach(btn => btn.disabled = true);
+                if (textarea) textarea.disabled = true;
+            }
 
             try {
                 // Chamar API com relato (pode ser vazio)
@@ -856,9 +873,7 @@
                                 <div class="form-group">
                                     <label class="form-label">Categorias *</label>
                                     <select id="activity-category" class="form-input" multiple style="min-height: 80px;" required>
-                                        <option value="okiyome">Okiyome</option>
-                                        <option value="estudo">Estudo</option>
-                                        <option value="cerimonia">Cerimônia</option>
+                                        <option value="">Carregando categorias...</option>
                                     </select>
                                     <small class="form-help">Segure Ctrl/Cmd para selecionar múltiplas categorias</small>
                                 </div>
@@ -1100,6 +1115,25 @@
             // Carregar dados para os selects
             loadActivityModalData();
 
+            // Listener para ocultar botão de alvos quando categoria "tarefa" for selecionada
+            setTimeout(() => {
+                const categorySelect = document.getElementById('activity-category');
+                const targetsBtn = document.getElementById('targets-toggle-btn');
+
+                if (categorySelect && targetsBtn) {
+                    categorySelect.addEventListener('change', function() {
+                        const selectedTexts = Array.from(this.selectedOptions).map(opt => opt.textContent.toLowerCase());
+                        const hasTarefa = selectedTexts.includes('tarefa');
+
+                        if (hasTarefa) {
+                            targetsBtn.style.display = 'none';
+                        } else {
+                            targetsBtn.style.display = '';
+                        }
+                    });
+                }
+            }, 100);
+
             // Focus no primeiro campo
             setTimeout(() => {
                 const firstInput = document.getElementById('activity-name');
@@ -1232,9 +1266,7 @@
                                 <div class="form-group">
                                     <label class="form-label">Categorias *</label>
                                     <select id="edit-activity-category" class="form-input" multiple style="min-height: 80px;" required>
-                                        <option value="okiyome">Okiyome</option>
-                                        <option value="estudo">Estudo</option>
-                                        <option value="cerimonia">Cerimônia</option>
+                                        <option value="">Carregando categorias...</option>
                                     </select>
                                     <small class="form-help">Segure Ctrl/Cmd para selecionar múltiplas categorias</small>
                                 </div>
@@ -2308,12 +2340,48 @@
                                                 console.log('🏷️ Categoria selecionada:', option.value, option.text);
                                             }
                                         });
+
+                                        // Ocultar botão de alvos se categoria "tarefa" estiver selecionada
+                                        const selectedTexts = Array.from(catSelect.selectedOptions).map(opt => opt.textContent.toLowerCase());
+                                        const hasTarefa = selectedTexts.includes('tarefa');
+                                        const targetsBtn = document.getElementById('edit-targets-toggle-btn');
+
+                                        if (targetsBtn) {
+                                            targetsBtn.style.display = hasTarefa ? 'none' : '';
+                                        }
+
+                                        // Adicionar listener para mudanças futuras
+                                        catSelect.addEventListener('change', function() {
+                                            const selectedTexts = Array.from(this.selectedOptions).map(opt => opt.textContent.toLowerCase());
+                                            const hasTarefaSelected = selectedTexts.includes('tarefa');
+
+                                            if (targetsBtn) {
+                                                targetsBtn.style.display = hasTarefaSelected ? 'none' : '';
+                                            }
+                                        });
                                     } else {
                                         // Tentar novamente se ainda não carregou
                                         setTimeout(selectCategories, 200);
                                     }
                                 };
                                 setTimeout(selectCategories, 100);
+                            }
+
+                            // Adicionar listener geral para ocultar botão alvos (caso não tenha categorias_ids)
+                            if (!activity.categorias_ids) {
+                                setTimeout(() => {
+                                    const catSelect = document.getElementById('edit-activity-category');
+                                    const targetsBtn = document.getElementById('edit-targets-toggle-btn');
+
+                                    if (catSelect && targetsBtn) {
+                                        catSelect.addEventListener('change', function() {
+                                            const selectedTexts = Array.from(this.selectedOptions).map(opt => opt.textContent.toLowerCase());
+                                            const hasTarefaSelected = selectedTexts.includes('tarefa');
+
+                                            targetsBtn.style.display = hasTarefaSelected ? 'none' : '';
+                                        });
+                                    }
+                                }, 100);
                             }
 
                             // Selecionar responsável - aguardar carregamento

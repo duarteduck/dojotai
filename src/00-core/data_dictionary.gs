@@ -140,6 +140,15 @@ const DATA_DICTIONARY = {
         description: 'Status do usuário'
       },
 
+       role: {
+        type: 'TEXT',
+        required: false,
+        enum: ['admin', 'membro'],
+        default: null,
+        description: 'Papel do usuário no sistema (admin = administrador, vazio = membro)',
+        example: 'admin'
+      },
+
       // Data e hora de criação
       criado_em: {
         type: 'DATETIME',

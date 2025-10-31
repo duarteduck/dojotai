@@ -2,20 +2,21 @@
     // ============================================================================
     // PERMISSIONS HELPERS
     // Funções utilitárias para controle de permissões e autorização
+    // Sistema dinâmico baseado em roles (campo 'role' na tabela usuarios)
     // ============================================================================
 
     /**
-     * Lista de UIDs de administradores (temporário - futuramente será por roles/cargos)
-     */
-    const ADMIN_UIDS = ['U001', 'U002', 'U003', 'U004'];
-
-    /**
      * Verifica se o usuário atual é administrador
-     * @returns {boolean} - true se for admin
+     * Lê o campo 'role' do banco de dados (carregado no login via State/localStorage)
+     * @returns {boolean} - true se role === 'admin', false caso contrário
      */
     function isCurrentUserAdmin() {
-        const currentUserUid = State.uid || localStorage.getItem('uid');
-        return ADMIN_UIDS.includes(currentUserUid);
+        // Lê role do State (setado no login) ou fallback localStorage
+        const role = (window.State && State.role) || localStorage.getItem('userRole');
+
+        // Retorna true APENAS se role === "admin"
+        // Qualquer outro valor (vazio, null, "membro", etc) → false
+        return role && role.toLowerCase() === 'admin';
     }
 
     /**
@@ -110,7 +111,6 @@
     }
 
     // Expor funções globalmente
-    window.ADMIN_UIDS = ADMIN_UIDS;
     window.isCurrentUserAdmin = isCurrentUserAdmin;
     window.isCurrentUserResponsavel = isCurrentUserResponsavel;
     window.canViewParticipants = canViewParticipants;

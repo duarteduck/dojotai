@@ -847,7 +847,54 @@ Busca por `PropertiesService.getScriptProperties().getProperty('currentSessionId
 
 ---
 
-**Última Atualização:** 09/10/2025
+### **27/10/2025 - Correção de Escopo de Funções no Modal**
+
+**Problema Identificado:**
+- Botão "Fazer Login Novamente" do modal de sessão expirada não funcionava
+- Ao clicar, console mostrava erro: `showLogin is not defined`
+- Funções chamadas via atributos HTML `onclick` precisam estar no escopo global (`window`)
+- Problema afetava também formulário de login (`onsubmit`) e botão de logout
+
+**Causa Raiz:**
+```javascript
+// Funções declaradas localmente não são acessíveis via onclick HTML
+function showLogin() { ... }     // ❌ Não acessível via onclick
+function doLogin(event) { ... }  // ❌ Não acessível via onsubmit
+async function logout() { ... }  // ❌ Não acessível via onclick em outros componentes
+```
+
+**Funções Corrigidas:**
+
+1. ✅ **`showLogin()`** (src/05-components/core/auth.html:26)
+   - **ANTES:** `function showLogin() { ... }`
+   - **DEPOIS:** `window.showLogin = function showLogin() { ... }`
+   - **Uso:** Modal de sessão expirada, botão "Fazer Login Novamente"
+
+2. ✅ **`doLogin()`** (src/05-components/core/auth.html:154)
+   - **ANTES:** `function doLogin(event) { ... }`
+   - **DEPOIS:** `window.doLogin = function doLogin(event) { ... }`
+   - **Uso:** Formulário de login, `onsubmit="doLogin(event)"`
+
+3. ✅ **`logout()`** (src/05-components/core/auth.html:288)
+   - **ANTES:** `async function logout() { ... }`
+   - **DEPOIS:** `window.logout = async function logout() { ... }`
+   - **Uso:** Menu do usuário (userMenuDropdown.html), botão de logout
+
+**Arquivos Modificados:**
+- `src/05-components/core/auth.html:26,154,288` - Exposição de funções no escopo global
+
+**Resultado:**
+- ✅ Modal de sessão expirada funciona corretamente
+- ✅ Usuário consegue fazer login novamente após expiração
+- ✅ Formulário de login processa corretamente o submit
+- ✅ Logout funciona de qualquer componente que chame a função
+
+**Lição Aprendida:**
+Funções chamadas via atributos HTML (`onclick`, `onsubmit`, etc.) devem estar no escopo global. Use `window.functionName = function...` ou listeners via JavaScript (`addEventListener`).
+
+---
+
+**Última Atualização:** 27/10/2025
 **Status:** ✅ **IMPLEMENTADO, TESTADO E FUNCIONANDO**
 **Versão do Sistema:** 2.0.0-alpha.1
 **Próxima Revisão:** Quando implementar melhorias futuras (aviso antes de expirar)

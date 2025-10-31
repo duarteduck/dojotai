@@ -66,8 +66,6 @@
     }
 
     // Aplicar filtros padrão (Status: Pendente)
-    // NOTA: Filtro de responsável NÃO é aplicado automaticamente
-    // O backend já filtra por usuário/membro automaticamente
     function aplicarFiltrosPadrao() {
         // 1. Status: Pendente (sempre aplicar primeiro)
         filtrosState.status = ['pendente'];
@@ -76,7 +74,8 @@
             checkboxPendente.checked = true;
         }
 
-        // 2. Limpar filtro de responsável (não mais aplicado por padrão)
+        // 2. Limpar filtro de responsável (não aplicado automaticamente)
+        // Admin pode aplicar manualmente via modal de filtros
         filtrosState.responsavel = [];
 
         // Atualizar UI e aplicar filtros

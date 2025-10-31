@@ -23,7 +23,7 @@
     /**
      * Mostra tela de login
      */
-    function showLogin() {
+    window.showLogin = function showLogin() {
         // Esconder todo o conteúdo da aplicação
         const appContent = document.querySelector('.app-container');
         const header = document.querySelector('.app-header');
@@ -151,7 +151,7 @@
     /**
      * Processa login
      */
-    function doLogin(event) {
+    window.doLogin = function doLogin(event) {
         if (event) event.preventDefault();
 
         const usuario = document.getElementById('login-usuario').value;
@@ -182,6 +182,14 @@
                         localStorage.setItem('sessionId', result.session.id);
                         localStorage.setItem('uid', result.user.uid); // UID real do usuário
                         localStorage.setItem('userName', result.user.nome);
+                        localStorage.setItem('userRole', result.user.role || ''); // Role do usuário (admin, vazio, etc)
+
+                        // Salvar também no State global
+                        if (window.State) {
+                            State.uid = result.user.uid;
+                            State.nome = result.user.nome;
+                            State.role = result.user.role || '';
+                        }
 
                         // Sucesso - remover tela de login e mostrar app
                         const loginScreen = document.getElementById('login-screen');
@@ -285,10 +293,10 @@
     /**
      * Logout do sistema
      */
-    async function logout() {
+    window.logout = async function logout() {
         console.log('🚪 Iniciando processo de logout...');
 
-        // Mostrar loading overlay se existe
+        // Mostrar loading overlay
         if (typeof showLogoutLoading === 'function') {
             showLogoutLoading(true);
         }
@@ -334,41 +342,30 @@
 
         // Limpar TODOS os dados de sessão local
         console.log('🧹 Limpando dados locais...');
-        localStorage.removeItem('sessionId');
-        localStorage.removeItem('uid');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('user');
+        localStorage.clear();
         sessionStorage.clear();
 
-        // Usar State.clear() se disponível
+        // Limpar estado global
         if (typeof State !== 'undefined' && typeof State.clear === 'function') {
             State.clear();
         }
 
-        // Esconder todo o conteúdo da aplicação
-        console.log('🔄 Ocultando interface da aplicação...');
-        const appContent = document.querySelector('.app-container');
-        const header = document.querySelector('.app-header');
-        const navTabs = document.querySelector('.nav-tabs');
-        const mobileNav = document.querySelector('.mobile-nav');
-        const pageContents = document.querySelectorAll('.page-content');
+        // Resetar seletor de membros
+        if (typeof resetMemberSelector === 'function') {
+            resetMemberSelector();
+        }
 
-        if (appContent) appContent.style.display = 'none';
-        if (header) header.style.display = 'none';
-        if (navTabs) navTabs.style.display = 'none';
-        if (mobileNav) mobileNav.style.display = 'none';
-        pageContents.forEach(page => page.style.display = 'none');
+        console.log('✅ Logout completo! Mostrando tela de login...');
 
-        // Mostrar tela de login novamente
-        console.log('🔄 Redirecionando para tela de login...');
-        showLogin();
-
-        // Esconder loading overlay
+        // Ocultar overlay de loading e mostrar tela de login
         if (typeof showLogoutLoading === 'function') {
             showLogoutLoading(false);
         }
 
-        console.log('✅ Logout completo realizado com sucesso!');
+        // Mostrar tela de login
+        if (typeof showLogin === 'function') {
+            showLogin();
+        }
     }
 
     /**
@@ -419,6 +416,16 @@
         localStorage.removeItem('user');
         sessionStorage.clear();
 
+        // Limpar estado global
+        if (typeof State !== 'undefined' && typeof State.clear === 'function') {
+            State.clear();
+        }
+
+        // Resetar seletor de membros
+        if (typeof resetMemberSelector === 'function') {
+            resetMemberSelector();
+        }
+
         // Mostrar modal amigável
         const modal = `
             <div id="session-expired-modal" style="
@@ -447,7 +454,7 @@
                         Por favor, faça login novamente para continuar.
                     </p>
                     <button
-                        onclick="document.getElementById('session-expired-modal').remove(); showLogin();"
+                        onclick="if(typeof showLogin === 'function') showLogin();"
                         style="
                             background: #3498db;
                             color: white;

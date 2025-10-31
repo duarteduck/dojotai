@@ -57,6 +57,9 @@
         // Permissão base: admin OU responsável
         const canManage = isAdmin || isResponsavel;
 
+        // Verificar se é categoria "tarefa" (não tem participantes nem alvos)
+        const isTarefa = (activity.categoria || '').toLowerCase() === 'tarefa';
+
         // DEBUG: Log da classificação
         console.log(`🔍 Card ${activity.id}:`, {
             data: activity.data,
@@ -80,9 +83,11 @@
         // CANCELADA   | -             | -      | -        | -        | -
 
         // IMPORTANTE: Todos os botões (exceto Resumo) só aparecem se NÃO for Concluída E NÃO for Cancelada
-        const showParticipantes = canManage && (isAtrasada || isHoje || isPendente) && !isConcluida && !isCancelada;
-        const showEditar = canManage && (isHoje || isPendente) && !isConcluida && !isCancelada;
-        const showCancelar = canManage && (isHoje || isPendente) && !isConcluida && !isCancelada;
+        // Botão Participantes: não aparece para categoria "tarefa"
+        const showParticipantes = !isTarefa && canManage && (isAtrasada || isHoje || isPendente) && !isConcluida && !isCancelada;
+        // Botões Editar e Cancelar: apenas para admin (isAdmin já definido na linha 36)
+        const showEditar = isAdmin && (isHoje || isPendente) && !isConcluida && !isCancelada;
+        const showCancelar = isAdmin && (isHoje || isPendente) && !isConcluida && !isCancelada;
         const showConcluir = canManage && (isAtrasada || isHoje || isPendente) && !isConcluida && !isCancelada;
         const showResumo = canManage && isConcluida; // Só aparece em Concluída (desabilitado por enquanto)
 
@@ -125,8 +130,8 @@
 
                     <!-- Parte Inferior: Contagens + Botões (sempre alinhados no bottom) -->
                     <div style="margin-top: auto; padding-top: var(--spacing-sm);">
-                        <!-- Sistema de Participação Unificado -->
-                        <div class="participation-summary" style="margin-bottom: var(--spacing-sm);">
+                        <!-- Sistema de Participação Unificado (não aparece para categoria "tarefa") -->
+                        ${!isTarefa ? `<div class="participation-summary" style="margin-bottom: var(--spacing-sm);">
                             <div class="participation-row" style="margin-bottom: var(--spacing-xs);">
                                 <span class="participation-label" style="font-size: var(--font-size-xs);">Alvo:</span>
                                 <span class="participation-count total" style="font-size: var(--font-size-xs);">${activity.total_alvos || 0}</span>
@@ -145,7 +150,7 @@
                                     <span class="participation-count absent" style="font-size: var(--font-size-xs);">${activity.ausentes || 0} ausentes</span>
                                 </div>
                             </div>
-                        </div>
+                        </div>` : ''}
 
                         <!-- Tags da atividade -->
                         ${activity.tags ? `<div style="margin-bottom: var(--spacing-sm); padding: var(--spacing-sm); background: var(--light); border-radius: var(--radius); border-left: 3px solid var(--primary);">

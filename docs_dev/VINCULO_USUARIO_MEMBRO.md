@@ -2140,7 +2140,283 @@ Preciso solicitar aprovação para:
 
 ---
 
-**📅 Última atualização:** 19/10/2025
+## 🐛 PROBLEMAS RESOLVIDOS E MELHORIAS
+
+### **27/10/2025 - Correções Críticas de Vínculos e Seletor**
+
+---
+
+#### 🐛 Problema 1: Chamada Incorreta da API
+**Sintoma:** Todos usuários viam mesmos vínculos após logout/login sem refresh da página
+
+**Causa:**
+```javascript
+// ERRADO - memberSelector.html:43
+const result = await apiCall('getMyLinkedMembers', sessionId);
+```
+- `apiCall()` já injeta `sessionId` automaticamente do `localStorage`
+- Passar `sessionId` manualmente como argumento causava erro de parâmetros
+- Backend recebia `sessionId` duplicado
+- Consulta retornava vínculos incorretos
+
+**Solução:**
+```javascript
+// CORRETO - memberSelector.html:43
+// NOTA: apiCall() já injeta sessionId automaticamente
+const result = await apiCall('getMyLinkedMembers');
+```
+
+**Arquivo modificado:** `src/05-components/memberSelector.html:43-44`
+
+**Resultado:**
+- ✅ API recebe apenas o `sessionId` correto do usuário logado
+- ✅ Vínculos retornados correspondem ao usuário autenticado
+
+---
+
+#### 🐛 Problema 2: Estado Global Não Limpo no Logout
+**Sintoma:** Após logout/login sem refresh da página, novo usuário via vínculos do usuário anterior
+
+**Causa:**
+```javascript
+// Variáveis globais no topo do memberSelector.html
+let myLinkedMembers = [];  // Mantinha dados do usuário anterior
+let selectedMember = null;  // Não era resetado
+let memberSelectorInitialized = false;  // Flag impedia recarregar vínculos
+```
+
+Quando usuário fazia logout e outro fazia login:
+1. Variáveis globais mantinham valores do primeiro usuário
+2. Flag `memberSelectorInitialized = true` bloqueava novo carregamento
+3. Novo usuário via vínculos do usuário anterior
+
+**Solução:**
+
+**1. Criada função `window.resetMemberSelector()`** (memberSelector.html:89-114)
+```javascript
+/**
+ * Reseta o seletor de membros no logout
+ * Limpa todas as variáveis globais e estado
+ */
+window.resetMemberSelector = function resetMemberSelector() {
+    console.log('🧹 Resetando seletor de membros...');
+
+    // Limpar variáveis globais
+    myLinkedMembers = [];
+    selectedMember = null;
+    memberSelectorInitialized = false;
+
+    // Limpar estado (já feito por State.clear(), mas garantir)
+    State.selectedMember = null;
+    State.selectedMemberId = null;
+
+    // Esconder botão do seletor e remover classe de alerta
+    const selectorBtn = document.getElementById('member-selector-btn');
+    if (selectorBtn) {
+        selectorBtn.style.display = 'none';
+        selectorBtn.classList.remove('no-members-alert');
+    }
+
+    // Fechar dropdown se estiver aberto
+    const dropdown = document.getElementById('member-selector-dropdown');
+    if (dropdown) {
+        dropdown.classList.remove('show');
+    }
+
+    console.log('✅ Seletor de membros resetado');
+}
+```
+
+**2. Chamada no `logout()`** (auth.html:348-351)
+```javascript
+// Resetar seletor de membros se disponível
+if (typeof resetMemberSelector === 'function') {
+    resetMemberSelector();
+}
+```
+
+**3. Chamada no `handleSessionExpired()`** (auth.html:427-433)
+```javascript
+// Limpar estado e seletor de membros
+if (typeof State !== 'undefined' && typeof State.clear === 'function') {
+    State.clear();
+}
+if (typeof resetMemberSelector === 'function') {
+    resetMemberSelector();
+}
+```
+
+**Arquivos modificados:**
+- `src/05-components/memberSelector.html:89-114` - Função `resetMemberSelector()`
+- `src/05-components/core/auth.html:348-351` - Chamada no logout
+- `src/05-components/core/auth.html:427-433` - Chamada na sessão expirada
+
+**Resultado:**
+- ✅ Cada usuário vê apenas seus próprios vínculos
+- ✅ Logout limpa completamente o estado do seletor
+- ✅ Login de novo usuário carrega vínculos corretos
+- ✅ Sessão expirada também reseta corretamente
+
+---
+
+#### ✨ Melhoria 3: Seletor Sempre Visível com Alerta
+
+**Mudança de Comportamento:**
+
+| Situação | ANTES | DEPOIS |
+|----------|-------|--------|
+| **0 vínculos** | 🚫 Botão oculto | 🔴 Botão vermelho pulsante |
+| **1 vínculo** | 🚫 Botão oculto | 🔵 Botão visível normal |
+| **2+ vínculos** | 🔵 Botão visível | 🔵 Botão visível normal |
+
+**Objetivo:** Sempre mostrar o botão do seletor para dar feedback visual claro, especialmente quando não há vínculos cadastrados.
+
+---
+
+**Implementação:**
+
+**1. Botão Sempre Visível** (memberSelector.html:155-168)
+```javascript
+// ANTES: Só mostrava com 2+ vínculos
+if (myLinkedMembers.length > 1) {
+    button.style.display = 'block';
+} else {
+    button.style.display = 'none';  // ❌ Oculto
+}
+
+// DEPOIS: Sempre mostra, com indicador de alerta
+// Sempre mostrar o botão
+button.style.display = 'block';
+button.addEventListener('click', openMemberSelectorModal);
+
+// Adicionar classe de alerta se não houver vínculos
+if (myLinkedMembers.length === 0) {
+    button.classList.add('no-members-alert');
+    button.title = '⚠️ Nenhum perfil vinculado';
+    console.log('⚠️ Botão em modo alerta (sem vínculos)');
+} else {
+    button.classList.remove('no-members-alert');
+    button.title = myLinkedMembers.length > 1 ? 'Trocar perfil' : 'Ver perfil vinculado';
+    console.log(`✅ Botão de perfil ativado (${myLinkedMembers.length} vínculo(s))`);
+}
+```
+
+**2. Estado de Alerta Visual** (memberSelector.html:382-410)
+```css
+/* Estado de alerta quando não há vínculos */
+#member-selector-btn.no-members-alert {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    animation: pulse-alert 2s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+}
+
+#member-selector-btn.no-members-alert:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+    animation: pulse-alert-fast 1s ease-in-out infinite;
+}
+
+@keyframes pulse-alert {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    }
+}
+
+@keyframes pulse-alert-fast {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.9);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+}
+```
+
+**3. Mensagem no Dropdown** (memberSelector.html:270-284)
+```javascript
+// Se não há vínculos, mostrar mensagem de alerta
+if (myLinkedMembers.length === 0) {
+    container.innerHTML = `
+        <div style="padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚠️</div>
+            <div style="font-weight: 600; color: var(--danger); margin-bottom: 0.5rem;">
+                Nenhum perfil vinculado
+            </div>
+            <div style="font-size: 0.875rem; color: var(--text-light);">
+                Entre em contato com o administrador<br>para vincular seu perfil a um membro.
+            </div>
+        </div>
+    `;
+    return;
+}
+```
+
+**Arquivos modificados:**
+- `src/05-components/memberSelector.html:155-168` - Lógica botão sempre visível
+- `src/05-components/memberSelector.html:270-284` - Mensagem dropdown sem vínculos
+- `src/05-components/memberSelector.html:382-410` - Estilos CSS alerta vermelho
+- `src/05-components/memberSelector.html:105` - Remoção de classe no reset
+
+**Resultado Visual:**
+
+**Sem vínculos (0):**
+- 🔴 Botão 🥋 vermelho com gradiente vibrante
+- 🔴 Animação de pulso (box-shadow expandindo a cada 2s)
+- ⚡ Pulso mais rápido no hover (1s)
+- ⚠️ Tooltip: "Nenhum perfil vinculado"
+- 📋 Ao clicar: Mensagem explicativa no dropdown
+
+**Com 1 vínculo:**
+- 🔵 Botão 🥋 normal (azul/roxo do Design System)
+- 👤 Tooltip: "Ver perfil vinculado"
+- 📋 Ao clicar: Mostra o único vínculo (sem opção de trocar)
+
+**Com 2+ vínculos:**
+- 🔵 Botão 🥋 normal
+- 🔄 Tooltip: "Trocar perfil"
+- 📋 Ao clicar: Lista completa para escolher
+
+---
+
+### 📊 Resumo de Arquivos Modificados
+
+| Arquivo | Linhas | Descrição |
+|---------|--------|-----------|
+| `src/05-components/memberSelector.html` | 43-44 | Corrigir chamada API (remover sessionId manual) |
+| `src/05-components/memberSelector.html` | 89-114 | Função `resetMemberSelector()` |
+| `src/05-components/memberSelector.html` | 155-168 | Botão sempre visível com estado de alerta |
+| `src/05-components/memberSelector.html` | 270-284 | Mensagem dropdown sem vínculos |
+| `src/05-components/memberSelector.html` | 382-410 | Estilos CSS alerta vermelho pulsante |
+| `src/05-components/core/auth.html` | 348-351 | Chamada reset no logout |
+| `src/05-components/core/auth.html` | 427-433 | Chamada reset na sessão expirada |
+
+**Total:** 2 arquivos, ~120 linhas modificadas
+
+---
+
+### 🎯 Impacto das Correções
+
+**UX melhorada:**
+- ✅ Feedback visual claro quando não há vínculos (botão vermelho pulsante)
+- ✅ Usuário entende imediatamente que precisa vincular perfil
+- ✅ Seletor sempre acessível (não some misteriosamente)
+- ✅ Cada usuário vê apenas seus próprios vínculos
+
+**Bugs corrigidos:**
+- ✅ Vínculos não misturam entre usuários diferentes
+- ✅ Logout limpa completamente o estado
+- ✅ Sessão expirada também reseta corretamente
+- ✅ API chamada corretamente sem duplicação de parâmetros
+
+**Segurança:**
+- ✅ Isolamento perfeito entre sessões de usuários diferentes
+- ✅ Impossível ver vínculos de outro usuário
+
+---
+
+**📅 Última atualização:** 27/10/2025
 **📌 Status:** ✅ MVP COMPLETO - Pendências são features v2 opcionais
 **👤 Implementado por:** Claude Code
 **👤 Aprovado por:** Diogo Duarte

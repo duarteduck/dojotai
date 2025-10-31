@@ -7,6 +7,8 @@
      */
 
     // Flag para prevenir inicialização duplicada
+    console.log('📍 init.html carregado - systemInitialized:', window.systemInitialized);
+
     if (!window.systemInitialized) {
         window.systemInitialized = false;
 
@@ -15,6 +17,8 @@
          * Chamado UMA ÚNICA VEZ quando o DOM está pronto
          */
         function initSystem() {
+            console.log('🔍 initSystem() chamado - Flag atual:', window.systemInitialized);
+
             if (window.systemInitialized) {
                 console.warn('⚠️ Sistema já foi inicializado, pulando...');
                 return;

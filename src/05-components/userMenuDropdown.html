@@ -55,13 +55,13 @@
     }
 
     .user-menu-header h4 {
-        margin: 0 0 var(--spacing-xs) 0;
+        margin: 0;
         font-size: var(--font-size-lg);
         font-weight: 600;
     }
 
     .user-menu-header p {
-        margin: 0;
+        margin: var(--spacing-xs) 0 0 0;
         font-size: var(--font-size-sm);
         opacity: 0.9;
     }
@@ -426,8 +426,17 @@
             nameEl.textContent = user.nome;
         }
 
-        if (roleEl && user?.role) {
-            roleEl.textContent = user.role;
+        if (roleEl) {
+            // Verificar se é admin
+            const isAdmin = typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin();
+
+            if (isAdmin) {
+                roleEl.textContent = 'Administrador';
+                roleEl.style.display = 'block';
+            } else {
+                // Não-admin: ocultar completamente
+                roleEl.style.display = 'none';
+            }
         }
     }
 

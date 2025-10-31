@@ -328,15 +328,19 @@ function _listActivitiesCore(filtros, singleActivityId, userId, memberId) {
     console.log('🔍 Buscando participações do membro:', memberId);
     try {
       const participacoes = DatabaseManager.query('participacoes', {
-        id_membro: memberId.toString(),
-        deleted: { $ne: 'x' }
-      });
+        id_membro: memberId.toString()
+      }, false);
 
-      if (participacoes && participacoes.ok && participacoes.items) {
-        participacoes.items.forEach(p => {
+      if (participacoes && participacoes.length > 0) {
+        // Filtrar deletados DEPOIS da query (mesmo padrão usado em participacoes.gs)
+        const participacoesAtivas = participacoes.filter(p => p.deleted !== 'x');
+
+        participacoesAtivas.forEach(p => {
           atividadesComParticipacao.add(p.id_atividade);
         });
-        console.log('✅ Participações encontradas:', atividadesComParticipacao.size, 'atividades');
+
+        console.log('✅ Participações encontradas:', participacoesAtivas.length, 'ativas de', participacoes.length, 'total');
+        console.log('✅ Atividades únicas com participação:', atividadesComParticipacao.size);
       } else {
         console.log('ℹ️ Nenhuma participação encontrada para o membro');
       }
@@ -376,8 +380,11 @@ function _listActivitiesCore(filtros, singleActivityId, userId, memberId) {
     // ============================================================================
     // NOVO: Filtro de usuário/membro
     // Se userId fornecido, filtrar por responsável OU participação
+    // IMPORTANTE: Pular esta filtragem se há filtro de responsável ativo
     // ============================================================================
-    if (userId) {
+    const temFiltroResponsavel = filtros && filtros.responsavel && Array.isArray(filtros.responsavel) && filtros.responsavel.length > 0;
+
+    if (userId && !temFiltroResponsavel) {
       const atribuidoUid = (item.atribuido_uid || '').toString().trim();
       const isResponsavel = (atribuidoUid === userId);
       const isParticipante = atividadesComParticipacao.has(item.id);

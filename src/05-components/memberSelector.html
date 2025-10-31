@@ -40,7 +40,8 @@
             }
 
             // Buscar vínculos do usuário logado
-            const result = await apiCall('getMyLinkedMembers', sessionId);
+            // NOTA: apiCall() já injeta sessionId automaticamente
+            const result = await apiCall('getMyLinkedMembers');
 
             if (!result.ok) {
                 console.error('❌ Erro ao buscar vínculos:', result.error);
@@ -82,6 +83,38 @@
     }
 
     /**
+     * Reseta o seletor de membros no logout
+     * Limpa todas as variáveis globais e estado
+     */
+    window.resetMemberSelector = function resetMemberSelector() {
+        console.log('🧹 Resetando seletor de membros...');
+
+        // Limpar variáveis globais
+        myLinkedMembers = [];
+        selectedMember = null;
+        memberSelectorInitialized = false;
+
+        // Limpar estado (já feito por State.clear(), mas garantir)
+        State.selectedMember = null;
+        State.selectedMemberId = null;
+
+        // Esconder botão do seletor e remover classe de alerta
+        const selectorBtn = document.getElementById('member-selector-btn');
+        if (selectorBtn) {
+            selectorBtn.style.display = 'none';
+            selectorBtn.classList.remove('no-members-alert');
+        }
+
+        // Fechar dropdown se estiver aberto
+        const dropdown = document.getElementById('member-selector-dropdown');
+        if (dropdown) {
+            dropdown.classList.remove('show');
+        }
+
+        console.log('✅ Seletor de membros resetado');
+    }
+
+    /**
      * Seleciona membro inicial após login
      * Prioridade: principal='sim' > primeiro da lista
      */
@@ -120,14 +153,19 @@
             return;
         }
 
-        // Mostrar botão apenas se há múltiplos vínculos
-        if (myLinkedMembers.length > 1) {
-            button.style.display = 'block';
-            button.addEventListener('click', openMemberSelectorModal);
-            console.log('✅ Botão de troca de perfil ativado');
+        // Sempre mostrar o botão
+        button.style.display = 'block';
+        button.addEventListener('click', openMemberSelectorModal);
+
+        // Adicionar classe de alerta se não houver vínculos
+        if (myLinkedMembers.length === 0) {
+            button.classList.add('no-members-alert');
+            button.title = '⚠️ Nenhum perfil vinculado';
+            console.log('⚠️ Botão em modo alerta (sem vínculos)');
         } else {
-            button.style.display = 'none';
-            console.log('ℹ️ Botão de troca de perfil oculto (apenas 1 vínculo)');
+            button.classList.remove('no-members-alert');
+            button.title = myLinkedMembers.length > 1 ? 'Trocar perfil' : 'Ver perfil vinculado';
+            console.log(`✅ Botão de perfil ativado (${myLinkedMembers.length} vínculo(s))`);
         }
     }
 
@@ -230,6 +268,22 @@
 
         container.innerHTML = '';
 
+        // Se não há vínculos, mostrar mensagem de alerta
+        if (myLinkedMembers.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 1.5rem; text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚠️</div>
+                    <div style="font-weight: 600; color: var(--danger); margin-bottom: 0.5rem;">
+                        Nenhum perfil vinculado
+                    </div>
+                    <div style="font-size: 0.875rem; color: var(--text-light);">
+                        Entre em contato com o administrador<br>para vincular seu perfil a um membro.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
         console.log('🔍 Renderizando membros. Selecionado:', selectedMember);
 
         myLinkedMembers.forEach(vinculo => {
@@ -324,6 +378,36 @@
     #member-selector-btn {
         display: none; /* Mostrado apenas se múltiplos vínculos */
         position: relative;
+    }
+
+    /* Estado de alerta quando não há vínculos */
+    #member-selector-btn.no-members-alert {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        animation: pulse-alert 2s ease-in-out infinite;
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+
+    #member-selector-btn.no-members-alert:hover {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+        animation: pulse-alert-fast 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse-alert {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        }
+        50% {
+            box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+        }
+    }
+
+    @keyframes pulse-alert-fast {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.9);
+        }
+        50% {
+            box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+        }
     }
 
     /* Dropdown de seleção de membros (estilo igual ao userMenuDropdown) */
